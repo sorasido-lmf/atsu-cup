@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 ユーザー管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .roster-list{ display:flex; flex-direction:column; gap:8px; }
+  .roster-row{
+    display:flex; align-items:center; gap:8px; min-width:0; background:#0d0a14; border:1.5px solid var(--line);
+    border-radius:10px; padding:9px 10px;
+  }
+  .roster-row .nm{flex:1; min-width:0; font-weight:700; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .roster-row .rm{
+    flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:#6b5f82; font-size:11px;
+    cursor:pointer; padding:3px 6px; line-height:1;
+  }
+  .roster-row .cam-toggle-inline{ flex-shrink:0; padding:3px 8px; font-size:12px; }
+</style>
+</head>
+<body>
+<a class="back-link" href="index.html">‹ トップへ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">🧑‍🤝‍🧑</div>
+    <h1>ユーザー管理</h1>
+    <div class="sub">USERS</div>
+  </header>
+
+  <section class="panel">
+    <h2><span class="num">01</span> 登録済みユーザー</h2>
+    <p class="hint">撮影可否(📹/🚫)はユーザーごとのデフォルト設定です。大会エントリー時にその大会限定で上書きできます。✕で完全に削除します。</p>
+    <div id="countBadges"></div>
+    <div id="rosterList" class="roster-list" style="margin-top:12px;"></div>
+    <div class="row" style="margin-top:16px;">
+      <button class="btn btn-primary" id="openRegisterBtn">➕ 新規ユーザー登録</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="num">02</span> GitHubと同期</h2>
+    <p class="hint">この端末の登録者一覧と、GitHub上の <code>data/users.json</code> を同期します(削除はまだ同期されません)。</p>
+    <div class="row">
+      <button class="btn btn-ghost" id="pullBtn">🔽 GitHubから取り込む</button>
+      <button class="btn btn-ghost" id="pushBtn">🔼 GitHubへ保存する</button>
+    </div>
+    <div id="syncStatus" style="margin-top:10px;"></div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script src="github-db.js"></script>
+<script src="user-register-modal.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+  if(!state.userRecDefaults) state.userRecDefaults = {};
+
+  const countBadges = document.getElementById("countBadges");
+  const rosterList = document.getElementById("rosterList");
+  const syncStatus = document.getElementById("syncStatus");
+
+  function recOf(name){ return state.userRecDefaults[name] !== false; }
+
+  function setSyncStatus(msg, type){
+    syncStatus.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>`;
+  }
+
+  function renderAll(){
+    const total = state.roster.length;
+    const rec = state.roster.filter(recOf).length;
+    countBadges.innerHTML = `
+      <span class="count-badge">登録者: ${total}人</span>
+      <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
+      <span class="count-badge muted2">🚫 撮影不可: ${total-rec}人</span>`;
+
+    rosterList.innerHTML = "";
+    if(!state.roster.length){
+      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
+      return;
+    }
+    state.roster.forEach(name=>{
+      const isRec = recOf(name);
+      const row = document.createElement('div');
+      row.className = 'roster-row';
+      row.innerHTML = `
+        <span class="nm">${escapeHtml(name)}</span>
+        <button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>
+        <button class="rm" data-roster-rm="${escapeHtml(name)}" title="完全に削除">✕</button>
+      `;
+      rosterList.appendChild(row);
+    });
+
+    rosterList.querySelectorAll('[data-cam]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const name = el.dataset.cam;
+        state.userRecDefaults[name] = !recOf(name);
+        AtsuCup.persist();
+        renderAll();
+      });
+    });
+    rosterList.querySelectorAll('[data-roster-rm]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const name = el.dataset.rosterRm;
+        if(!confirm(`「${name}」を登録者一覧から完全に削除しますか？`)) return;
+        state.roster = state.roster.filter(n=>n!==name);
+        state.people = state.people.filter(p=>p.name!==name);
+        delete state.userRecDefaults[name];
+        AtsuCup.persist();
+        renderAll();
+      });
+    });
+  }
+
+  document.getElementById("openRegisterBtn").addEventListener("click", ()=>{
+    UserRegisterModal.open({ onRegistered: ()=> renderAll() });
+  });
+
+  const USERS_PATH = "data/users.json";
+
+  document.getElementById("pullBtn").addEventListener("click", async ()=>{
+    if(!GitHubDB.hasToken()){ setSyncStatus("GitHubトークンが未設定です。「設定」画面から登録してください。", "error"); return; }
+    const btn = document.getElementById("pullBtn");
+    btn.disabled = true; btn.textContent = "取り込み中...";
+    try{
+      const { data: users } = await GitHubDB.getFile(USERS_PATH);
+      const before = state.roster.length;
+      let added = 0;
+      users.forEach(u=>{
+        if(!u.name) return;
+        if(!state.roster.includes(u.name)){ state.roster.push(u.name); added++; }
+        state.userRecDefaults[u.name] = u.recDefault !== false;
+      });
+      AtsuCup.persist();
+      renderAll();
+      setSyncStatus(`取り込み完了: ${added}人を追加しました(GitHub上の登録者: ${users.length}人、この端末: ${before}→${state.roster.length}人)`, "ok");
+    }catch(e){
+      setSyncStatus(e.message || String(e), "error");
+    }finally{
+      btn.disabled = false; btn.textContent = "🔽 GitHubから取り込む";
+    }
+  });
+
+  document.getElementById("pushBtn").addEventListener("click", async ()=>{
+    if(!GitHubDB.hasToken()){ setSyncStatus("GitHubトークンが未設定です。「設定」画面から登録してください。", "error"); return; }
+    const btn = document.getElementById("pushBtn");
+    btn.disabled = true; btn.textContent = "保存中...";
+    try{
+      const { data: users, sha } = await GitHubDB.getFile(USERS_PATH);
+      const existingIds = new Set(users.map(u=>u.id));
+      const byName = new Map(users.map(u=>[u.name, u]));
+      let added = 0, updated = 0;
+      state.roster.forEach(name=>{
+        const recDefault = recOf(name);
+        const existing = byName.get(name);
+        if(existing){
+          if(existing.recDefault !== recDefault){ existing.recDefault = recDefault; updated++; }
+        }else{
+          const id = GitHubDB.genId('u', existingIds);
+          existingIds.add(id);
+          const newUser = { id, name, recDefault, createdAt: new Date().toISOString(), note: "" };
+          users.push(newUser);
+          byName.set(name, newUser);
+          added++;
+        }
+      });
+      if(added === 0 && updated === 0){ setSyncStatus("差分なし: GitHub上のデータと一致しています。", "ok"); return; }
+      await GitHubDB.putFile(USERS_PATH, users, `参加者を${added}人追加・${updated}人更新`, sha);
+      setSyncStatus(`保存完了: 新規${added}人・更新${updated}人(GitHub上の登録者: ${users.length}人)`, "ok");
+    }catch(e){
+      setSyncStatus(e.message || String(e), "error");
+    }finally{
+      btn.disabled = false; btn.textContent = "🔼 GitHubへ保存する";
+    }
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

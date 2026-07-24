@@ -208,7 +208,7 @@
     const box = document.getElementById('peopleSummary');
     if(!state.people.length){
       box.innerHTML = `<div class="empty-state"><span class="big">🙋</span>参加者が選ばれていません。</div>
-        <a class="btn btn-primary" style="width:100%;" href="entry.html">参加者登録へ</a>`;
+        <a class="btn btn-primary" style="width:100%;" href="tournament-entry.html">大会エントリーへ</a>`;
       return;
     }
     const rec = state.people.filter(p=>p.rec).length;
@@ -216,7 +216,7 @@
       <span class="count-badge">参加: ${state.people.length}人</span>
       <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
       <span class="count-badge muted2">🚫 撮影不可: ${state.people.length-rec}人</span>
-      <div class="row"><a class="btn btn-ghost" href="entry.html">参加者を編集する</a></div>
+      <div class="row"><a class="btn btn-ghost" href="tournament-entry.html">参加者を編集する</a></div>
     `;
   }
 

@@ -31,10 +31,11 @@
     <h2><span class="num">01</span> このツールでできること</h2>
     <div class="menu-grid">
       <a class="menu-card" href="history.html"><span class="ic">📜</span>過去の大会</a>
-      <a class="menu-card" href="entry.html"><span class="ic">🙋</span>参加者登録</a>
+      <a class="menu-card" href="tournament-entry.html"><span class="ic">🙋</span>大会エントリー</a>
       <a class="menu-card" href="video.html"><span class="ic">🎬</span>対戦動画</a>
       <a class="menu-card" href="hall.html"><span class="ic">👑</span>歴代優勝者</a>
       <a class="menu-card" href="record.html"><span class="ic">📊</span>戦績</a>
+      <a class="menu-card" href="users.html"><span class="ic">🧑‍🤝‍🧑</span>ユーザー管理</a>
       <a class="menu-card" href="settings.html"><span class="ic">⚙️</span>設定</a>
     </div>
   </section>
@@ -125,7 +126,7 @@
         tournamentForm.innerHTML = "";
         if(!editingMeta){
           // 新規作成の直後は、参加者選択→組み合わせ抽選までひと続きで行えるよう誘導する
-          location.href = "entry.html?flow=new";
+          location.href = "tournament-entry.html?flow=new";
           return;
         }
         renderCurrentTournamentBox();

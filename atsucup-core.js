@@ -7,6 +7,7 @@ const AtsuCup = (function(){
   const state = {
     people: [],       // [{name, rec}] 今回の大会に選ばれている参加者
     roster: [],       // [name, ...] この端末に登録済みの参加者マスタ(大会をまたいで再利用)
+    userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値(ユーザー管理画面で編集)
     order: [],
     remaining: [],
     matches: [],       // matches[round][i] = {a,b,winner,loser,video}
@@ -365,6 +366,10 @@ const AtsuCup = (function(){
     if(person) person.name = newName;
     const rIdx = state.roster.indexOf(oldName);
     if(rIdx>=0) state.roster[rIdx] = newName;
+    if(Object.prototype.hasOwnProperty.call(state.userRecDefaults, oldName)){
+      state.userRecDefaults[newName] = state.userRecDefaults[oldName];
+      delete state.userRecDefaults[oldName];
+    }
     persist();
   }
 
