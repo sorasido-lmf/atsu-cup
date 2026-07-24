@@ -1,6 +1,1 @@
-[
-  { "id": "t2026-07_u0001", "tournamentId": "t2026-07", "userId": "u0001", "placement": 1, "wins": 2, "recAtEntry": true },
-  { "id": "t2026-07_u0003", "tournamentId": "t2026-07", "userId": "u0003", "placement": 2, "wins": 1, "recAtEntry": false },
-  { "id": "t2026-07_u0002", "tournamentId": "t2026-07", "userId": "u0002", "placement": 3, "wins": 1, "recAtEntry": true },
-  { "id": "t2026-07_u0004", "tournamentId": "t2026-07", "userId": "u0004", "placement": 4, "wins": 0, "recAtEntry": true }
-]
+[]
