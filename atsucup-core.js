@@ -7,7 +7,8 @@ const AtsuCup = (function(){
   const state = {
     people: [],       // [{name, rec}] 今回の大会に選ばれている参加者
     roster: [],       // [name, ...] この端末に登録済みの参加者マスタ(大会をまたいで再利用)
-    userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値(ユーザー管理画面で編集)
+    userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値(data/users.json の recDefault 列のローカルミラー)
+    archivedUsers: {}, // {name: boolean} アーカイブ済みユーザー(data/users.json の archived 列のローカルミラー。物理削除はせず選出対象から外すだけ)
     order: [],
     remaining: [],
     matches: [],       // matches[round][i] = {a,b,winner,loser,video}
@@ -369,6 +370,10 @@ const AtsuCup = (function(){
     if(Object.prototype.hasOwnProperty.call(state.userRecDefaults, oldName)){
       state.userRecDefaults[newName] = state.userRecDefaults[oldName];
       delete state.userRecDefaults[oldName];
+    }
+    if(Object.prototype.hasOwnProperty.call(state.archivedUsers, oldName)){
+      state.archivedUsers[newName] = state.archivedUsers[oldName];
+      delete state.archivedUsers[oldName];
     }
     persist();
   }

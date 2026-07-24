@@ -10,6 +10,7 @@ GitHubリポジトリで管理する参加者・大会マスタデータ。JSON�
 | id | string | 一意なID。不変。名前変更の影響を受けない |
 | name | string | 現在の表示名 |
 | recDefault | boolean | 撮影可否のデフォルト設定 |
+| archived | boolean | アーカイブ済みかどうか(デフォルトfalse)。trueの場合、新規の大会エントリー選出には出てこないが、過去の対戦記録・戦績データは維持される(物理削除はしない) |
 | createdAt | string (ISO8601) | 登録日 |
 | note | string | メモ欄（任意） |
 

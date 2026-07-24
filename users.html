@@ -19,6 +19,12 @@
     cursor:pointer; padding:3px 6px; line-height:1;
   }
   .roster-row .cam-toggle-inline{ flex-shrink:0; padding:3px 8px; font-size:12px; }
+  .roster-row.confirming{ border-color:#ff7373; background:linear-gradient(180deg,rgba(255,77,77,.14),rgba(255,77,77,.04)); flex-direction:column; align-items:stretch; gap:8px; }
+  .roster-row.confirming .confirm-msg{ font-size:12.5px; color:var(--cream); }
+  .roster-row.confirming .confirm-actions{ display:flex; gap:8px; }
+  .roster-row.confirming .confirm-actions .btn{ flex:1; padding:6px 10px; font-size:12.5px; }
+  .archived-toggle{ background:none; border:none; color:var(--muted); font-size:12.5px; text-decoration:underline; cursor:pointer; padding:6px 0; }
+  .archived-row .nm{ color:var(--muted); text-decoration:line-through; }
 </style>
 </head>
 <body>
@@ -32,17 +38,19 @@
 
   <section class="panel">
     <h2><span class="num">01</span> 登録済みユーザー</h2>
-    <p class="hint">撮影可否(📹/🚫)はユーザーごとのデフォルト設定です。大会エントリー時にその大会限定で上書きできます。✕で完全に削除します。</p>
+    <p class="hint">撮影可否(📹/🚫)はユーザーごとのデフォルト設定です。大会エントリー時にその大会限定で上書きできます。📦でアーカイブすると大会エントリーの選出候補から外れます(過去の記録は残ります。完全削除ではありません)。</p>
     <div id="countBadges"></div>
     <div id="rosterList" class="roster-list" style="margin-top:12px;"></div>
     <div class="row" style="margin-top:16px;">
       <button class="btn btn-primary" id="openRegisterBtn">➕ 新規ユーザー登録</button>
     </div>
+    <button class="archived-toggle" id="archivedToggle" style="margin-top:14px;"></button>
+    <div id="archivedList" class="roster-list" style="margin-top:10px; display:none;"></div>
   </section>
 
   <section class="panel">
     <h2><span class="num">02</span> GitHubと同期</h2>
-    <p class="hint">この端末の登録者一覧と、GitHub上の <code>data/users.json</code> を同期します(削除はまだ同期されません)。</p>
+    <p class="hint">この端末の登録者一覧と、GitHub上の <code>data/users.json</code> を同期します(撮影可否・アーカイブ状態も同期されます)。</p>
     <div class="row">
       <button class="btn btn-ghost" id="pullBtn">🔽 GitHubから取り込む</button>
       <button class="btn btn-ghost" id="pushBtn">🔼 GitHubへ保存する</button>
@@ -64,43 +72,88 @@
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
   if(!state.userRecDefaults) state.userRecDefaults = {};
+  if(!state.archivedUsers) state.archivedUsers = {};
 
   const countBadges = document.getElementById("countBadges");
   const rosterList = document.getElementById("rosterList");
+  const archivedToggle = document.getElementById("archivedToggle");
+  const archivedList = document.getElementById("archivedList");
   const syncStatus = document.getElementById("syncStatus");
 
+  let showArchived = false;
+  let confirmingName = null; // アーカイブ確認中の名前(ネイティブconfirm()は使わずインラインで確認する)
+
   function recOf(name){ return state.userRecDefaults[name] !== false; }
+  function isArchived(name){ return !!state.archivedUsers[name]; }
 
   function setSyncStatus(msg, type){
     syncStatus.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>`;
   }
 
-  function renderAll(){
-    const total = state.roster.length;
-    const rec = state.roster.filter(recOf).length;
-    countBadges.innerHTML = `
-      <span class="count-badge">登録者: ${total}人</span>
-      <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
-      <span class="count-badge muted2">🚫 撮影不可: ${total-rec}人</span>`;
-
-    rosterList.innerHTML = "";
-    if(!state.roster.length){
-      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
-      return;
+  function makeRow(name, { archived }){
+    const row = document.createElement('div');
+    if(confirmingName === name){
+      row.className = 'roster-row confirming';
+      row.innerHTML = `
+        <span class="nm">${escapeHtml(name)}</span>
+        <div class="confirm-msg">「${escapeHtml(name)}」をアーカイブしますか？大会エントリーの選出候補から外れます(過去の記録は消えません)。</div>
+        <div class="confirm-actions">
+          <button class="btn btn-primary" data-confirm-archive="${escapeHtml(name)}">📦 アーカイブする</button>
+          <button class="btn btn-ghost" data-cancel-archive="${escapeHtml(name)}">キャンセル</button>
+        </div>
+      `;
+      return row;
     }
-    state.roster.forEach(name=>{
+    row.className = 'roster-row' + (archived ? ' archived-row' : '');
+    if(archived){
+      row.innerHTML = `
+        <span class="nm">${escapeHtml(name)}</span>
+        <button class="rm" data-restore="${escapeHtml(name)}" title="復元">♻️ 復元</button>
+      `;
+    }else{
       const isRec = recOf(name);
-      const row = document.createElement('div');
-      row.className = 'roster-row';
       row.innerHTML = `
         <span class="nm">${escapeHtml(name)}</span>
         <button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>
-        <button class="rm" data-roster-rm="${escapeHtml(name)}" title="完全に削除">✕</button>
+        <button class="rm" data-archive="${escapeHtml(name)}" title="アーカイブ">📦</button>
       `;
-      rosterList.appendChild(row);
-    });
+    }
+    return row;
+  }
 
-    rosterList.querySelectorAll('[data-cam]').forEach(el=>{
+  function renderAll(){
+    const activeNames = state.roster.filter(n=>!isArchived(n));
+    const archivedNames = state.roster.filter(isArchived);
+
+    const rec = activeNames.filter(recOf).length;
+    countBadges.innerHTML = `
+      <span class="count-badge">登録者: ${activeNames.length}人</span>
+      <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
+      <span class="count-badge muted2">🚫 撮影不可: ${activeNames.length-rec}人</span>`;
+
+    rosterList.innerHTML = "";
+    if(!activeNames.length){
+      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
+    }else{
+      activeNames.forEach(name=> rosterList.appendChild(makeRow(name, { archived:false })));
+    }
+
+    archivedToggle.textContent = showArchived
+      ? `▲ アーカイブ済みを隠す(${archivedNames.length}人)`
+      : `▼ アーカイブ済みを表示(${archivedNames.length}人)`;
+    archivedList.style.display = showArchived ? 'flex' : 'none';
+    archivedList.style.flexDirection = 'column';
+    archivedList.style.gap = '8px';
+    archivedList.innerHTML = "";
+    if(showArchived){
+      if(!archivedNames.length){
+        archivedList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">アーカイブ済みのユーザーはいません。</div>`;
+      }else{
+        archivedNames.forEach(name=> archivedList.appendChild(makeRow(name, { archived:true })));
+      }
+    }
+
+    document.querySelectorAll('[data-cam]').forEach(el=>{
       el.addEventListener('click', ()=>{
         const name = el.dataset.cam;
         state.userRecDefaults[name] = !recOf(name);
@@ -108,18 +161,41 @@
         renderAll();
       });
     });
-    rosterList.querySelectorAll('[data-roster-rm]').forEach(el=>{
+    document.querySelectorAll('[data-archive]').forEach(el=>{
       el.addEventListener('click', ()=>{
-        const name = el.dataset.rosterRm;
-        if(!confirm(`「${name}」を登録者一覧から完全に削除しますか？`)) return;
-        state.roster = state.roster.filter(n=>n!==name);
-        state.people = state.people.filter(p=>p.name!==name);
-        delete state.userRecDefaults[name];
+        confirmingName = el.dataset.archive;
+        renderAll();
+      });
+    });
+    document.querySelectorAll('[data-cancel-archive]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        confirmingName = null;
+        renderAll();
+      });
+    });
+    document.querySelectorAll('[data-confirm-archive]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const name = el.dataset.confirmArchive;
+        state.archivedUsers[name] = true;
+        confirmingName = null;
+        AtsuCup.persist();
+        renderAll();
+      });
+    });
+    document.querySelectorAll('[data-restore]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const name = el.dataset.restore;
+        state.archivedUsers[name] = false;
         AtsuCup.persist();
         renderAll();
       });
     });
   }
+
+  archivedToggle.addEventListener('click', ()=>{
+    showArchived = !showArchived;
+    renderAll();
+  });
 
   document.getElementById("openRegisterBtn").addEventListener("click", ()=>{
     UserRegisterModal.open({ onRegistered: ()=> renderAll() });
@@ -139,6 +215,7 @@
         if(!u.name) return;
         if(!state.roster.includes(u.name)){ state.roster.push(u.name); added++; }
         state.userRecDefaults[u.name] = u.recDefault !== false;
+        state.archivedUsers[u.name] = !!u.archived;
       });
       AtsuCup.persist();
       renderAll();
@@ -161,13 +238,18 @@
       let added = 0, updated = 0;
       state.roster.forEach(name=>{
         const recDefault = recOf(name);
+        const archived = isArchived(name);
         const existing = byName.get(name);
         if(existing){
-          if(existing.recDefault !== recDefault){ existing.recDefault = recDefault; updated++; }
+          if(existing.recDefault !== recDefault || !!existing.archived !== archived){
+            existing.recDefault = recDefault;
+            existing.archived = archived;
+            updated++;
+          }
         }else{
           const id = GitHubDB.genId('u', existingIds);
           existingIds.add(id);
-          const newUser = { id, name, recDefault, createdAt: new Date().toISOString(), note: "" };
+          const newUser = { id, name, recDefault, archived, createdAt: new Date().toISOString(), note: "" };
           users.push(newUser);
           byName.set(name, newUser);
           added++;
