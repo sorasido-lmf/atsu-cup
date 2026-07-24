@@ -198,113 +198,94 @@ const AtsuCup = (function(){
     persist();
   }
 
-  // ラウンド0(1回戦)の元々の参加者だけから、各ラウンド・各カードが「そのブロックには撮影不可の人が
-  // 誰1人としていない(=誰が勝ち上がってきても絶対に両者撮影OK確定)」かどうかを、実際の勝敗によらず
-  // 静的に判定する。levels[r][k]===trueなら、そのカードは入れ替え(撮影不可回避)の対象に将来も
-  // 絶対にならないため、両方の勝者が決まり次第すぐに確定してよい。
-  function computeNGFreeLevels(recMap){
-    const round0 = state.matches[0];
-    if(!round0 || !round0.length) return [];
-    let level = round0.map(m=>{
-      const aOK = !m.a || !!recMap[m.a];
-      const bOK = !m.b || !!recMap[m.b]; // シード(不戦勝)側は常にOK扱い
-      return aOK && bOK;
-    });
-    const levels = [level];
-    while(level.length > 1){
-      const next = [];
-      for(let i=0;i<level.length;i+=2){ next.push(!!(level[i] && level[i+1])); }
-      levels.push(next);
-      level = next;
+  // 次ラウンドの各スロットには、その勝者の出所(前ラウンドのカードindex)を aSrc/bSrc として記録する。
+  // これにより、未決着のまま先のラウンドへ進んだ場合でも、後から前ラウンドを決着させた勝者を、
+  // 正しい空きスロットへ入れられる(位置・相手・入れ替え結果は「進む」を押した時点で固定される)。
+  function slotSourcedBy(r1, srcIdx){
+    const round = state.matches[r1];
+    if(!round) return null;
+    for(let k=0;k<round.length;k++){
+      if(round[k].aSrc === srcIdx) return {k, side:'a'};
+      if(round[k].bSrc === srcIdx) return {k, side:'b'};
     }
-    return levels;
+    return null;
   }
 
-  // 同じラウンドの中で、これより後の結果に一切影響されない(=入れ替えの対象に絶対ならない)場合は、
-  // ラウンド全体の決着を待たずにその場で次のラウンドのカードを確定させる。
-  // 「片方だけ撮影不可」の組み合わせや、その系統に撮影不可の人が誰もいないブロックは、撮影不可同士の
-  // 入れ替え判定の対象に絶対ならないため、いつ確定させても結果は変わらない。
-  function propagateByes(){
-    let changed = true;
-    while(changed){
-      changed = false;
-      const recMap = recMapOf();
-      const ngFreeLevels = computeNGFreeLevels(recMap);
-      for(let r=0; r<state.matches.length; r++){
-        const round = state.matches[r];
-        if(round.length === 1){
-          if(round[0].winner){ state.winnerName = round[0].winner; }
-          continue;
-        }
-        if(round.length < 2) continue;
-        const matchCount = round.length / 2;
+  // 勝者が決まったカードmの勝者を、次ラウンドの対応スロットへ入れる(未決着で先に進んでいた場合の後追い反映)
+  function propagateWinnerDownstream(r, m, name){
+    const loc = slotSourcedBy(r+1, m);
+    if(!loc) return;
+    state.matches[r+1][loc.k][loc.side] = name;
+  }
 
-        if(!state.matches[r+1]){
-          state.matches[r+1] = Array.from({length: matchCount}, () => ({a:null, b:null, winner:null, loser:null, video:""}));
-        }
-        const nextRound = state.matches[r+1];
-        if(nextRound.length !== matchCount) continue; // 想定外の形は触らない(安全策)
-        const nextLevel = ngFreeLevels[r+1];
+  // 選び直し時: カードmの旧勝者が入っていた下流スロットを空に戻し、そのカードの勝敗も無効化して連鎖的に掃除する
+  function clearDownstreamFrom(r, m){
+    const loc = slotSourcedBy(r+1, m);
+    if(!loc) return;
+    const card = state.matches[r+1][loc.k];
+    card[loc.side] = null;
+    if(card.winner){
+      card.winner = null; card.loser = null;
+      clearDownstreamFrom(r+1, loc.k);
+    }
+    // 準決勝(2試合)より先を触った場合は、3位決定戦・優勝も作り直しになるためクリアしておく
+    if(state.matches[r].length === 2){ state.thirdPlaceMatch = null; }
+    if(state.matches[r+1] && state.matches[r+1].length === 1){ state.winnerName = ""; }
+  }
 
-        // 隣り合う2試合の勝者が両方決まった時点で、まだ確定していないカードだけを埋める。
-        // 両者とも撮影OK、または両者とも撮影不可の場合だけは、入れ替えの候補になり得るため、
-        // ラウンド全体の決着がつくまで保留する(pendingIdxに集める)。
-        const pendingIdx = [];
-        for(let k=0;k<matchCount;k++){
-          if(nextRound[k].a !== null) continue; // 既に確定済み
-          const m0 = round[2*k], m1 = round[2*k+1];
-          if(!m0.winner || !m1.winner) continue; // まだ両方決まっていない
-          const a = m0.winner, b = m1.winner;
-          const guaranteedSafe = (nextLevel && nextLevel[k]) || (!!recMap[a] !== !!recMap[b]);
-          if(guaranteedSafe){
-            // その系統に撮影不可の人がそもそもいない、または片方だけ撮影OK
-            // → 入れ替えの対象に絶対ならないので即確定
-            nextRound[k] = {a, b, winner:null, loser:null, video:""};
-            changed = true;
-          }else{
-            pendingIdx.push(k);
-          }
-        }
+  // 準決勝(2試合)の両敗者が決まっていれば3位決定戦を作る(未生成なら)
+  function maybeCreateThirdPlace(r){
+    const round = state.matches[r];
+    if(round && round.length === 2 && round[0].loser && round[1].loser && !state.thirdPlaceMatch){
+      state.thirdPlaceMatch = { a:round[0].loser, b:round[1].loser, winner:null };
+    }
+  }
 
-        // 保留中のカードが残っていても、ラウンド全体の決着がついていれば、これまで通り
-        // 一番近い組同士で入れ替える処理をまとめて行い、確定させる。
-        const allDecided = round.every(m => m.winner);
-        if(allDecided && pendingIdx.length){
-          const pairs = pendingIdx.map(k => [round[2*k].winner, round[2*k+1].winner]);
-          for(let ii=0; ii<pairs.length; ii++){
-            const [a,b] = pairs[ii];
-            if(recMap[a] || recMap[b]) continue;
-            let bestJJ = -1, bestDist = Infinity;
-            for(let jj=0; jj<pairs.length; jj++){
-              if(jj===ii) continue;
-              const [c,d] = pairs[jj];
-              if(recMap[c] && recMap[d]){
-                const dist = Math.abs(pendingIdx[jj]-pendingIdx[ii]);
-                if(dist < bestDist){ bestDist = dist; bestJJ = jj; }
-              }
-            }
-            if(bestJJ>=0){
-              const [c,d] = pairs[bestJJ];
-              pairs[ii] = [a, c];
-              pairs[bestJJ] = [b, d];
-            }
-          }
-          pendingIdx.forEach((k, idx)=>{
-            const [a,b] = pairs[idx];
-            nextRound[k] = {a, b, winner:null, loser:null, video:""};
-          });
-          changed = true;
-        }
+  // ラウンドrの勝者から次のラウンド(r+1)の組み合わせを生成する。「次のラウンドへ進む」で明示的に呼ぶ。
+  // 撮影不可同士になる組を、決着済みの勝者だけを使って撮影可同士の組と入れ替える。
+  // 不可同士が無ければ入れ替えは起きない(順序を保つ)。未決着カードの勝者スロットはnull(後から後追い反映)。
+  function advanceRound(r){
+    const round = state.matches[r];
+    if(!round || round.length < 2) return false;
+    const matchCount = round.length / 2;
+    const recMap = recMapOf();
 
-        // 準決勝(2試合)の両者の勝敗が決まった時点で、両者の敗者による3位決定戦を自動生成
-        if(round.length === 2 && !state.thirdPlaceMatch){
-          const [m0, m1] = round;
-          if(m0.loser && m1.loser){
-            state.thirdPlaceMatch = { a:m0.loser, b:m1.loser, winner:null };
-          }
+    // naive: 次カードk = [前カード2kの勝者, 前カード2k+1の勝者]。srcで対応を固定する
+    const slots = [];
+    for(let k=0;k<matchCount;k++){
+      slots.push({ a: round[2*k].winner || null, aSrc: 2*k, b: round[2*k+1].winner || null, bSrc: 2*k+1 });
+    }
+
+    // 撮影不可回避: 両方決着済みで撮影不可同士のカードを、両方決着済みで撮影可同士のカードと入れ替える。
+    // 片側スロット(名前とsrcをセット)を交換して対応関係を保つ(既存の入れ替え方と同じ考え方)。
+    const decided = [];
+    for(let k=0;k<matchCount;k++){ if(slots[k].a && slots[k].b) decided.push(k); }
+    for(const ii of decided){
+      const a = slots[ii].a, b = slots[ii].b;
+      if(recMap[a] || recMap[b]) continue; // 不可同士でなければそのまま
+      let bestJJ = -1, bestDist = Infinity;
+      for(const jj of decided){
+        if(jj === ii) continue;
+        if(recMap[slots[jj].a] && recMap[slots[jj].b]){
+          const dist = Math.abs(jj - ii);
+          if(dist < bestDist){ bestDist = dist; bestJJ = jj; }
         }
       }
+      if(bestJJ >= 0){
+        const nB = slots[ii].b, nBSrc = slots[ii].bSrc;
+        slots[ii].b = slots[bestJJ].a; slots[ii].bSrc = slots[bestJJ].aSrc;
+        slots[bestJJ].a = nB; slots[bestJJ].aSrc = nBSrc;
+      }
     }
+
+    // r+1以降を作り直す(「進む」の再実行にも対応)
+    state.matches = state.matches.slice(0, r+1);
+    state.matches[r+1] = slots.map(s=>({ a:s.a, b:s.b, aSrc:s.aSrc, bSrc:s.bSrc, winner:null, loser:null, video:"" }));
+    state.thirdPlaceMatch = null;
+    state.winnerName = "";
+    maybeCreateThirdPlace(r);
+    persist();
+    return true;
   }
 
   // r回戦より先に、実際の対戦カードや結果が1つでも存在するかどうか
@@ -321,23 +302,23 @@ const AtsuCup = (function(){
     const match = state.matches[r][m];
     const val = side === 'a' ? match.a : match.b;
     if(!val) return;
-    // 1回戦を残したまま2回戦以降を先に消化できるようにするため、次のラウンドは
-    // ラウンド全体の決着を待たずに組み上がることがある。そのため、ここで無効にすべきなのは
-    // 「既に決まっていた勝敗を選び直した」場合だけであり、初めて決める場合は他の(無関係な)
-    // 先のラウンドの結果まで巻き込んで消してしまわないようにする。
     const isRepick = !!match.winner && match.winner !== val;
     const loser = side === 'a' ? match.b : match.a;
     match.winner = val;
     match.loser = loser || null;
-    if(isRepick){
-      state.matches = state.matches.slice(0, r+1);
-      state.thirdPlaceMatch = null;
-      state.winnerName = "";
-    }
+
+    // 決勝(1試合)の勝者は優勝者
     if(state.matches[r].length === 1){
-      if(match.winner){ state.winnerName = match.winner; }
+      state.winnerName = match.winner;
+      persist();
+      return;
     }
-    propagateByes();
+    // 選び直しの場合は、旧勝者が入っていた下流スロットを掃除してから新勝者を反映する
+    if(isRepick){ clearDownstreamFrom(r, m); }
+    // 次のラウンドが既に生成済みなら、この勝者を対応スロットへ後追い反映する
+    if(state.matches[r+1]){ propagateWinnerDownstream(r, m, val); }
+    // 準決勝の両敗者が揃ったら3位決定戦を作る
+    maybeCreateThirdPlace(r);
     persist();
   }
 
@@ -384,7 +365,7 @@ const AtsuCup = (function(){
   }
 
   // 大会途中で参加者が増えた場合、空いているBYE(不戦勝)枠に新しい参加者を入れて実際の対戦に変える。
-  // それより先のラウンドは(再選択時と同じく)いったん無効になり、決着がつき次第また自動で組み直される。
+  // それより先のラウンドはいったん破棄され、「次のラウンドへ進む」で組み直す。
   function addChallengerToBye(r, m, name){
     const match = state.matches[r] && state.matches[r][m];
     if(!match || match.b !== null) return;
@@ -398,7 +379,6 @@ const AtsuCup = (function(){
     state.matches = state.matches.slice(0, r+1);
     state.thirdPlaceMatch = null;
     state.winnerName = "";
-    propagateByes();
     persist();
   }
 
@@ -684,7 +664,7 @@ const AtsuCup = (function(){
   return {
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildRound1Manual, resetDownstream,
-    propagateByes, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, isRevealed, forcedPairsList, hasDownstreamProgress,
+    advanceRound, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, isRevealed, forcedPairsList, hasDownstreamProgress,
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, archiveCurrentTournament, endCurrentTournament, newTournamentId,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable, videoTournamentList
