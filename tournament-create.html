@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 大会を作成</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .confirm-banner{
+    background:linear-gradient(180deg,rgba(255,77,77,.14),rgba(255,77,77,.04)); border:1px solid #ff7373;
+    border-radius:14px; padding:14px; font-size:13px; color:var(--cream); line-height:1.8;
+  }
+  .confirm-banner .row{ margin-top:10px; }
+</style>
+</head>
+<body>
+<a class="back-link" href="index.html">‹ トップへ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">➕</div>
+    <h1>大会を作成</h1>
+    <div class="sub">NEW TOURNAMENT</div>
+  </header>
+
+  <section class="panel">
+    <div id="confirmBox"></div>
+    <div id="formBox"></div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+
+  const confirmBox = document.getElementById("confirmBox");
+  const formBox = document.getElementById("formBox");
+
+  function renderForm(){
+    formBox.innerHTML = `
+      <div class="video-card">
+        <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" placeholder="例: 第30回 あつ杯"></div>
+        <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;"></textarea></div>
+        <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
+        <div class="row">
+          <button class="btn btn-primary" id="tfSave">この内容で作成する</button>
+        </div>
+      </div>
+    `;
+    document.getElementById("tfSave").addEventListener("click", async ()=>{
+      const title = document.getElementById("tfTitle").value.trim();
+      const details = document.getElementById("tfDetails").value.trim();
+      const fileInput = document.getElementById("tfPoster");
+      if(!title){ alert("大会名を入力してください。"); return; }
+      const saveBtn = document.getElementById("tfSave");
+      saveBtn.disabled = true; saveBtn.textContent = "保存中...";
+      try{
+        let posterUrl = null;
+        if(fileInput.files && fileInput.files[0]){
+          posterUrl = await AtsuCup.resizeImageToDataUrl(fileInput.files[0], 900, 0.75);
+        }
+        if(state.tournamentMeta && state.tournamentMeta.title){
+          AtsuCup.endCurrentTournament();
+        }
+        const id = AtsuCup.newTournamentId();
+        state.tournamentMeta = { id, title, details, posterUrl };
+        AtsuCup.persist();
+        location.href = `tournament-detail.html?id=${encodeURIComponent(id)}`;
+      }catch(e){
+        alert("保存に失敗しました: " + (e.message||e));
+        saveBtn.disabled = false; saveBtn.textContent = "この内容で作成する";
+      }
+    });
+  }
+
+  if(state.tournamentMeta && state.tournamentMeta.title){
+    confirmBox.innerHTML = `
+      <div class="confirm-banner">
+        現在開催中の「${escapeHtml(state.tournamentMeta.title)}」は、新しい大会を作成すると自動的に「大会一覧」に保存されます。新しい大会を作成しますか？
+        <div class="row">
+          <button class="btn btn-primary" id="confirmNewBtn">作成する</button>
+          <a class="btn btn-ghost" href="index.html">キャンセル</a>
+        </div>
+      </div>
+    `;
+    document.getElementById("confirmNewBtn").addEventListener("click", ()=>{
+      confirmBox.innerHTML = "";
+      renderForm();
+    });
+  }else{
+    renderForm();
+  }
+})();
+</script>
+</body>
+</html>

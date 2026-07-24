@@ -14,7 +14,7 @@ const AtsuCup = (function(){
     matches: [],       // matches[round][i] = {a,b,winner,loser,video}
     winnerName: "",
     thirdPlaceMatch: null, // {a,b,winner} 準決勝(2試合)完了時に敗者同士で自動生成
-    tournamentMeta: { title: "", details: "", posterUrl: null }, // 開催中の大会の情報(この端末だけに保存)
+    tournamentMeta: { id: null, title: "", details: "", posterUrl: null }, // 開催中の大会の情報(この端末だけに保存)
     history: [] // 過去に「終了する」で確定させた大会の記録(戦績集計に使う)
   };
 
@@ -51,6 +51,11 @@ const AtsuCup = (function(){
     // ここで登録者一覧に反映しておく(「選ばれているのに登録者一覧に出ない」不整合の解消)
     const rosterSet = new Set(state.roster);
     state.people.forEach(p=>{ if(!rosterSet.has(p.name)){ state.roster.push(p.name); rosterSet.add(p.name); } });
+    // idフィールド導入より前に保存された「開催中の大会」にはidが無いため、ここで発行しておく
+    // (tournament-detail.html等がidで大会を特定できるようにするため)
+    if(state.tournamentMeta && state.tournamentMeta.title && !state.tournamentMeta.id){
+      state.tournamentMeta.id = newTournamentId();
+    }
   }
 
   function escapeHtml(s){
@@ -508,10 +513,13 @@ const AtsuCup = (function(){
   }
 
   /* ---------- 大会のライフサイクル ---------- */
+  function newTournamentId(){ return 't'+Date.now()+Math.random().toString(36).slice(2,8); }
+
   // 今の大会(未終了でも)を「過去の大会」として記録に残す
+  // 進行中だった大会と同じidを引き継ぐことで、tournament-detail.htmlの?id=が終了後も同じ大会を指し続けられるようにする
   function archiveCurrentTournament(){
     state.history.push({
-      id: 'h'+Date.now()+Math.random().toString(36).slice(2,8),
+      id: state.tournamentMeta.id || newTournamentId(),
       title: state.tournamentMeta.title,
       details: state.tournamentMeta.details,
       posterUrl: state.tournamentMeta.posterUrl,
@@ -677,7 +685,7 @@ const AtsuCup = (function(){
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildRound1Manual, resetDownstream,
     propagateByes, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, isRevealed, forcedPairsList, hasDownstreamProgress,
-    computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, archiveCurrentTournament, endCurrentTournament,
+    computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, archiveCurrentTournament, endCurrentTournament, newTournamentId,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable, videoTournamentList
   };
