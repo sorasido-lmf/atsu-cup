@@ -61,6 +61,16 @@
     <div id="availableList"></div>
   </section>
 
+  <section class="panel">
+    <h2><span class="num">04</span> GitHubと同期</h2>
+    <p class="hint">この端末の登録者一覧と、GitHub上の <code>data/users.json</code> を同期します(名前の追加のみ。削除はまだ同期されません)。</p>
+    <div class="row">
+      <button class="btn btn-ghost" id="pullBtn">🔽 GitHubから取り込む</button>
+      <button class="btn btn-ghost" id="pushBtn">🔼 GitHubへ保存する</button>
+    </div>
+    <div id="syncStatus" style="margin-top:10px;"></div>
+  </section>
+
   <div class="next-flow-box" id="nextFlowBox" style="display:none;">
     <a class="btn btn-gold" style="width:100%;" href="matchup.html">次へ: 組み合わせを決める →</a>
   </div>
@@ -70,6 +80,7 @@
 
 <script src="tap-ripple.js"></script>
 <script src="atsucup-core.js"></script>
+<script src="github-db.js"></script>
 <script>
 (function(){
   "use strict";
@@ -82,6 +93,62 @@
   const selectedList = document.getElementById("selectedList");
   const availableList = document.getElementById("availableList");
   const nextFlowBox = document.getElementById("nextFlowBox");
+  const syncStatus = document.getElementById("syncStatus");
+
+  function setSyncStatus(msg, type){
+    syncStatus.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>`;
+  }
+
+  const USERS_PATH = "data/users.json";
+
+  document.getElementById("pullBtn").addEventListener("click", async ()=>{
+    if(!GitHubDB.hasToken()){ setSyncStatus("GitHubトークンが未設定です。「設定」画面から登録してください。", "error"); return; }
+    const btn = document.getElementById("pullBtn");
+    btn.disabled = true; btn.textContent = "取り込み中...";
+    try{
+      const { data: users } = await GitHubDB.getFile(USERS_PATH);
+      const before = state.roster.length;
+      const newNames = users.map(u=>u.name).filter(n=>n && !state.roster.includes(n));
+      state.roster = [...state.roster, ...newNames];
+      AtsuCup.persist();
+      renderAll();
+      setSyncStatus(`取り込み完了: ${newNames.length}人を追加しました(GitHub上の登録者: ${users.length}人、この端末: ${before}→${state.roster.length}人)`, "ok");
+    }catch(e){
+      setSyncStatus(e.message || String(e), "error");
+    }finally{
+      btn.disabled = false; btn.textContent = "🔽 GitHubから取り込む";
+    }
+  });
+
+  document.getElementById("pushBtn").addEventListener("click", async ()=>{
+    if(!GitHubDB.hasToken()){ setSyncStatus("GitHubトークンが未設定です。「設定」画面から登録してください。", "error"); return; }
+    const btn = document.getElementById("pushBtn");
+    btn.disabled = true; btn.textContent = "保存中...";
+    try{
+      const { data: users, sha } = await GitHubDB.getFile(USERS_PATH);
+      const existingIds = new Set(users.map(u=>u.id));
+      const byName = new Map(users.map(u=>[u.name, u]));
+      let added = 0;
+      state.roster.forEach(name=>{
+        if(!byName.has(name)){
+          const id = GitHubDB.genId('u', existingIds);
+          existingIds.add(id);
+          const rec = state.people.find(p=>p.name===name);
+          const newUser = { id, name, recDefault: rec ? !!rec.rec : true, createdAt: new Date().toISOString(), note: "" };
+          users.push(newUser);
+          byName.set(name, newUser);
+          added++;
+        }
+      });
+      if(added === 0){ setSyncStatus("差分なし: 全員すでにGitHub上に登録済みです。", "ok"); return; }
+      await GitHubDB.putFile(USERS_PATH, users, `参加者を${added}人追加`, sha);
+      setSyncStatus(`保存完了: ${added}人を新規追加しました(GitHub上の登録者: ${users.length}人)`, "ok");
+    }catch(e){
+      setSyncStatus(e.message || String(e), "error");
+    }finally{
+      btn.disabled = false; btn.textContent = "🔼 GitHubへ保存する";
+    }
+  });
 
   if(new URLSearchParams(location.search).get('flow') === 'new'){
     document.getElementById('flowBanner').innerHTML = `<div class="flow-banner">✅ 大会を作成しました。続けてこの大会に参加する人を選んでください。選び終わったら下の「次へ」から組み合わせを決められます。</div>`;

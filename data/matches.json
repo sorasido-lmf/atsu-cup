@@ -1,0 +1,6 @@
+[
+  { "id": "t2026-07_r1_m0", "tournamentId": "t2026-07", "round": 1, "stage": "normal", "matchIndex": 0, "player1Id": "u0001", "player2Id": "u0002", "winnerId": "u0001", "isBye": false, "videoUrl": "", "playedAt": "2026-07-24T10:00:00+09:00" },
+  { "id": "t2026-07_r1_m1", "tournamentId": "t2026-07", "round": 1, "stage": "normal", "matchIndex": 1, "player1Id": "u0003", "player2Id": "u0004", "winnerId": "u0003", "isBye": false, "videoUrl": "", "playedAt": "2026-07-24T10:10:00+09:00" },
+  { "id": "t2026-07_r2_m0", "tournamentId": "t2026-07", "round": 2, "stage": "normal", "matchIndex": 0, "player1Id": "u0001", "player2Id": "u0003", "winnerId": "u0001", "isBye": false, "videoUrl": "", "playedAt": "2026-07-24T10:30:00+09:00" },
+  { "id": "t2026-07_r2_m1", "tournamentId": "t2026-07", "round": 2, "stage": "thirdPlace", "matchIndex": 0, "player1Id": "u0002", "player2Id": "u0004", "winnerId": "u0002", "isBye": false, "videoUrl": "", "playedAt": "2026-07-24T10:40:00+09:00" }
+]

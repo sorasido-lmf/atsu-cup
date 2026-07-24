@@ -34,7 +34,7 @@ const AtsuCup = (function(){
         console.error('[atsucup] persist failed completely:', e2);
         if(!persistFailWarned){
           persistFailWarned = true;
-          alert('この端末への保存に失敗しました(空き容量不足の可能性があります)。直前の操作が保存されていない場合があるので、画面を切り替える前に一度リロードして反映されているか確認してください。');
+          alert('この端末への保存に失敗しました(空き容量不足、またはプライベートブラウジング等でこの端末への保存が無効になっている可能性があります)。直前の操作が保存されていない場合があるので、画面を切り替える前に一度リロードして反映されているか確認してください。');
         }
       }
     }
@@ -655,6 +655,12 @@ const AtsuCup = (function(){
   if(typeof document !== 'undefined'){
     if(document.body) initUpdateBanner();
     else document.addEventListener('DOMContentLoaded', initUpdateBanner);
+  }
+
+  // 保険: 各画面がpersist()を呼び忘れているケースがあっても、画面を離れる瞬間に必ず保存する
+  if(typeof window !== 'undefined'){
+    window.addEventListener('pagehide', persist);
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') persist(); });
   }
 
   return {
