@@ -37,19 +37,19 @@
   </header>
 
   <section class="panel">
-    <h2><span class="num">01</span> 登録済みユーザー</h2>
-    <p class="hint">撮影可否(📹/🚫)はユーザーごとのデフォルト設定です。大会エントリー時にその大会限定で上書きできます。📦でアーカイブすると大会エントリーの選出候補から外れます(過去の記録は残ります。完全削除ではありません)。</p>
-    <div id="countBadges"></div>
-    <div id="rosterList" class="roster-list" style="margin-top:12px;"></div>
-    <div class="row" style="margin-top:16px;">
+    <h2>登録済みユーザー</h2>
+    <p class="hint">撮影可否(📹/🚫)はユーザーごとのデフォルト設定です。大会エントリー時にその大会限定で上書きできます。</p>
+    <div class="row">
       <button class="btn btn-primary" id="openRegisterBtn">➕ 新規ユーザー登録</button>
     </div>
+    <div id="countBadges" style="margin-top:16px;"></div>
+    <div id="rosterList" class="roster-list" style="margin-top:12px;"></div>
     <button class="archived-toggle" id="archivedToggle" style="margin-top:14px;"></button>
     <div id="archivedList" class="roster-list" style="margin-top:10px; display:none;"></div>
   </section>
 
   <section class="panel">
-    <h2><span class="num">02</span> GitHubと同期</h2>
+    <h2>GitHubと同期</h2>
     <p class="hint">この端末の登録者一覧と、GitHub上の <code>data/users.json</code> を同期します(撮影可否・アーカイブ状態も同期されます)。</p>
     <div class="row">
       <button class="btn btn-ghost" id="pullBtn">🔽 GitHubから取り込む</button>
