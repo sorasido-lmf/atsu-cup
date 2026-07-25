@@ -396,6 +396,16 @@ const AtsuCup = (function(){
     persist();
   }
 
+  // 決着済みカードの勝敗を取り消す(下流に伝播済みなら一緒に掃除する)
+  function resetMatchResult(r, m){
+    const match = state.matches[r][m];
+    if(!match || !match.winner) return;
+    if(state.matches[r].length === 1){ state.winnerName = ""; }
+    else { clearDownstreamFrom(r, m); }
+    match.winner = null; match.loser = null;
+    persist();
+  }
+
   function pickThirdPlaceWinner(side){
     const m = state.thirdPlaceMatch;
     if(!m) return;
@@ -703,7 +713,8 @@ const AtsuCup = (function(){
   return {
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
-    advanceRound, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
+    advanceRound, pickWinner, resetMatchResult, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
+    propagateWinnerDownstream,
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
     setActive, activeT,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,

@@ -161,17 +161,23 @@
   }
 
   /* ================= 組み合わせ決定(matchup) ================= */
+  let matchupMode = 'view'; // 'view'|'confirmReset'
   function renderMatchup(){
     const hasPeople = state.people.length>0;
+    const confirmHtml = matchupMode==='confirmReset' ? `
+      <div class="advance-warn">組み合わせをリセットしていいですか？(入力済みの勝敗もすべて消えます)
+        <div class="row"><button class="btn btn-primary" id="confirmResetBtn">リセットする</button><button class="btn btn-ghost" id="cancelResetBtn">キャンセル</button></div>
+      </div>` : '';
     matchupSection.innerHTML = `
       <h2>組み合わせを決める</h2>
       <div id="peopleSummary"></div>
       ${hasPeople ? `
-        <p class="hint" style="margin-top:14px;">下のトーナメント表の空いている枠をタップすると、エントリー者から相手を選べます。まとめて決めたい場合は自動抽選も使えます。</p>
+        <p class="hint" style="margin-top:14px;">下のトーナメント表の空いている枠をタップすると、エントリー者から相手を選べます。まとめて決めたい場合は自動抽選も使えます。ドラッグ&ドロップで枠の移動・入れ替え・取り消しもできます。</p>
         <div class="row">
           <button class="btn btn-primary" id="instantAutoBtn">⚡ ワンタップで自動抽選</button>
-          <button class="btn btn-ghost" id="resetOrderBtn">🔄 引き直す</button>
+          <button class="btn btn-ghost" id="resetOrderBtn">🔄 リセット</button>
         </div>
+        ${confirmHtml}
       ` : ''}`;
 
     if(hasPeople){
@@ -182,7 +188,11 @@
         AtsuCup.persist();
         render();
       });
-      document.getElementById('resetOrderBtn').addEventListener('click', ()=>{ AtsuCup.resetDownstream(); render(); });
+      document.getElementById('resetOrderBtn').addEventListener('click', ()=>{ matchupMode='confirmReset'; renderMatchup(); });
+      if(matchupMode==='confirmReset'){
+        document.getElementById('cancelResetBtn').addEventListener('click', ()=>{ matchupMode='view'; renderMatchup(); });
+        document.getElementById('confirmResetBtn').addEventListener('click', ()=>{ matchupMode='view'; AtsuCup.resetDownstream(); render(); });
+      }
     }
     renderPeopleSummary();
   }
@@ -277,7 +287,7 @@
         ${isRestricted ? `<p class="hint" style="margin-top:0; color:#ffb3b3;">撮影不可の偏りを避けるため、候補を絞っています。</p>` : `<p class="hint" style="margin-top:0;">タップでこの枠に入れます。</p>`}
         ${restricted.length ? `
           <div class="slotpick-grid">
-            ${restricted.map(n=>`<button type="button" class="slotpick-cand" data-pick="${escapeHtml(n)}">${escapeHtml(n)}${recMap[n]?'':' 🚫'}</button>`).join('')}
+            ${restricted.map(n=>`<button type="button" class="slotpick-cand" data-pick="${escapeHtml(n)}">${escapeHtml(n)} ${recMap[n]?'📹':'🚫'}</button>`).join('')}
           </div>` : `<div class="empty-state" style="padding:12px 4px;">選べる人がいません。</div>`}
         <div class="slotpick-actions">
           <button class="btn btn-gold" id="slotRouletteBtn" ${restricted.length?'':'disabled'}>🎲 ルーレットで決める</button>
@@ -387,16 +397,29 @@
   function jointY(r,i){ if(r===0) return (leafY(2*i)+leafY(2*i+1))/2; return (jointY(r-1,2*i)+jointY(r-1,2*i+1))/2; }
   function colLeft(r){ return PAD_LEFT + r*COL_W; }
 
+  // 枠(r,m,side)がD&Dの対象(ドラッグ元/ドロップ先)として有効か。
+  // 「後戻りできない進行」の単位をカード自身の決着有無にする: 決着済みのペアカードはロック、
+  // シード枠(1回戦のbye)は勝敗という概念が無いので常に対象(b側の➕途中参加枠は別関数で描画するためここには来ない)
+  function slotDndEligible(r, m, side){
+    const match = state.matches[r] && state.matches[r][m];
+    if(!match) return false;
+    if(match.bye) return side==='a';
+    return !match.winner;
+  }
   let treeSlotRects={}, lastSvgW=0, bRecMap={};
-  function boxSvg(r,i,side,name,centerY,isWinner,isForced){
+  function boxSvg(r,i,side,name,centerY,isWinner,isForced,hasWinner,dndOn){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
-    const fill=isWinner?'#161020':'#0d0a14'; const stroke=isWinner?'#5a4a2a':(isForced?'#7a2c2c':'#3a2f4d');
+    const isLoser = hasWinner && !isWinner;
+    const fill=isWinner?'#161020':'#0d0a14'; const stroke=isWinner?'#e8b34c':(isForced?'#7a2c2c':'#3a2f4d');
+    const strokeW=isWinner?2.5:1.5;
     const nameFill=isWinner?'#e8b34c':'#f1e6cf'; const weight=isWinner?'900':'700';
+    const opacity=isLoser?0.45:1;
     treeSlotRects[`${r}_${i}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
-    return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`
+    return `<g class="tree-slot" data-r="${r}" data-m="${i}" data-side="${side}" opacity="${opacity}"${dndOn?' data-dnd="1"':''}>`
+      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"/>`
       +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="13" font-weight="${weight}" fill="${nameFill}">${escapeHtml(truncate(name,7))}</text>`
-      +`<text x="${cLeft+BOX_W-26}" y="${centerY+4.5}" font-size="10.5" text-anchor="end">${bRecMap[name]?'📹':'🚫'}</text>`
-      +`<text class="tree-edit-icon" data-editr="${r}" data-editm="${i}" data-editside="${side}" x="${cLeft+BOX_W-4}" y="${centerY+4.5}" font-size="12" text-anchor="end">✏️</text>`;
+      +`<text x="${cLeft+BOX_W-8}" y="${centerY+4.5}" font-size="10.5" text-anchor="end">${bRecMap[name]?'📹':'🚫'}</text>`
+      +`</g>`;
   }
   // 大会開始後に残っているシード空き枠(➕・WalkinModalで新規登録込みの飛び入り)
   function byeBoxSvg(r,i,centerY){
@@ -412,19 +435,23 @@
     return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5" stroke-dasharray="3 3"/>`
       +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`;
   }
-  // 1回戦の空き枠: タップでエントリー者ピッカーを開く
+  // 1回戦の空き枠: タップでエントリー者ピッカーを開く。D&Dのドロップ先にもなる
   function slotTapBoxSvg(m,side,centerY,label){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
-    return `<g class="tree-slot-tap" data-m="${m}" data-side="${side}">`
+    treeSlotRects[`0_${m}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
+    return `<g class="tree-slot tree-slot-tap" data-r="0" data-m="${m}" data-side="${side}">`
       +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#5a4a2a" stroke-width="1.5" stroke-dasharray="3 3"/>`
       +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#e8b34c">${escapeHtml(label)}</text>`
       +`</g>`;
   }
-  // 2回戦以降で、まだ勝ち上がりが決まっていない未確定枠
-  function pendingBoxSvg(r,centerY){
+  // 2回戦以降で、まだ勝ち上がりが決まっていない未確定枠。D&Dのドロップ先にもなる
+  function pendingBoxSvg(r,i,side,centerY){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
-    return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
-      +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">？？？</text>`;
+    treeSlotRects[`${r}_${i}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
+    return `<g class="tree-slot" data-r="${r}" data-m="${i}" data-side="${side}">`
+      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
+      +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">？？？</text>`
+      +`</g>`;
   }
   function buildTreeSVG(){
     treeSlotRects={}; bRecMap=AtsuCup.recMapOf();
@@ -447,17 +474,19 @@
         [['a',m?m.a:null,upY],['b',m?m.b:null,downY]].forEach(([side,name,y])=>{
           if(name===null){
             if(r===0 && m && m.bye && side==='b'){
-              // シード枠の空側(b): 保持者(a)が決まっていれば、途中参加として挑戦者を迎えられる
+              // シード枠の空側(b): 保持者(a)が決まっていれば、途中参加として挑戦者を迎えられる(D&D対象外)
               if(m.a){ boxesSvg+=byeBoxSvg(r,i,y); }
               else { boxesSvg+=byePlaceholderSvg(y); } // 保持者未定の間はタップ不可のプレースホルダのみ
               return;
             }
-            if(r===0){ boxesSvg+=slotTapBoxSvg(i, side, y, m && m.bye ? 'タップでシードを選ぶ' : 'タップで選ぶ'); return; } // 1回戦の空き枠は常にタップ可能
-            boxesSvg+=pendingBoxSvg(r,y); return;
+            if(r===0){ boxesSvg+=slotTapBoxSvg(i, side, y, 'タップで選ぶ'); return; } // 1回戦の空き枠は常にタップ可能
+            boxesSvg+=pendingBoxSvg(r,i,side,y); return;
           }
-          const isWinner=!!m.winner && m.winner===name; boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced);
+          const isWinner=!!m.winner && m.winner===name; const hasWinner=!!m.winner;
+          const dndOn = slotDndEligible(r,i,side);
+          boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced,hasWinner,dndOn);
         });
-        if(m && m.a && m.b && !m.winner){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
+        if(m && m.a && m.b){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
       }
     }
     let trophySvg=''; if(state.winnerName){ const fy=jointY(totalRounds-1,0); trophySvg=`<text x="${lastColRight+6}" y="${fy+8}" font-size="22">🏆</text>`; }
@@ -468,7 +497,7 @@
     computeRowH();
     const hint = round1HasEmpty()
       ? '空いている枠をタップして、対戦相手を選んでください。'
-      : '⚔️で勝敗入力・✏️で名前変更・シード枠の➕で途中参加';
+      : '⚔️で勝敗入力・シード枠の➕で途中参加・ドラッグ&ドロップで枠の移動/入れ替え';
     bracketSection.innerHTML = `
       <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
       <p class="hint" style="margin:2px 0 8px;">${hint}</p>
@@ -488,19 +517,146 @@
   }
   function wireTreeInteractions(){
     document.querySelectorAll('#treeScroll .tree-pick').forEach(el=> el.addEventListener('click', ()=> openMatchPickModal(+el.dataset.r, +el.dataset.m)));
-    document.querySelectorAll('#treeScroll .tree-edit-icon').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startEditTreeName(+el.dataset.editr,+el.dataset.editm,el.dataset.editside); }));
     document.querySelectorAll('#treeScroll .tree-add-icon').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startAddChallenger(+el.dataset.addm); }));
-    document.querySelectorAll('#treeScroll .tree-slot-tap').forEach(el=> el.addEventListener('click', ()=> openSlotPicker(+el.dataset.m, el.dataset.side)));
+    document.querySelectorAll('#treeScroll .tree-slot-tap').forEach(el=> el.addEventListener('click', ()=> { if(dndJustDragged){ dndJustDragged=false; return; } openSlotPicker(+el.dataset.m, el.dataset.side); }));
+    wireTreeDnd();
   }
-  function startEditTreeName(r,m,side){
-    const match=state.matches[r][m]; if(!match) return; const current=side==='a'?match.a:match.b; const rect=treeSlotRects[`${r}_${m}_${side}`]; const svgEl=document.querySelector('#treeScroll svg'); if(!rect||!svgEl) return;
-    const already=svgEl.querySelector('foreignObject.tree-edit-fo'); if(already)already.remove();
-    const fo=document.createElementNS('http://www.w3.org/2000/svg','foreignObject'); fo.setAttribute('class','tree-edit-fo'); fo.setAttribute('x',rect.x); fo.setAttribute('y',rect.y); fo.setAttribute('width',rect.w); fo.setAttribute('height',rect.h);
-    const input=document.createElementNS('http://www.w3.org/1999/xhtml','input'); input.setAttribute('type','text'); input.setAttribute('class','tree-edit-input'); input.value=current; input.setAttribute('list','rosterCandidates'); input.addEventListener('click',ev=>ev.stopPropagation());
-    fo.appendChild(input); svgEl.appendChild(fo); input.focus(); input.select();
-    let done=false; const commit=()=>{ if(done)return; done=true; const val=input.value.trim(); if(val&&val!==current){ AtsuCup.renameParticipant(current,val); } renderTree(); renderExtras(); };
-    input.addEventListener('blur',commit); input.addEventListener('keydown',e=>{ if(e.key==='Enter')input.blur(); });
+
+  /* ---- エントリー枠のドラッグ&ドロップ(同ラウンド内の移動・入れ替え・選択解除) ---- */
+  let dndState=null, dndGhostEl=null, dndUnassignEl=null, dndJustDragged=false;
+  function ensureDndEls(){
+    if(!dndGhostEl){ dndGhostEl=document.createElement('div'); dndGhostEl.className='dnd-ghost'; dndGhostEl.style.display='none'; document.body.appendChild(dndGhostEl); }
+    if(!dndUnassignEl){ dndUnassignEl=document.createElement('div'); dndUnassignEl.className='dnd-unassign-zone'; dndUnassignEl.textContent='🗑️ ここにドロップして枠を空にする'; document.body.appendChild(dndUnassignEl); }
   }
+  function wireTreeDnd(){
+    ensureDndEls();
+    document.querySelectorAll('#treeScroll .tree-slot[data-dnd="1"]').forEach(el=> el.addEventListener('pointerdown', onDndPointerDown));
+  }
+  function onDndPointerDown(ev){
+    const el=ev.currentTarget;
+    const r=+el.dataset.r, m=+el.dataset.m, side=el.dataset.side;
+    const match=state.matches[r][m]; const name = side==='a'?match.a:match.b;
+    if(!name) return;
+    ev.preventDefault();
+    try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+    dndState={ pointerId:ev.pointerId, srcR:r, srcM:m, srcSide:side, name, startX:ev.clientX, startY:ev.clientY, dragging:false, el, hoverTarget:null, hoverIsUnassign:false };
+    el.addEventListener('pointermove', onDndPointerMove);
+    el.addEventListener('pointerup', onDndPointerUp);
+    el.addEventListener('pointercancel', onDndPointerCancel);
+  }
+  function startDndVisuals(){
+    dndState.el.classList.add('dragging');
+    dndUnassignEl.classList.add('active');
+    const recMap=AtsuCup.recMapOf();
+    dndGhostEl.textContent = dndState.name+' '+(recMap[dndState.name]?'📹':'🚫');
+    dndGhostEl.style.display='block';
+  }
+  function onDndPointerMove(ev){
+    if(!dndState || ev.pointerId!==dndState.pointerId) return;
+    const dx=ev.clientX-dndState.startX, dy=ev.clientY-dndState.startY;
+    if(!dndState.dragging){
+      if(Math.hypot(dx,dy) < 6) return;
+      dndState.dragging = true;
+      startDndVisuals();
+    }
+    dndGhostEl.style.left=ev.clientX+'px'; dndGhostEl.style.top=(ev.clientY-40)+'px';
+    updateDndHover(ev.clientX, ev.clientY);
+  }
+  function clearHoverTarget(){
+    if(dndState.hoverTarget){
+      const {r,m,side}=dndState.hoverTarget;
+      const el=document.querySelector(`#treeScroll .tree-slot[data-r="${r}"][data-m="${m}"][data-side="${side}"]`);
+      if(el) el.classList.remove('drop-hover');
+    }
+    dndState.hoverTarget=null;
+  }
+  function updateDndHover(clientX, clientY){
+    const uRect=dndUnassignEl.getBoundingClientRect();
+    const overUnassign = clientX>=uRect.left && clientX<=uRect.right && clientY>=uRect.top && clientY<=uRect.bottom;
+    dndUnassignEl.classList.toggle('drop-hover', overUnassign);
+    if(overUnassign){ clearHoverTarget(); dndState.hoverIsUnassign=true; return; }
+    dndState.hoverIsUnassign=false;
+
+    const svgEl=document.querySelector('#treeScroll svg');
+    if(!svgEl){ clearHoverTarget(); return; }
+    const ctm=svgEl.getScreenCTM();
+    if(!ctm){ clearHoverTarget(); return; }
+    const pt=svgEl.createSVGPoint(); pt.x=clientX; pt.y=clientY;
+    const svgPt=pt.matrixTransform(ctm.inverse());
+
+    let found=null;
+    for(const key in treeSlotRects){
+      const parts=key.split('_'); if(parts.length!==3) continue; // 'bye_i'キーは対象外
+      const rNum=+parts[0], mNum=+parts[1], sSide=parts[2];
+      if(rNum!==dndState.srcR) continue; // 同ラウンド内のみ
+      if(mNum===dndState.srcM && sSide===dndState.srcSide) continue; // 自分自身は除外
+      if(!slotDndEligible(rNum, mNum, sSide)) continue;
+      const rect=treeSlotRects[key];
+      if(svgPt.x>=rect.x && svgPt.x<=rect.x+rect.w && svgPt.y>=rect.y && svgPt.y<=rect.y+rect.h){ found={r:rNum,m:mNum,side:sSide,key}; break; }
+    }
+    if(found){
+      if(dndState.hoverTarget && dndState.hoverTarget.key!==found.key) clearHoverTarget();
+      dndState.hoverTarget=found;
+      const targetEl=document.querySelector(`#treeScroll .tree-slot[data-r="${found.r}"][data-m="${found.m}"][data-side="${found.side}"]`);
+      if(targetEl) targetEl.classList.add('drop-hover');
+    } else {
+      clearHoverTarget();
+    }
+  }
+  function unassignSlot(r,m,side){
+    const match=state.matches[r][m];
+    if(match.bye){ match.a=null; match.winner=null; if(state.matches[r+1]) AtsuCup.propagateWinnerDownstream(r,m,null); }
+    else if(side==='a'){ match.a=null; } else { match.b=null; }
+  }
+  function swapSlots(r,m1,s1,m2,s2){
+    const match1=state.matches[r][m1], match2=state.matches[r][m2];
+    const name1 = s1==='a'?match1.a:match1.b, name2 = s2==='a'?match2.a:match2.b;
+    if(r===0){
+      if(s1==='a') match1.a=name2; else match1.b=name2;
+      if(s2==='a') match2.a=name1; else match2.b=name1;
+    } else {
+      const src1 = s1==='a'?match1.aSrc:match1.bSrc, src2 = s2==='a'?match2.aSrc:match2.bSrc;
+      if(s1==='a'){ match1.a=name2; match1.aSrc=src2; } else { match1.b=name2; match1.bSrc=src2; }
+      if(s2==='a'){ match2.a=name1; match2.aSrc=src1; } else { match2.b=name1; match2.bSrc=src1; }
+    }
+    // シード枠が絡む場合はwinnerを保持者(a)に同期し、2回戦以降が既にあれば追従させる
+    [[m1,s1,match1],[m2,s2,match2]].forEach(([mm,ss,mt])=>{
+      if(r===0 && mt.bye && ss==='a'){
+        mt.winner = mt.a;
+        if(state.matches[1]) AtsuCup.propagateWinnerDownstream(0, mm, mt.a);
+      }
+    });
+  }
+  function commitDnd(){
+    const {srcR,srcM,srcSide,hoverTarget,hoverIsUnassign}=dndState;
+    if(hoverIsUnassign){ unassignSlot(srcR,srcM,srcSide); }
+    else if(hoverTarget){ swapSlots(srcR,srcM,srcSide,hoverTarget.m,hoverTarget.side); }
+    else { return; }
+    AtsuCup.persist();
+    renderTree(); renderExtras();
+  }
+  function cleanupDnd(){
+    if(dndState){
+      dndState.el.removeEventListener('pointermove', onDndPointerMove);
+      dndState.el.removeEventListener('pointerup', onDndPointerUp);
+      dndState.el.removeEventListener('pointercancel', onDndPointerCancel);
+    }
+    if(dndGhostEl) dndGhostEl.style.display='none';
+    if(dndUnassignEl){ dndUnassignEl.classList.remove('active'); dndUnassignEl.classList.remove('drop-hover'); }
+    document.querySelectorAll('#treeScroll .tree-slot.dragging, #treeScroll .tree-slot.drop-hover').forEach(el=>{ el.classList.remove('dragging'); el.classList.remove('drop-hover'); });
+    dndState=null;
+  }
+  function onDndPointerUp(ev){
+    if(!dndState || ev.pointerId!==dndState.pointerId) return;
+    const wasDragging=dndState.dragging;
+    if(wasDragging){ commitDnd(); dndJustDragged=true; setTimeout(()=>{ dndJustDragged=false; }, 0); }
+    cleanupDnd();
+  }
+  function onDndPointerCancel(ev){
+    if(!dndState || ev.pointerId!==dndState.pointerId) return;
+    cleanupDnd();
+  }
+
   let pendingChallengerM=null;
   function startAddChallenger(m){
     WalkinModal.open({
@@ -539,13 +695,16 @@
     btnB.innerHTML=`<span class="nm">${escapeHtml(match.b)}</span><span>${recMap[match.b]?'📹':'🚫'}</span>`;
     btnA.classList.toggle('winner',match.winner===match.a); btnB.classList.toggle('winner',match.winner===match.b);
     btnA.onclick=()=>{ pick(r,m,'a'); closeMatchModal(); }; btnB.onclick=()=>{ pick(r,m,'b'); closeMatchModal(); };
+    const resetBtn=document.getElementById('modalResetBtn');
+    resetBtn.style.display = match.winner ? 'block' : 'none';
+    resetBtn.onclick=()=>{ AtsuCup.resetMatchResult(r,m); closeMatchModal(); renderTree(); renderExtras(); renderLiveHeader(); };
     document.getElementById('matchPickModal').style.display='flex';
   }
   let matchModalEl=null;
   function ensureMatchModal(){
     if(matchModalEl) return;
     matchModalEl=document.createElement('div'); matchModalEl.className='match-pick-modal'; matchModalEl.id='matchPickModal'; matchModalEl.style.display='none';
-    matchModalEl.innerHTML=`<div class="match-pick-modal-backdrop" id="matchPickModalBackdrop"></div><div class="match-pick-modal-card"><div class="match-pick-modal-title" id="modalMatchTitle"></div><div class="match-pick-modal-row"><button type="button" class="modal-pick-btn" id="modalPickA"></button><span class="vs-label">VS</span><button type="button" class="modal-pick-btn" id="modalPickB"></button></div><button type="button" class="btn btn-ghost" id="modalCancelBtn" style="width:100%; margin-top:12px;">キャンセル</button></div>`;
+    matchModalEl.innerHTML=`<div class="match-pick-modal-backdrop" id="matchPickModalBackdrop"></div><div class="match-pick-modal-card"><div class="match-pick-modal-title" id="modalMatchTitle"></div><p class="hint" style="margin-top:0; text-align:center;">勝った方をタップしてください</p><div class="match-pick-modal-row"><button type="button" class="modal-pick-btn" id="modalPickA"></button><span class="vs-label">VS</span><button type="button" class="modal-pick-btn" id="modalPickB"></button></div><button type="button" class="btn btn-ghost" id="modalResetBtn" style="width:100%; margin-top:12px; display:none;">勝敗をリセット</button><button type="button" class="btn btn-ghost" id="modalCancelBtn" style="width:100%; margin-top:8px;">キャンセル</button></div>`;
     document.body.appendChild(matchModalEl);
     matchModalEl.querySelector('#matchPickModalBackdrop').addEventListener('click', closeMatchModal);
     matchModalEl.querySelector('#modalCancelBtn').addEventListener('click', closeMatchModal);
