@@ -18,6 +18,13 @@ const GitHubDB = (function(){
     if(!token) throw new Error("GitHubトークンが未設定です。設定画面からトークンを登録してください。");
     return { "Authorization": `token ${token}`, "Accept": "application/vnd.github+json" };
   }
+  // 読み取り専用: リポジトリはPublicなのでトークンが無くても取得できる(あれば付ける。レート制限が緩和される)
+  function readHeaders(){
+    const token = getToken();
+    const h = { "Accept": "application/vnd.github+json" };
+    if(token) h["Authorization"] = `token ${token}`;
+    return h;
+  }
 
   function contentsUrl(path){
     return `https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`;
@@ -33,7 +40,7 @@ const GitHubDB = (function(){
 
   // path配下のJSONを取得する。ファイルが存在しない場合は空配列として扱う
   async function getFile(path){
-    const res = await fetch(`${contentsUrl(path)}?ref=${BRANCH}&t=${Date.now()}`, { headers: authHeaders() });
+    const res = await fetch(`${contentsUrl(path)}?ref=${BRANCH}&t=${Date.now()}`, { headers: readHeaders() });
     if(res.status === 404){ return { data: [], sha: null }; }
     if(!res.ok){ throw new Error(`GitHubからの取得に失敗しました(status ${res.status})`); }
     const json = await res.json();

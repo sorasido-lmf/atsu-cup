@@ -38,27 +38,19 @@
 
   <section class="panel">
     <h2>登録済みユーザー</h2>
-    <p class="hint">撮影可否(📹/🚫)はユーザーごとのデフォルト設定です。大会エントリー時にその大会限定で上書きできます。</p>
+    <p class="hint">撮影可否(📹/🚫)はユーザーごとのデフォルト設定です。大会エントリー時にその大会限定で上書きできます。登録者一覧はGitHub上の <code>data/users.json</code> を直接読み書きします(操作はすぐに反映されます)。</p>
     <div class="row">
       <button class="btn btn-primary" id="openRegisterBtn">➕ 新規ユーザー登録</button>
+      <button class="btn btn-ghost" id="reloadBtn">🔄 再読み込み</button>
     </div>
+    <div id="syncStatus" style="margin-top:10px;"></div>
     <div id="countBadges" style="margin-top:16px;"></div>
     <div id="rosterList" class="roster-list" style="margin-top:12px;"></div>
-    <button class="archived-toggle" id="archivedToggle" style="margin-top:14px;"></button>
+    <button class="archived-toggle" id="archivedToggle" style="margin-top:14px; display:none;"></button>
     <div id="archivedList" class="roster-list" style="margin-top:10px; display:none;"></div>
   </section>
 
-  <section class="panel">
-    <h2>GitHubと同期</h2>
-    <p class="hint">この端末の登録者一覧と、GitHub上の <code>data/users.json</code> を同期します(撮影可否・アーカイブ状態も同期されます)。</p>
-    <div class="row">
-      <button class="btn btn-ghost" id="pullBtn">🔽 GitHubから取り込む</button>
-      <button class="btn btn-ghost" id="pushBtn">🔼 GitHubへ保存する</button>
-    </div>
-    <div id="syncStatus" style="margin-top:10px;"></div>
-  </section>
-
-  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+  <footer class="note">登録ユーザーはGitHub上の data/users.json で管理されます。大会・対戦結果・戦績は、この端末のブラウザ内に保存されます。</footer>
 </div>
 
 <script src="tap-ripple.js"></script>
@@ -68,29 +60,56 @@
 <script>
 (function(){
   "use strict";
-  const state = AtsuCup.state;
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
-  if(!state.userRecDefaults) state.userRecDefaults = {};
-  if(!state.archivedUsers) state.archivedUsers = {};
+
+  const USERS_PATH = "data/users.json";
+  let ghUsers = [];
+  let ghSha = null;
+  let loadError = null;
+  let loading = true;
 
   const countBadges = document.getElementById("countBadges");
   const rosterList = document.getElementById("rosterList");
   const archivedToggle = document.getElementById("archivedToggle");
   const archivedList = document.getElementById("archivedList");
   const syncStatus = document.getElementById("syncStatus");
+  const reloadBtn = document.getElementById("reloadBtn");
 
   let showArchived = false;
   let confirmingName = null; // アーカイブ確認中の名前(ネイティブconfirm()は使わずインラインで確認する)
 
-  function recOf(name){ return state.userRecDefaults[name] !== false; }
-  function isArchived(name){ return !!state.archivedUsers[name]; }
-
-  function setSyncStatus(msg, type){
-    syncStatus.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>`;
+  function recOf(u){ return u.recDefault !== false; }
+  function setStatus(msg, type){
+    syncStatus.innerHTML = msg ? `<div class="empty-state" style="padding:10px 12px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>` : '';
   }
 
-  function makeRow(name, { archived }){
+  async function writeUsers(newList, message){
+    const res = await GitHubDB.putFile(USERS_PATH, newList, message, ghSha);
+    ghUsers = newList;
+    ghSha = (res && res.content && res.content.sha) || null;
+  }
+
+  async function loadUsers(){
+    loading = true; loadError = null;
+    setStatus("読み込み中...", "");
+    renderAll();
+    try{
+      const { data, sha } = await GitHubDB.getFile(USERS_PATH);
+      ghUsers = Array.isArray(data) ? data : [];
+      ghSha = sha;
+      setStatus("", "");
+    }catch(e){
+      loadError = (e && e.message) || String(e);
+      setStatus(loadError, "error");
+    }finally{
+      loading = false;
+      renderAll();
+    }
+  }
+
+  function makeRow(u, { archived }){
+    const name = u.name;
     const row = document.createElement('div');
     if(confirmingName === name){
       row.className = 'roster-row confirming';
@@ -111,7 +130,7 @@
         <button class="rm" data-restore="${escapeHtml(name)}" title="復元">♻️ 復元</button>
       `;
     }else{
-      const isRec = recOf(name);
+      const isRec = recOf(u);
       row.innerHTML = `
         <span class="nm">${escapeHtml(name)}</span>
         <button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>
@@ -122,43 +141,65 @@
   }
 
   function renderAll(){
-    const activeNames = state.roster.filter(n=>!isArchived(n));
-    const archivedNames = state.roster.filter(isArchived);
-
-    const rec = activeNames.filter(recOf).length;
-    countBadges.innerHTML = `
-      <span class="count-badge">登録者: ${activeNames.length}人</span>
-      <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
-      <span class="count-badge muted2">🚫 撮影不可: ${activeNames.length-rec}人</span>`;
-
-    rosterList.innerHTML = "";
-    if(!activeNames.length){
-      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
-    }else{
-      activeNames.forEach(name=> rosterList.appendChild(makeRow(name, { archived:false })));
+    if(loading && !ghUsers.length && !loadError){
+      countBadges.innerHTML = '';
+      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">読み込み中...</div>`;
+      archivedToggle.style.display = 'none';
+      archivedList.style.display = 'none';
+      return;
+    }
+    if(loadError){
+      countBadges.innerHTML = '';
+      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">読み込みに失敗しました。「🔄 再読み込み」でやり直してください。</div>`;
+      archivedToggle.style.display = 'none';
+      archivedList.style.display = 'none';
+      return;
     }
 
+    const activeUsers = ghUsers.filter(u=>!u.archived);
+    const archivedUsers = ghUsers.filter(u=>u.archived);
+
+    const rec = activeUsers.filter(recOf).length;
+    countBadges.innerHTML = `
+      <span class="count-badge">登録者: ${activeUsers.length}人</span>
+      <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
+      <span class="count-badge muted2">🚫 撮影不可: ${activeUsers.length-rec}人</span>`;
+
+    rosterList.innerHTML = "";
+    if(!activeUsers.length){
+      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
+    }else{
+      activeUsers.forEach(u=> rosterList.appendChild(makeRow(u, { archived:false })));
+    }
+
+    archivedToggle.style.display = 'block';
     archivedToggle.textContent = showArchived
-      ? `▲ アーカイブ済みを隠す(${archivedNames.length}人)`
-      : `▼ アーカイブ済みを表示(${archivedNames.length}人)`;
+      ? `▲ アーカイブ済みを隠す(${archivedUsers.length}人)`
+      : `▼ アーカイブ済みを表示(${archivedUsers.length}人)`;
     archivedList.style.display = showArchived ? 'flex' : 'none';
     archivedList.style.flexDirection = 'column';
     archivedList.style.gap = '8px';
     archivedList.innerHTML = "";
     if(showArchived){
-      if(!archivedNames.length){
+      if(!archivedUsers.length){
         archivedList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">アーカイブ済みのユーザーはいません。</div>`;
       }else{
-        archivedNames.forEach(name=> archivedList.appendChild(makeRow(name, { archived:true })));
+        archivedUsers.forEach(u=> archivedList.appendChild(makeRow(u, { archived:true })));
       }
     }
 
     document.querySelectorAll('[data-cam]').forEach(el=>{
-      el.addEventListener('click', ()=>{
+      el.addEventListener('click', async ()=>{
         const name = el.dataset.cam;
-        state.userRecDefaults[name] = !recOf(name);
-        AtsuCup.persist();
-        renderAll();
+        el.disabled = true;
+        try{
+          const updated = ghUsers.map(u=> u.name===name ? { ...u, recDefault: !recOf(u) } : u);
+          await writeUsers(updated, `${name}の撮影可否を変更`);
+          renderAll();
+        }catch(e){
+          setStatus((e && e.message) || String(e), "error");
+          el.disabled = false;
+        }
       });
     });
     document.querySelectorAll('[data-archive]').forEach(el=>{
@@ -174,20 +215,32 @@
       });
     });
     document.querySelectorAll('[data-confirm-archive]').forEach(el=>{
-      el.addEventListener('click', ()=>{
-        const name = el.dataset.confirmArchive;
-        state.archivedUsers[name] = true;
-        confirmingName = null;
-        AtsuCup.persist();
-        renderAll();
+      el.addEventListener('click', async (ev)=>{
+        const name = ev.currentTarget.dataset.confirmArchive;
+        ev.currentTarget.disabled = true;
+        try{
+          const updated = ghUsers.map(u=> u.name===name ? { ...u, archived: true } : u);
+          await writeUsers(updated, `${name}をアーカイブ`);
+          confirmingName = null;
+          renderAll();
+        }catch(e){
+          setStatus((e && e.message) || String(e), "error");
+          ev.currentTarget.disabled = false;
+        }
       });
     });
     document.querySelectorAll('[data-restore]').forEach(el=>{
-      el.addEventListener('click', ()=>{
-        const name = el.dataset.restore;
-        state.archivedUsers[name] = false;
-        AtsuCup.persist();
-        renderAll();
+      el.addEventListener('click', async (ev)=>{
+        const name = ev.currentTarget.dataset.restore;
+        ev.currentTarget.disabled = true;
+        try{
+          const updated = ghUsers.map(u=> u.name===name ? { ...u, archived: false } : u);
+          await writeUsers(updated, `${name}を復元`);
+          renderAll();
+        }catch(e){
+          setStatus((e && e.message) || String(e), "error");
+          ev.currentTarget.disabled = false;
+        }
       });
     });
   }
@@ -197,75 +250,26 @@
     renderAll();
   });
 
+  reloadBtn.addEventListener('click', loadUsers);
+
   document.getElementById("openRegisterBtn").addEventListener("click", ()=>{
-    UserRegisterModal.open({ onRegistered: ()=> renderAll() });
-  });
-
-  const USERS_PATH = "data/users.json";
-
-  document.getElementById("pullBtn").addEventListener("click", async ()=>{
-    if(!GitHubDB.hasToken()){ setSyncStatus("GitHubトークンが未設定です。「設定」画面から登録してください。", "error"); return; }
-    const btn = document.getElementById("pullBtn");
-    btn.disabled = true; btn.textContent = "取り込み中...";
-    try{
-      const { data: users } = await GitHubDB.getFile(USERS_PATH);
-      const before = state.roster.length;
-      let added = 0;
-      users.forEach(u=>{
-        if(!u.name) return;
-        if(!state.roster.includes(u.name)){ state.roster.push(u.name); added++; }
-        state.userRecDefaults[u.name] = u.recDefault !== false;
-        state.archivedUsers[u.name] = !!u.archived;
-      });
-      AtsuCup.persist();
-      renderAll();
-      setSyncStatus(`取り込み完了: ${added}人を追加しました(GitHub上の登録者: ${users.length}人、この端末: ${before}→${state.roster.length}人)`, "ok");
-    }catch(e){
-      setSyncStatus(e.message || String(e), "error");
-    }finally{
-      btn.disabled = false; btn.textContent = "🔽 GitHubから取り込む";
-    }
-  });
-
-  document.getElementById("pushBtn").addEventListener("click", async ()=>{
-    if(!GitHubDB.hasToken()){ setSyncStatus("GitHubトークンが未設定です。「設定」画面から登録してください。", "error"); return; }
-    const btn = document.getElementById("pushBtn");
-    btn.disabled = true; btn.textContent = "保存中...";
-    try{
-      const { data: users, sha } = await GitHubDB.getFile(USERS_PATH);
-      const existingIds = new Set(users.map(u=>u.id));
-      const byName = new Map(users.map(u=>[u.name, u]));
-      let added = 0, updated = 0;
-      state.roster.forEach(name=>{
-        const recDefault = recOf(name);
-        const archived = isArchived(name);
-        const existing = byName.get(name);
-        if(existing){
-          if(existing.recDefault !== recDefault || !!existing.archived !== archived){
-            existing.recDefault = recDefault;
-            existing.archived = archived;
-            updated++;
-          }
-        }else{
+    UserRegisterModal.open({
+      existingNames: ghUsers.map(u=>u.name),
+      persist: async (names)=>{
+        if(!GitHubDB.hasToken()) throw new Error("GitHubトークンが未設定です。「設定」画面から登録してください。");
+        const existingIds = new Set(ghUsers.map(u=>u.id));
+        const newUsers = names.map(name=>{
           const id = GitHubDB.genId('u', existingIds);
           existingIds.add(id);
-          const newUser = { id, name, recDefault, archived, createdAt: new Date().toISOString(), note: "" };
-          users.push(newUser);
-          byName.set(name, newUser);
-          added++;
-        }
-      });
-      if(added === 0 && updated === 0){ setSyncStatus("差分なし: GitHub上のデータと一致しています。", "ok"); return; }
-      await GitHubDB.putFile(USERS_PATH, users, `参加者を${added}人追加・${updated}人更新`, sha);
-      setSyncStatus(`保存完了: 新規${added}人・更新${updated}人(GitHub上の登録者: ${users.length}人)`, "ok");
-    }catch(e){
-      setSyncStatus(e.message || String(e), "error");
-    }finally{
-      btn.disabled = false; btn.textContent = "🔼 GitHubへ保存する";
-    }
+          return { id, name, recDefault: true, archived: false, createdAt: new Date().toISOString(), note: "" };
+        });
+        await writeUsers([...ghUsers, ...newUsers], `参加者を${names.length}人追加`);
+      },
+      onRegistered: ()=> renderAll()
+    });
   });
 
-  renderAll();
+  loadUsers();
 })();
 </script>
 </body>
