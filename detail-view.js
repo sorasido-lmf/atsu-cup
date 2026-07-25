@@ -33,12 +33,15 @@
     if(isLive()){
       if(mode === 'editing'){ renderEditForm(); return; }
       renderLiveHeader();
-      if(hasPairing()){
-        matchupSection.style.display = 'none';
-        bracketSection.style.display = 'block';
-        renderBracket();
-      }else{
-        bracketSection.style.display = 'none';
+      // 組み合わせ操作(まだ対戦が始まっておらず参加者がいる間)とトーナメント表を、必要に応じて両方表示する
+      const decidable = AtsuCup.bracketNotStarted() && state.people.length>0;
+      const hasTree = state.matches.length>0 && state.matches[0].length>0;
+      matchupSection.style.display = decidable ? 'block' : 'none';
+      if(decidable) renderMatchup();
+      bracketSection.style.display = hasTree ? 'block' : 'none';
+      if(hasTree) renderBracket();
+      // 参加者0で組み合わせも無いときは、エントリー誘導だけ出す
+      if(!decidable && !hasTree){
         matchupSection.style.display = 'block';
         renderMatchup();
       }
@@ -161,36 +164,51 @@
   function flattenOrder(){ if(state.matches.length){ const names=[]; state.matches[0].forEach(m=>{ if(m.a) names.push(m.a); if(m.b) names.push(m.b); }); if(names.length) return names; } return state.people.map(p=>p.name); }
 
   function renderMatchup(){
+    const hasPeople = state.people.length>0;
     matchupSection.innerHTML = `
       <h2>組み合わせを決める</h2>
       <div id="peopleSummary"></div>
-      <div class="decide-tabs" id="decideModeTabs" style="margin-top:14px;"></div>
-      <div id="rouletteLauncher"></div>
-      <div id="manualBox" style="display:none;"></div>
-      <div class="row">
-        <button class="btn btn-primary" id="instantAutoBtn">⚡ ワンタップで自動抽選</button>
-        <button class="btn btn-ghost" id="resetOrderBtn">🔄 引き直す</button>
-      </div>
-      <h3 class="section-title" style="margin-top:18px;">組み合わせプレビュー</h3>
-      <p class="hint" id="pairingHint">ルーレット・自動抽選で組み合わせが決まると、ここに表示されます。名前タップで書き換え、⠿ドラッグで入れ替えできます。</p>
-      <div id="pairingArea" class="pairing-list"></div>`;
+      ${hasPeople ? `
+        <p class="hint" style="margin-top:14px;">ルーレット・自動抽選・手動で1回戦の組み合わせを決めます。決まるまで下のトーナメント表は「？？？」で表示されます。</p>
+        <div class="row">
+          <button class="btn btn-gold" id="rouletteBtn">🎡 ルーレットで決める</button>
+          <button class="btn btn-ghost" id="manualBtn">✋ 手動で決める</button>
+        </div>
+        <div class="row">
+          <button class="btn btn-primary" id="instantAutoBtn">⚡ ワンタップで自動抽選</button>
+          <button class="btn btn-ghost" id="resetOrderBtn">🔄 引き直す</button>
+        </div>
+        <div id="manualBox" style="display:none; margin-top:6px;"></div>
+      ` : ''}`;
 
-    document.getElementById('instantAutoBtn').addEventListener('click', ()=>{
-      if(!state.people.length) return;
-      AtsuCup.resetDownstream(); state.remaining=[]; state.order = state.people.map(p=>p.name); AtsuCup.persist();
-      render(); // remaining空 → bracketへ
-    });
-    document.getElementById('resetOrderBtn').addEventListener('click', ()=>{ AtsuCup.resetDownstream(); refreshMatchup(); });
-
-    renderDecideModeTabs();
-    refreshMatchup();
+    if(hasPeople){
+      document.getElementById('rouletteBtn').addEventListener('click', openRoulette);
+      document.getElementById('manualBtn').addEventListener('click', ()=>{
+        const box = document.getElementById('manualBox');
+        if(box.style.display === 'block'){ box.style.display='none'; return; }
+        if(state.matches.length && state.matches[0].length){
+          const seeds = flattenSeeds();
+          manualBuilt = flattenOrder().map(n=>({name:n, seed:seeds.includes(n)})); manualPool=[];
+        }else{ manualBuilt=[]; manualPool = state.people.map(p=>p.name); }
+        manualSeedMode=false;
+        box.style.display='block';
+        renderManualEditor();
+      });
+      document.getElementById('instantAutoBtn').addEventListener('click', ()=>{
+        if(!state.people.length) return;
+        AtsuCup.resetDownstream(); state.remaining=[]; state.order = state.people.map(p=>p.name); AtsuCup.persist();
+        render();
+      });
+      document.getElementById('resetOrderBtn').addEventListener('click', ()=>{ AtsuCup.resetDownstream(); render(); });
+    }
+    renderPeopleSummary();
+    drawWheel();
   }
 
   function refreshMatchup(){
     renderPeopleSummary();
     drawWheel();
-    renderPairingPreview();
-    renderRouletteLauncher();
+    render();
   }
 
   function renderPeopleSummary(){
@@ -212,39 +230,6 @@
       </div>`;
   }
 
-  function renderDecideModeTabs(){
-    const tabs = document.getElementById('decideModeTabs');
-    if(!tabs) return;
-    tabs.innerHTML = `
-      <button class="btn ${decideMode==='roulette'?'btn-gold':'btn-ghost'}" id="modeRouletteBtn">🎡 ルーレット</button>
-      <button class="btn ${decideMode==='manual'?'btn-gold':'btn-ghost'}" id="modeManualBtn">✋ 手動で決める</button>`;
-    document.getElementById('modeRouletteBtn').addEventListener('click', ()=>{
-      decideMode='roulette'; manualPool=[]; manualBuilt=[]; manualSeedMode=false;
-      document.getElementById('manualBox').style.display='none';
-      renderDecideModeTabs(); renderRouletteLauncher();
-    });
-    document.getElementById('modeManualBtn').addEventListener('click', ()=>{
-      decideMode='manual';
-      if(state.matches.length && state.matches[0].length){
-        const seeds = flattenSeeds();
-        manualBuilt = flattenOrder().map(n=>({name:n, seed:seeds.includes(n)})); manualPool=[];
-      }else{ manualBuilt=[]; manualPool = state.people.map(p=>p.name); }
-      manualSeedMode=false;
-      document.getElementById('rouletteLauncher').innerHTML='';
-      document.getElementById('manualBox').style.display='block';
-      renderDecideModeTabs(); renderManualEditor();
-    });
-  }
-
-  function renderRouletteLauncher(){
-    const el = document.getElementById('rouletteLauncher');
-    if(!el) return;
-    if(decideMode!=='roulette'){ el.innerHTML=''; return; }
-    if(!state.people.length){ el.innerHTML=''; return; }
-    const remain = state.remaining.length;
-    el.innerHTML = `<button class="btn btn-gold" id="openRouletteBtn" style="width:100%; margin-bottom:6px;">🎲 ルーレットで決める${remain?`(残り${remain}人)`:''}</button>`;
-    document.getElementById('openRouletteBtn').addEventListener('click', openRoulette);
-  }
 
   /* ---- 手動編集 ---- */
   function renderManualEditor(){
@@ -315,57 +300,6 @@
     });
   }
 
-  /* ---- 組み合わせプレビュー ---- */
-  function startEditPairName(m, side){
-    const slotEl = document.querySelector(`#pairingArea .pair-slot[data-m="${m}"][data-side="${side}"]`);
-    if(!slotEl) return; const nmSpan=slotEl.querySelector('.nm'); if(!nmSpan) return;
-    const match=state.matches[0][m]; const current=side==='a'?match.a:match.b;
-    const input=document.createElement('input'); input.type='text'; input.className='nm-edit-input'; input.value=current; input.setAttribute('list','rosterCandidates');
-    input.addEventListener('click',ev=>ev.stopPropagation()); nmSpan.replaceWith(input); input.focus(); input.select();
-    let done=false; const commit=()=>{ if(done)return; done=true; const val=input.value.trim(); if(val){ if(side==='a')match.a=val; else match.b=val; if(match.b===null)match.winner=match.a; AtsuCup.persist(); } renderPairingPreview(); };
-    input.addEventListener('blur',commit); input.addEventListener('keydown',e=>{ if(e.key==='Enter')input.blur(); });
-  }
-  function swapPairSlots(m1,s1,m2,s2){
-    if(m1===m2&&s1===s2) return; const M1=state.matches[0][m1], M2=state.matches[0][m2];
-    const tmp=M1[s1]; M1[s1]=M2[s2]; M2[s2]=tmp;
-    if(M1.b===null)M1.winner=M1.a; if(M2.b===null)M2.winner=M2.a; AtsuCup.persist(); renderPairingPreview();
-  }
-  function attachPairDrag(handleEl){
-    handleEl.addEventListener('click',ev=>ev.stopPropagation());
-    handleEl.addEventListener('pointerdown',(e)=>{
-      e.preventDefault(); e.stopPropagation(); const m=+handleEl.dataset.m, side=handleEl.dataset.side;
-      const slotEl=handleEl.closest('.pair-slot'); const startX=e.clientX, startY=e.clientY;
-      slotEl.classList.add('dragging-slot'); slotEl.style.pointerEvents='none'; let dropTarget=null;
-      function onMove(ev){ const dx=ev.clientX-startX, dy=ev.clientY-startY; slotEl.style.transform=`translate(${dx}px,${dy}px)`;
-        const under=document.elementFromPoint(ev.clientX,ev.clientY); document.querySelectorAll('.pair-slot.drop-target').forEach(x=>x.classList.remove('drop-target'));
-        const t=under?under.closest('.pair-slot[data-m]'):null; if(t&&t!==slotEl){ dropTarget=t; t.classList.add('drop-target'); } else dropTarget=null; }
-      function onUp(){ slotEl.style.transform=''; slotEl.style.pointerEvents=''; slotEl.classList.remove('dragging-slot'); document.querySelectorAll('.pair-slot.drop-target').forEach(x=>x.classList.remove('drop-target')); document.removeEventListener('pointermove',onMove); document.removeEventListener('pointerup',onUp); if(dropTarget){ swapPairSlots(m,side,+dropTarget.dataset.m,dropTarget.dataset.side); } }
-      document.addEventListener('pointermove',onMove); document.addEventListener('pointerup',onUp);
-    });
-  }
-  function pairSlotHtml(name,m,side,recMap,isForced){
-    if(name===null) return `<div class="pair-slot bye">BYE (不戦勝)</div>`;
-    if(!AtsuCup.isRevealed(name)) return `<div class="pair-slot pending"><span>🎲 ？？？</span></div>`;
-    return `<div class="pair-slot ${isForced?'forced':''}" data-m="${m}" data-side="${side}"><span class="nm" data-editname>${escapeHtml(name)}</span><span class="cam-mark">${recMap[name]?'📹':'🚫'}</span><span class="drag-handle-sm" data-draghandle data-m="${m}" data-side="${side}">⠿</span></div>`;
-  }
-  function renderPairingPreview(){
-    const area=document.getElementById('pairingArea'); const hint=document.getElementById('pairingHint'); if(!area) return;
-    if(!state.people.length){ area.innerHTML=`<div class="empty-state"><span class="big">🙋</span>参加者がいません。</div>`; hint.style.display='none'; return; }
-    hint.style.display='block';
-    const has = state.matches.length>0 && state.matches[0].length>0;
-    if(!has){ area.innerHTML=`<div class="empty-state"><span class="big">🌀</span>まだ組み合わせがありません。<br>上で決め方を選んでください。</div>`; return; }
-    const recMap=AtsuCup.recMapOf(); const round=state.matches[0];
-    let html=round.map((m,i)=>{
-      const isForced=m.a&&m.b&&AtsuCup.isRevealed(m.a)&&AtsuCup.isRevealed(m.b)&&!recMap[m.a]&&!recMap[m.b];
-      return `<div class="pair-card"><div class="pair-row">${pairSlotHtml(m.a,i,'a',recMap,isForced)}<span class="pair-vs">VS</span>${pairSlotHtml(m.b,i,'b',recMap,isForced)}</div></div>`;
-    }).join('');
-    const forced=AtsuCup.forcedPairsList();
-    if(forced.length){ html+=`<div class="warn-box">⚠️ 撮影OKの人が足りず、以下は撮影不可同士の対戦になっています:<br>`+forced.map(f=>`・${escapeHtml(f.a)} vs ${escapeHtml(f.b)}`).join('<br>')+`</div>`; }
-    area.innerHTML=html;
-    area.querySelectorAll('[data-editname]').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); const slot=el.closest('.pair-slot'); startEditPairName(+slot.dataset.m, slot.dataset.side); }));
-    area.querySelectorAll('[data-draghandle]').forEach(el=> attachPairDrag(el));
-  }
-
   /* ---- ルーレットモーダル ---- */
   let rouletteEl=null, wheelCanvas=null, wheelCtx=null, currentRotation=0, spinning=false;
   const WHEEL_COLORS=["#ff6a2b","#e8b34c","#7c4dff","#2bc9a0","#ff4d94","#4fb0e8","#a8e83b","#ff9145"];
@@ -432,11 +366,9 @@
         pickedBanner.classList.toggle('seed',isSeed);
         if(isSeed){ pickedBanner.textContent='🎉 シード権獲得！ '+picked; spawnSeedParticles(); } else { pickedBanner.textContent='🎯 '+picked; }
         AtsuCup.persist();
-        renderPairingPreview();
+        renderTree(); // トーナメント表の該当枠が ？？？ → 名前 に変わる
         if(state.remaining.length===0){
-          setTimeout(()=>{ closeRoulette(); render(); }, 900); // 全員公開 → bracketへ
-        } else {
-          renderRouletteLauncher();
+          setTimeout(()=>{ closeRoulette(); }, 900); // 全員公開 → モーダルを閉じて勝敗入力可能な表示へ
         }
       }
     }
@@ -482,6 +414,12 @@
     return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
       +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">？？？</text>`;
   }
+  // ルーレットでまだ公開されていない枠(組み合わせは決まっているが名前を伏せている)
+  function hiddenBoxSvg(r,centerY){
+    const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
+    return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5"/>`
+      +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#6b5f82">🎲 ？？？</text>`;
+  }
   function buildTreeSVG(){
     treeSlotRects={}; bRecMap=AtsuCup.recMapOf();
     const round0=state.matches[0]; const leafCount=round0.length*2; const totalRounds=Math.round(Math.log2(leafCount));
@@ -495,16 +433,19 @@
       framesSvg+=`<text x="${colLeft(r)+BOX_W/2}" y="14" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9a8fae">${escapeHtml(roundLabel(matchCount))}</text>`;
       for(let i=0;i<matchCount;i++){
         const m=round[i]; const centerY=jointY(r,i); const upY=centerY-TREE_ROW_H/2, downY=centerY+TREE_ROW_H/2;
-        const isForced=m&&m.a&&m.b&&!bRecMap[m.a]&&!bRecMap[m.b];
+        const bothRevealed = m && m.a && m.b && AtsuCup.isRevealed(m.a) && AtsuCup.isRevealed(m.b);
+        const isForced = bothRevealed && !bRecMap[m.a] && !bRecMap[m.b];
         linesSvg+=`<path d="M${boxRight},${upY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
         linesSvg+=`<path d="M${boxRight},${downY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
         linesSvg+=`<path d="M${joinX},${upY} V${downY}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
         linesSvg+=`<path d="M${joinX},${centerY} H${stubRight}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
         [['a',m?m.a:null,upY,m?m.aSrc:undefined],['b',m?m.b:null,downY,m?m.bSrc:undefined]].forEach(([side,name,y,src])=>{
           if(name===null){ if(src===undefined && side==='b' && m && m.a){ boxesSvg+=byeBoxSvg(r,i,y); } else { boxesSvg+=pendingBoxSvg(r,y); } return; }
+          if(!AtsuCup.isRevealed(name)){ boxesSvg+=hiddenBoxSvg(r,y); return; } // ルーレット未公開
           const isWinner=!!m.winner && m.winner===name; boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced);
         });
-        if(m&&m.a&&m.b&&!m.winner){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
+        // 勝敗ボタンは両者とも公開済みで未決着のときだけ
+        if(bothRevealed && !m.winner){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
       }
     }
     let trophySvg=''; if(state.winnerName){ const fy=jointY(totalRounds-1,0); trophySvg=`<text x="${lastColRight+6}" y="${fy+8}" font-size="22">🏆</text>`; }
@@ -513,10 +454,12 @@
 
   function renderBracket(){
     computeRowH();
+    const hint = state.remaining.length
+      ? '上のボタンで組み合わせを決めてください(決まると「？？？」が名前に変わります)。'
+      : '⚔️で勝敗入力・✏️で名前変更・シード枠の➕で途中参加';
     bracketSection.innerHTML = `
       <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
-      <p class="hint" style="margin:2px 0 8px;">⚔️で勝敗入力・✏️で名前変更・シード枠の➕で途中参加</p>
-      ${AtsuCup.bracketNotStarted() ? `<div class="row" style="margin-bottom:8px;"><button class="btn btn-ghost" id="reshuffleBtn" style="width:100%;">🔄 組み合わせをやり直す</button></div>` : ''}
+      <p class="hint" style="margin:2px 0 8px;">${hint}</p>
       <div class="row" id="jumpRow" style="display:none; margin-bottom:8px;"><button class="btn btn-ghost" id="jumpNextBtn" style="width:100%;">🎯 次の対戦へ</button></div>
       <div class="tree-scroll" id="treeScroll"></div>
       <div id="advanceArea"></div>
@@ -524,8 +467,6 @@
       <div id="noticeArea"></div>
       <div id="thirdPlaceArea"></div>
       <div id="championArea"></div>`;
-    const reshuffle=document.getElementById('reshuffleBtn');
-    if(reshuffle) reshuffle.addEventListener('click', ()=>{ AtsuCup.resetDownstream(); render(); });
     document.getElementById('saveBracketImgBtn').addEventListener('click', saveBracketImg);
     renderTree(); renderExtras();
   }
@@ -620,6 +561,15 @@
   }
   function renderExtras(){
     const recMap=AtsuCup.recMapOf();
+    // 組み合わせが未確定(ルーレット公開中)の間は、進行・警告・優勝などのUIを出さない
+    if(state.remaining.length){
+      document.getElementById('advanceArea').innerHTML='';
+      document.getElementById('jumpRow').style.display='none';
+      document.getElementById('noticeArea').innerHTML='';
+      document.getElementById('thirdPlaceArea').innerHTML='';
+      document.getElementById('championArea').innerHTML='';
+      return;
+    }
     // 次のラウンドへ進む
     const advanceArea=document.getElementById('advanceArea'); const lastR=state.matches.length-1; const lastRound=lastR>=0?state.matches[lastR]:null;
     if(lastRound && lastRound.length>1){
