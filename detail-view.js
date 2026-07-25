@@ -172,7 +172,7 @@
       <h2>組み合わせを決める</h2>
       <div id="peopleSummary"></div>
       ${hasPeople ? `
-        <p class="hint" style="margin-top:14px;">下のトーナメント表の空いている枠をタップすると、エントリー者から相手を選べます。まとめて決めたい場合は自動抽選も使えます。ドラッグ&ドロップで枠の移動・入れ替え・取り消しもできます。</p>
+        <p class="hint" style="margin-top:14px;">下のトーナメント表の空いている枠をタップすると、エントリー者から相手を選べます。まとめて決めたい場合は自動抽選も使えます。</p>
         <div class="row">
           <button class="btn btn-primary" id="instantAutoBtn">⚡ ワンタップで自動抽選</button>
           <button class="btn btn-ghost" id="resetOrderBtn">🔄 リセット</button>
@@ -496,7 +496,7 @@
   function renderBracket(){
     computeRowH();
     const hint = round1HasEmpty()
-      ? '空いている枠をタップして、対戦相手を選んでください。'
+      ? '空いている枠をタップして、対戦相手を選んでください。ドラッグ&ドロップで枠の移動・入れ替え・取り消しもできます。'
       : '⚔️で勝敗入力・シード枠の➕で途中参加・ドラッグ&ドロップで枠の移動/入れ替え';
     bracketSection.innerHTML = `
       <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
