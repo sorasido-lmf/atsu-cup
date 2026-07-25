@@ -30,12 +30,12 @@
 </style>
 </head>
 <body>
-<a class="back-link" href="index.html">‹ トップへ</a>
+<a class="back-link" id="backLink" href="index.html">‹ 戻る</a>
 <div class="wrap">
   <header class="top">
     <div class="crown-mark">🙋</div>
     <h1>大会エントリー</h1>
-    <div class="sub">TOURNAMENT ENTRY</div>
+    <div class="sub" id="entryTournamentName">TOURNAMENT ENTRY</div>
   </header>
 
   <div id="flowBanner"></div>
@@ -56,8 +56,8 @@
     </div>
   </section>
 
-  <div class="next-flow-box" id="nextFlowBox" style="display:none;">
-    <a class="btn btn-gold" style="width:100%;" id="toDetailLink" href="tournament-detail.html">次へ: 組み合わせを決める →</a>
+  <div class="next-flow-box" id="nextFlowBox">
+    <a class="btn btn-gold" style="width:100%;" id="toDetailLink" href="tournament-detail.html">‹ 大会詳細に戻る</a>
   </div>
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
@@ -75,17 +75,20 @@
   AtsuCup.restore();
   if(!state.userRecDefaults) state.userRecDefaults = {};
   if(!state.archivedUsers) state.archivedUsers = {};
+  // ?id= の大会を操作対象にする
+  const id = new URLSearchParams(location.search).get('id');
+  if(id) AtsuCup.setActive(id);
 
   const countBadges = document.getElementById("countBadges");
   const selectedList = document.getElementById("selectedList");
   const availableList = document.getElementById("availableList");
   const nextFlowBox = document.getElementById("nextFlowBox");
 
-  // 「次へ」の遷移先を、開催中の大会の詳細ページ(組み合わせ決定)に向ける
-  const toDetailLink = document.getElementById("toDetailLink");
-  if(toDetailLink && state.tournamentMeta && state.tournamentMeta.id){
-    toDetailLink.href = `tournament-detail.html?id=${encodeURIComponent(state.tournamentMeta.id)}`;
-  }
+  // 大会名を明記し、戻り先(この大会の詳細ページ)を各リンクに設定する
+  const detailHref = (state.tournamentMeta && state.tournamentMeta.id) ? `tournament-detail.html?id=${encodeURIComponent(state.tournamentMeta.id)}` : 'index.html';
+  const toDetailLink = document.getElementById("toDetailLink"); if(toDetailLink) toDetailLink.href = detailHref;
+  const backLink = document.getElementById("backLink"); if(backLink) backLink.href = detailHref;
+  const nameEl = document.getElementById("entryTournamentName"); if(nameEl && state.tournamentMeta.title) nameEl.textContent = state.tournamentMeta.title;
 
   function recDefaultOf(name){ return state.userRecDefaults[name] !== false; }
 
@@ -118,7 +121,6 @@
 
   function renderAll(){
     renderBadges();
-    nextFlowBox.style.display = state.people.length ? 'block' : 'none';
 
     // 今回参加する人(選択中)・2列表示
     selectedList.className = '';

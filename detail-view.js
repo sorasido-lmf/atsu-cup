@@ -13,12 +13,14 @@
   const matchupSection = document.getElementById('matchupSection');
   const bracketSection = document.getElementById('bracketSection');
   const id = new URLSearchParams(location.search).get('id');
+  // この大会を操作対象にする(state.people/matches等がこの大会を指すようになる)
+  AtsuCup.setActive(id);
 
   let mode = 'view'; // 'view'|'editing'|'confirmEnd'|'confirmDelete'
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
   function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
-  function isLive(){ return !!(id && state.tournamentMeta && state.tournamentMeta.id === id && state.tournamentMeta.title); }
+  function isLive(){ const t=AtsuCup.activeT(); return !!(t && t.status==='ongoing'); }
   function findHistory(){ return state.history.find(h=>h.id===id); }
   function hasPairing(){ return state.matches.length>0 && state.matches[0].length>0 && state.remaining.length===0; }
   function recDefaultOf(name){ return state.userRecDefaults[name] !== false; }
@@ -196,29 +198,18 @@
     if(!box) return;
     if(!state.people.length){
       box.innerHTML = `<div class="empty-state"><span class="big">🙋</span>参加者が選ばれていません。</div>
-        <a class="btn btn-primary" style="width:100%;" href="tournament-entry.html">大会エントリーへ</a>`;
+        <a class="btn btn-primary" style="width:100%;" href="tournament-entry.html?id=${encodeURIComponent(state.tournamentMeta.id)}">🙋 大会エントリー</a>`;
       return;
     }
     const rec = state.people.filter(p=>p.rec).length;
+    const entryHref = `tournament-entry.html?id=${encodeURIComponent(state.tournamentMeta.id)}`;
     box.innerHTML = `
       <span class="count-badge">参加: ${state.people.length}人</span>
       <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
       <span class="count-badge muted2">🚫 撮影不可: ${state.people.length-rec}人</span>
       <div class="row">
-        <button class="btn btn-ghost" id="addWalkinBtn">＋ 参加者を追加</button>
-        <a class="btn btn-ghost" href="tournament-entry.html">参加者を編集する</a>
+        <a class="btn btn-ghost" style="width:100%;" href="${entryHref}">🙋 大会エントリー</a>
       </div>`;
-    document.getElementById('addWalkinBtn').addEventListener('click', ()=>{
-      WalkinModal.open({
-        excludeNames: state.people.map(p=>p.name),
-        onPick: (name)=>{
-          if(state.people.some(p=>p.name===name)) return;
-          state.people.push({ name, rec: recDefaultOf(name) });
-          AtsuCup.resetDownstream();
-          refreshMatchup();
-        }
-      });
-    });
   }
 
   function renderDecideModeTabs(){
@@ -664,7 +655,7 @@
 
     const championArea=document.getElementById('championArea');
     if(state.winnerName){
-      championArea.innerHTML=`<div class="champion-box"><div class="label">Champion</div><div class="name">👑 ${escapeHtml(state.winnerName)}</div>${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div style="color:var(--muted);font-weight:700;margin-bottom:10px;">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}<a class="btn btn-gold" style="width:100%; margin-bottom:10px;" href="results.html">🏆 最終結果を見る(1位〜4位・全順位)</a><div class="row" style="justify-content:center;"><button class="btn btn-ghost" id="toCardBtn">優勝カードを作る</button><a class="btn btn-ghost" href="hall.html">歴代優勝者を見る</a></div></div>`;
+      championArea.innerHTML=`<div class="champion-box"><div class="label">Champion</div><div class="name">👑 ${escapeHtml(state.winnerName)}</div>${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div style="color:var(--muted);font-weight:700;margin-bottom:10px;">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}<a class="btn btn-gold" style="width:100%; margin-bottom:10px;" href="results.html?id=${encodeURIComponent(state.tournamentMeta.id)}">🏆 最終結果を見る(1位〜4位・全順位)</a><div class="row" style="justify-content:center;"><button class="btn btn-ghost" id="toCardBtn">優勝カードを作る</button><a class="btn btn-ghost" href="hall.html">歴代優勝者を見る</a></div></div>`;
       document.getElementById('toCardBtn').addEventListener('click', ()=>{ const c=document.createElement('canvas'); c.width=1000; c.height=1000; AtsuCup.generateAndSaveCard(c, state.tournamentMeta.title, state.winnerName); });
     } else { championArea.innerHTML=''; }
   }

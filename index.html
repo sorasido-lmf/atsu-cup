@@ -26,7 +26,6 @@
     <h2>このツールでできること</h2>
     <div class="menu-grid">
       <a class="menu-card" href="tournaments.html"><span class="ic">📜</span>大会一覧</a>
-      <a class="menu-card" href="tournament-entry.html"><span class="ic">🙋</span>大会エントリー</a>
       <a class="menu-card" href="video.html"><span class="ic">🎬</span>対戦動画</a>
       <a class="menu-card" href="hall.html"><span class="ic">👑</span>歴代優勝者</a>
       <a class="menu-card" href="record.html"><span class="ic">📊</span>戦績</a>
@@ -50,27 +49,22 @@
   const currentTournamentBox = document.getElementById("currentTournamentBox");
 
   function renderCurrentTournamentBox(){
-    const meta = state.tournamentMeta;
-    if(!meta || !meta.id || !meta.title){
-      currentTournamentBox.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会が作成されていません。</div>
+    const ongoing = state.tournaments.filter(t=>t.status==='ongoing');
+    if(!ongoing.length){
+      currentTournamentBox.innerHTML = `<div class="empty-state"><span class="big">🏆</span>開催中の大会はありません。</div>
         <a class="btn btn-primary" style="width:100%; margin-top:12px;" href="tournament-create.html">➕ 大会を作成する</a>`;
       return;
     }
-    const statusBadge = state.winnerName
-      ? `<span class="status-badge done">優勝者決定</span>`
-      : `<span class="status-badge open">進行中</span>`;
-    currentTournamentBox.innerHTML = `
-      ${statusBadge}
-      ${meta.posterUrl?`<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">`:''}
-      <div class="cur-title">${escapeHtml(meta.title)}</div>
-      ${state.winnerName?`<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>`:''}
-      <div class="row">
-        <a class="btn btn-gold" style="width:100%;" href="tournament-detail.html?id=${encodeURIComponent(meta.id)}">詳細を見る →</a>
-      </div>
-      <div class="row">
-        <a class="btn btn-ghost" href="tournament-create.html">➕ 新しい大会を作成する</a>
-      </div>
-    `;
+    // 開催中の大会を全件表示(複数同時進行に対応)
+    const cards = ongoing.map(t=>{
+      const badge = t.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`;
+      return `<a class="ongoing-card" href="tournament-detail.html?id=${encodeURIComponent(t.id)}">
+        ${badge}
+        <div class="cur-title" style="margin-top:6px;">${escapeHtml(t.title)}</div>
+        ${t.winnerName?`<div class="cur-line champ">👑 ${escapeHtml(t.winnerName)}</div>`:''}
+      </a>`;
+    }).join('');
+    currentTournamentBox.innerHTML = cards + `<a class="btn btn-primary" style="width:100%; margin-top:10px;" href="tournament-create.html">➕ 新しい大会を作成する</a>`;
   }
 
   renderCurrentTournamentBox();

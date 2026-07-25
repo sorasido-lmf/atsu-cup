@@ -75,8 +75,11 @@
   const state = AtsuCup.state;
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
+  // ?id= の大会を操作対象にする
+  const rid = new URLSearchParams(location.search).get('id');
+  if(rid) AtsuCup.setActive(rid);
 
-  // 「対戦表へ」の戻り先を、開催中の大会の詳細ページに向ける
+  // 「対戦表へ」の戻り先を、この大会の詳細ページに向ける
   const detailHref = (state.tournamentMeta && state.tournamentMeta.id) ? ('tournament-detail.html?id='+encodeURIComponent(state.tournamentMeta.id)) : 'tournaments.html';
   const backBtn = document.querySelector('a.back-link'); if(backBtn) backBtn.href = detailHref;
   const toDetailBracketBtn = document.getElementById('toDetailBracketBtn'); if(toDetailBracketBtn) toDetailBracketBtn.href = detailHref;

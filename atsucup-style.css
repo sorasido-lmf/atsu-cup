@@ -4,7 +4,12 @@
   --cream:#f1e6cf; --muted:#9a8fae; --danger:#ff4d4d; --ok:#3ecf8e;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;overflow-x:hidden;}
+.ongoing-card{
+  display:block; text-decoration:none; color:inherit; background:#0d0a14; border:1px solid var(--line);
+  border-radius:12px; padding:12px 14px; margin-bottom:8px;
+}
+.ongoing-card:active{ transform:scale(.99); }
 button, .rm, [data-select]{ transition:transform .1s ease, background .1s ease, opacity .1s ease; }
 button:active, .rm:active{ transform:scale(.93); }
 body{

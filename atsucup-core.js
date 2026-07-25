@@ -4,19 +4,71 @@ const AtsuCup = (function(){
 
   const STORE_KEY = "atsucup:state:v2";
 
+  // 複数の大会を同時に進行できるよう、各大会が自分の進行データ(people/matches等)を持つ。
+  // 端末共通のデータ(roster/userRecDefaults/archivedUsers)だけstate直下に置く。
   const state = {
-    people: [],       // [{name, rec}] 今回の大会に選ばれている参加者
     roster: [],       // [name, ...] この端末に登録済みの参加者マスタ(大会をまたいで再利用)
-    userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値(data/users.json の recDefault 列のローカルミラー)
-    archivedUsers: {}, // {name: boolean} アーカイブ済みユーザー(data/users.json の archived 列のローカルミラー。物理削除はせず選出対象から外すだけ)
-    order: [],
-    remaining: [],
-    matches: [],       // matches[round][i] = {a,b,winner,loser,video}
-    winnerName: "",
-    thirdPlaceMatch: null, // {a,b,winner} 準決勝(2試合)完了時に敗者同士で自動生成
-    tournamentMeta: { id: null, title: "", details: "", posterUrl: null }, // 開催中の大会の情報(この端末だけに保存)
-    history: [] // 過去に「終了する」で確定させた大会の記録(戦績集計に使う)
+    userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値
+    archivedUsers: {}, // {name: boolean} アーカイブ済みユーザー
+    tournaments: [],  // [{id,title,details,posterUrl,createdAt,status,people,order,remaining,matches,winnerName,thirdPlaceMatch}]
+    activeId: null    // 現在操作対象の大会id(各画面が ?id= から setActive でセット)
   };
+
+  function activeT(){ return state.tournaments.find(t=>t.id===state.activeId) || null; }
+  function setActive(id){ state.activeId = id || null; }
+  function newBlankTournament(meta){
+    return {
+      id: meta.id, title: meta.title||"", details: meta.details||"", posterUrl: meta.posterUrl||null,
+      createdAt: new Date().toISOString(), status: 'ongoing',
+      people: [], order: [], remaining: [], matches: [], winnerName: "", thirdPlaceMatch: null
+    };
+  }
+
+  // 既存コードの state.people / matches 等の参照を、アクティブな大会に転送する(getter/setter)。
+  // enumerable:false なので JSON.stringify(state) には出ず、実データは tournaments 配列にのみ保存される。
+  ['people','order','remaining','matches'].forEach(key=>{
+    Object.defineProperty(state, key, {
+      enumerable:false,
+      get(){ const t=activeT(); return t ? t[key] : []; },
+      set(v){ const t=activeT(); if(t) t[key]=v; }
+    });
+  });
+  Object.defineProperty(state, 'winnerName', {
+    enumerable:false,
+    get(){ const t=activeT(); return t ? t.winnerName : ""; },
+    set(v){ const t=activeT(); if(t) t.winnerName=v; }
+  });
+  Object.defineProperty(state, 'thirdPlaceMatch', {
+    enumerable:false,
+    get(){ const t=activeT(); return t ? t.thirdPlaceMatch : null; },
+    set(v){ const t=activeT(); if(t) t.thirdPlaceMatch=v; }
+  });
+  Object.defineProperty(state, 'tournamentMeta', {
+    enumerable:false,
+    get(){ const t=activeT(); return t ? {id:t.id,title:t.title,details:t.details,posterUrl:t.posterUrl} : {id:null,title:"",details:"",posterUrl:null}; },
+    set(v){
+      if(!v || !v.title){ state.activeId = null; return; } // 空メタ代入はアクティブ解除(旧endの名残)
+      const existing = state.tournaments.find(t=>t.id===v.id);
+      if(existing){ existing.title=v.title; existing.details=v.details; existing.posterUrl=v.posterUrl; state.activeId=existing.id; }
+      else { const nt=newBlankTournament(v); state.tournaments.push(nt); state.activeId=nt.id; }
+    }
+  });
+  // 後方互換: state.history は「終了済みの大会」を旧history形式(participants/championName)で見せる
+  Object.defineProperty(state, 'history', {
+    enumerable:false,
+    get(){
+      return state.tournaments.filter(t=>t.status==='completed').map(t=>({
+        id:t.id, title:t.title, details:t.details, posterUrl:t.posterUrl, createdAt:t.createdAt,
+        finished:!!t.winnerName, championName:t.winnerName||null,
+        matches:t.matches, thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people
+      }));
+    },
+    set(v){
+      // 「state.history = state.history.filter(...)」による削除に対応(渡された配列に無いcompletedを削除)
+      const keep = new Set((v||[]).map(h=>h.id));
+      state.tournaments = state.tournaments.filter(t=> t.status!=='completed' || keep.has(t.id));
+    }
+  });
 
   let persistFailWarned = false;
   function persist(){
@@ -26,9 +78,8 @@ const AtsuCup = (function(){
       // 容量オーバー等で保存に失敗した場合、ポスター画像を除いてでも他の進行状況(参加者・対戦表・結果)は必ず保存する
       try{
         const fallback = {
-          ...state,
-          tournamentMeta: { ...state.tournamentMeta, posterUrl: null },
-          history: state.history.map(h=>({ ...h, posterUrl: null }))
+          ...state, // enumerableな実データ(roster/userRecDefaults/archivedUsers/tournaments/activeId)のみ
+          tournaments: state.tournaments.map(t=>({ ...t, posterUrl: null }))
         };
         localStorage.setItem(STORE_KEY, JSON.stringify(fallback));
         console.error('[atsucup] persist: quota exceeded, saved without local poster image', e);
@@ -45,17 +96,46 @@ const AtsuCup = (function(){
   function restore(){
     try{
       const raw = localStorage.getItem(STORE_KEY);
-      if(raw) Object.assign(state, JSON.parse(raw));
+      if(raw) migrate(JSON.parse(raw));
     }catch(e){}
-    // 以前のバージョンで参加者マスタ(roster)に登録されないまま選択されていた人がいれば、
-    // ここで登録者一覧に反映しておく(「選ばれているのに登録者一覧に出ない」不整合の解消)
+    // 各大会の参加者で、登録者マスタ(roster)に無い人がいれば反映しておく
     const rosterSet = new Set(state.roster);
-    state.people.forEach(p=>{ if(!rosterSet.has(p.name)){ state.roster.push(p.name); rosterSet.add(p.name); } });
-    // idフィールド導入より前に保存された「開催中の大会」にはidが無いため、ここで発行しておく
-    // (tournament-detail.html等がidで大会を特定できるようにするため)
-    if(state.tournamentMeta && state.tournamentMeta.title && !state.tournamentMeta.id){
-      state.tournamentMeta.id = newTournamentId();
+    state.tournaments.forEach(t=>{
+      (t.people||[]).forEach(p=>{ if(!rosterSet.has(p.name)){ state.roster.push(p.name); rosterSet.add(p.name); } });
+    });
+  }
+
+  // localStorageのデータを新形式(tournaments配列)に取り込む。旧形式(tournamentMeta+history+直下people)は移行する。
+  function migrate(data){
+    state.roster = data.roster || [];
+    state.userRecDefaults = data.userRecDefaults || {};
+    state.archivedUsers = data.archivedUsers || {};
+    if(Array.isArray(data.tournaments)){
+      state.tournaments = data.tournaments;
+      state.activeId = data.activeId || null;
+      return;
     }
+    // --- 旧形式からの移行 ---
+    const list = [];
+    (data.history||[]).forEach(h=>{
+      list.push({
+        id: h.id || newTournamentId(), title: h.title||"", details: h.details||"", posterUrl: h.posterUrl||null,
+        createdAt: h.createdAt || new Date().toISOString(), status:'completed',
+        people: h.participants||[], order:[], remaining:[],
+        matches: h.matches||[], winnerName: h.championName||"", thirdPlaceMatch: h.thirdPlaceMatch||null
+      });
+    });
+    const meta = data.tournamentMeta;
+    if(meta && meta.title){
+      list.push({
+        id: meta.id || newTournamentId(), title: meta.title, details: meta.details||"", posterUrl: meta.posterUrl||null,
+        createdAt: new Date().toISOString(), status:'ongoing',
+        people: data.people||[], order: data.order||[], remaining: data.remaining||[],
+        matches: data.matches||[], winnerName: data.winnerName||"", thirdPlaceMatch: data.thirdPlaceMatch||null
+      });
+    }
+    state.tournaments = list;
+    state.activeId = null;
   }
 
   function escapeHtml(s){
@@ -478,47 +558,22 @@ const AtsuCup = (function(){
   }
 
   // 過去の大会(state.history)に加え、優勝が決まった今回の大会もあわせて集計対象にする
+  // 戦績集計の対象: 優勝が決まっている全大会(終了済み・進行中を問わない)
   function allFinishedEntries(){
-    const list = state.history.slice();
-    if(state.tournamentMeta && state.tournamentMeta.title && state.winnerName){
-      list.push({
-        title: state.tournamentMeta.title,
-        championName: state.winnerName,
-        matches: state.matches,
-        thirdPlaceMatch: state.thirdPlaceMatch,
-        participants: state.people
-      });
-    }
-    return list;
+    return state.tournaments
+      .filter(t=> t.status==='completed' || t.winnerName)
+      .map(t=>({ title:t.title, championName:t.winnerName||null, matches:t.matches, thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people }));
   }
 
   /* ---------- 大会のライフサイクル ---------- */
   function newTournamentId(){ return 't'+Date.now()+Math.random().toString(36).slice(2,8); }
 
-  // 今の大会(未終了でも)を「過去の大会」として記録に残す
-  // 進行中だった大会と同じidを引き継ぐことで、tournament-detail.htmlの?id=が終了後も同じ大会を指し続けられるようにする
-  function archiveCurrentTournament(){
-    state.history.push({
-      id: state.tournamentMeta.id || newTournamentId(),
-      title: state.tournamentMeta.title,
-      details: state.tournamentMeta.details,
-      posterUrl: state.tournamentMeta.posterUrl,
-      createdAt: new Date().toISOString(),
-      finished: !!state.winnerName,
-      championName: state.winnerName || null,
-      matches: JSON.parse(JSON.stringify(state.matches)),
-      thirdPlaceMatch: state.thirdPlaceMatch ? JSON.parse(JSON.stringify(state.thirdPlaceMatch)) : null,
-      participants: state.people.map(p=>({...p}))
-    });
-  }
-
-  // 今の大会を終わらせて「過去の大会」に保存し、開催中を空の状態に戻す(優勝者が未定でも終了できる)
+  // アクティブな大会を終了(status='completed')にする。複数同時進行なので他の大会には影響しない。
   function endCurrentTournament(){
-    if(state.tournamentMeta && state.tournamentMeta.title){
-      archiveCurrentTournament();
-    }
-    state.tournamentMeta = { title:"", details:"", posterUrl:null };
-    resetDownstream();
+    const t = activeT();
+    if(t){ t.status = 'completed'; }
+    state.activeId = null;
+    persist();
   }
 
   /* ---------- 歴代優勝者カード ---------- */
@@ -586,9 +641,12 @@ const AtsuCup = (function(){
     link.href = canvas.toDataURL("image/png");
     link.click();
   }
-  // 優勝が確定した過去の大会だけを、新しい順に一覧表示する
+  // 優勝が確定した大会だけを、新しい順に一覧表示する(終了済み・進行中を問わない)
   function championEntries(){
-    return state.history.filter(h=>h.championName).slice().reverse();
+    return state.tournaments.filter(t=>t.winnerName).map(t=>({
+      id:t.id, title:t.title, details:t.details, posterUrl:t.posterUrl, createdAt:t.createdAt,
+      championName:t.winnerName, matches:t.matches, thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people
+    })).reverse();
   }
 
   /* ---------- 対戦動画 ---------- */
@@ -613,16 +671,9 @@ const AtsuCup = (function(){
     });
     return list;
   }
-  // 「開催中の大会」と「過去の大会(state.history)」をまとめて選択肢にする
+  // 全大会(進行中・終了済み)を新しい順に選択肢にする
   function videoTournamentList(){
-    const list = [];
-    if(state.tournamentMeta && state.tournamentMeta.title){
-      list.push({ key:'current', title: state.tournamentMeta.title, matches: state.matches });
-    }
-    state.history.slice().reverse().forEach(h=>{
-      list.push({ key:h.id, title: h.title, matches: h.matches || [] });
-    });
-    return list;
+    return state.tournaments.slice().reverse().map(t=>({ key:t.id, title:t.title, matches:t.matches||[] }));
   }
 
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
@@ -665,7 +716,8 @@ const AtsuCup = (function(){
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildRound1Manual, resetDownstream,
     advanceRound, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, isRevealed, forcedPairsList, hasDownstreamProgress,
-    computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, archiveCurrentTournament, endCurrentTournament, newTournamentId,
+    computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
+    setActive, activeT,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable, videoTournamentList
   };

@@ -73,11 +73,8 @@
     area.querySelectorAll("input").forEach(inp=>{
       inp.addEventListener("change", ()=>{
         const r = +inp.dataset.r, i = +inp.dataset.i;
+        // target.matches は videoTournamentList が返す各大会の実データ参照なので直接更新される
         target.matches[r][i].video = inp.value.trim();
-        if(target.key !== 'current'){
-          const h = state.history.find(x=>x.id===target.key);
-          if(h) h.matches = target.matches;
-        }
         AtsuCup.persist();
         renderVideoTab();
       });

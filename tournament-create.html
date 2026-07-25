@@ -67,11 +67,8 @@
         if(fileInput.files && fileInput.files[0]){
           posterUrl = await AtsuCup.resizeImageToDataUrl(fileInput.files[0], 900, 0.75);
         }
-        if(state.tournamentMeta && state.tournamentMeta.title){
-          AtsuCup.endCurrentTournament();
-        }
         const id = AtsuCup.newTournamentId();
-        state.tournamentMeta = { id, title, details, posterUrl };
+        state.tournamentMeta = { id, title, details, posterUrl }; // setterが新しい大会として追加し操作対象にする
         AtsuCup.persist();
         location.href = `tournament-detail.html?id=${encodeURIComponent(id)}`;
       }catch(e){
@@ -81,23 +78,8 @@
     });
   }
 
-  if(state.tournamentMeta && state.tournamentMeta.title){
-    confirmBox.innerHTML = `
-      <div class="confirm-banner">
-        現在開催中の「${escapeHtml(state.tournamentMeta.title)}」は、新しい大会を作成すると自動的に「大会一覧」に保存されます。新しい大会を作成しますか？
-        <div class="row">
-          <button class="btn btn-primary" id="confirmNewBtn">作成する</button>
-          <a class="btn btn-ghost" href="index.html">キャンセル</a>
-        </div>
-      </div>
-    `;
-    document.getElementById("confirmNewBtn").addEventListener("click", ()=>{
-      confirmBox.innerHTML = "";
-      renderForm();
-    });
-  }else{
-    renderForm();
-  }
+  // 複数大会を同時進行できるので、前の大会の確認は不要。常に新規作成フォームを表示する
+  renderForm();
 })();
 </script>
 </body>

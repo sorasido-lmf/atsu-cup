@@ -39,40 +39,28 @@
 
   function renderList(){
     tournamentList.innerHTML = "";
-    const hasLive = state.tournamentMeta && state.tournamentMeta.id && state.tournamentMeta.title;
-    if(!hasLive && !state.history.length){
+    if(!state.tournaments.length){
       tournamentList.innerHTML = `<div class="empty-state" style="padding:16px 10px;">大会はまだありません。<br>トップページの「大会を作成する」から作成してください。</div>`;
       return;
     }
-
-    if(hasLive){
-      const meta = state.tournamentMeta;
+    // 進行中を先頭に、それぞれ新しい順に並べる(複数同時進行に対応)
+    const ongoing = state.tournaments.filter(t=>t.status==='ongoing').slice().reverse();
+    const completed = state.tournaments.filter(t=>t.status==='completed').slice().reverse();
+    [...ongoing, ...completed].forEach(t=>{
+      const statusHtml = t.status==='ongoing'
+        ? `<span class="status-badge open" style="padding:2px 8px; font-size:10.5px;">進行中</span>`
+        : (t.winnerName ? '👑 '+escapeHtml(t.winnerName) : '結果未記録');
       const el = document.createElement("div");
       el.className = "past-tournament-item";
       el.innerHTML = `
-        ${meta.posterUrl?`<img src="${escapeHtml(meta.posterUrl)}" alt="">`:`<div class="noimg">🏆</div>`}
+        ${t.posterUrl?`<img src="${escapeHtml(t.posterUrl)}" alt="">`:`<div class="noimg">🏆</div>`}
         <div class="meta">
-          <div class="t">${escapeHtml(meta.title)}</div>
-          <div class="c"><span class="status-badge open" style="padding:2px 8px; font-size:10.5px;">進行中</span></div>
+          <div class="t">${escapeHtml(t.title)}</div>
+          <div class="c">${statusHtml}</div>
         </div>
         <div class="arrow">›</div>
       `;
-      el.addEventListener("click", ()=> location.href = `tournament-detail.html?id=${encodeURIComponent(meta.id)}`);
-      tournamentList.appendChild(el);
-    }
-
-    state.history.slice().reverse().forEach(h=>{
-      const el = document.createElement("div");
-      el.className = "past-tournament-item";
-      el.innerHTML = `
-        ${h.posterUrl?`<img src="${escapeHtml(h.posterUrl)}" alt="">`:`<div class="noimg">🏆</div>`}
-        <div class="meta">
-          <div class="t">${escapeHtml(h.title)}</div>
-          <div class="c">${h.championName?'👑 '+escapeHtml(h.championName):'結果未記録'}</div>
-        </div>
-        <div class="arrow">›</div>
-      `;
-      el.addEventListener("click", ()=> location.href = `tournament-detail.html?id=${encodeURIComponent(h.id)}`);
+      el.addEventListener("click", ()=> location.href = `tournament-detail.html?id=${encodeURIComponent(t.id)}`);
       tournamentList.appendChild(el);
     });
   }
