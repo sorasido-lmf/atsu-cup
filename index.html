@@ -29,6 +29,7 @@
       <a class="menu-card" href="video.html"><span class="ic">🎬</span>対戦動画</a>
       <a class="menu-card" href="hall.html"><span class="ic">👑</span>歴代優勝者</a>
       <a class="menu-card" href="record.html"><span class="ic">📊</span>戦績</a>
+      <a class="menu-card" href="settings.html"><span class="ic">⚙️</span>設定</a>
     </div>
   </section>
 
@@ -36,6 +37,8 @@
 </div>
 
 <script src="tap-ripple.js"></script>
+<script src="github-db.js"></script>
+<script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
 <script>
 (function(){
@@ -66,6 +69,8 @@
   }
 
   renderCurrentTournamentBox();
+  // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
+  AtsuCup.ready.then(()=>{ renderCurrentTournamentBox(); });
 })();
 </script>
 </body>

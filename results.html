@@ -68,6 +68,8 @@
 </div>
 
 <script src="tap-ripple.js"></script>
+<script src="github-db.js"></script>
+<script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
 <script>
 (function(){
@@ -79,84 +81,98 @@
   const rid = new URLSearchParams(location.search).get('id');
   if(rid) AtsuCup.setActive(rid);
 
-  // 「対戦表へ」の戻り先を、この大会の詳細ページに向ける
-  const detailHref = (state.tournamentMeta && state.tournamentMeta.id) ? ('tournament-detail.html?id='+encodeURIComponent(state.tournamentMeta.id)) : 'tournaments.html';
-  const backBtn = document.querySelector('a.back-link'); if(backBtn) backBtn.href = detailHref;
-  const toDetailBracketBtn = document.getElementById('toDetailBracketBtn'); if(toDetailBracketBtn) toDetailBracketBtn.href = detailHref;
+  // data/*.json の取り込み後にも呼び直せるよう、全体を関数化している(何度呼んでも同じ結果になること)
+  function render(){
+    // 「対戦表へ」の戻り先を、この大会の詳細ページに向ける
+    const detailHref = (state.tournamentMeta && state.tournamentMeta.id) ? ('tournament-detail.html?id='+encodeURIComponent(state.tournamentMeta.id)) : 'tournaments.html';
+    const backBtn = document.querySelector('a.back-link'); if(backBtn) backBtn.href = detailHref;
+    const toDetailBracketBtn = document.getElementById('toDetailBracketBtn'); if(toDetailBracketBtn) toDetailBracketBtn.href = detailHref;
 
-  if(!state.winnerName){
-    document.getElementById('emptyStateBox').innerHTML = `
-      <section class="panel">
-        <div class="empty-state"><span class="big">🏆</span>まだ優勝者が決まっていません。</div>
-        <a class="btn btn-primary" style="width:100%;" href="${detailHref}">対戦表へ戻る →</a>
-      </section>
-    `;
-    return;
-  }
+    // 再描画に備えて毎回リセットする
+    document.getElementById('emptyStateBox').innerHTML = '';
+    document.getElementById('topSection').style.display = 'none';
+    document.getElementById('restSection').style.display = 'none';
+    document.getElementById('actionsSection').style.display = 'none';
 
-  document.getElementById('tournamentTitleLine').textContent = (state.tournamentMeta && state.tournamentMeta.title) || '';
-
-  const entry = {
-    matches: state.matches,
-    thirdPlaceMatch: state.thirdPlaceMatch,
-    championName: state.winnerName,
-    participants: state.people
-  };
-  const placements = AtsuCup.computePlacements(entry);
-
-  const top = {1:null, 2:null, 3:null, 4:null};
-  const restByRound = {};
-  Object.entries(placements).forEach(([name, info])=>{
-    if(info.place && info.place<=4){
-      top[info.place] = name;
-    }else if(info.roundIdx>=0){
-      if(!restByRound[info.roundIdx]) restByRound[info.roundIdx] = [];
-      restByRound[info.roundIdx].push(name);
+    if(!state.winnerName){
+      document.getElementById('emptyStateBox').innerHTML = `
+        <section class="panel">
+          <div class="empty-state"><span class="big">🏆</span>まだ優勝者が決まっていません。</div>
+          <a class="btn btn-primary" style="width:100%;" href="${detailHref}">対戦表へ戻る →</a>
+        </section>
+      `;
+      return;
     }
-  });
 
-  const medalEmoji = {1:'🥇', 2:'🥈', 3:'🥉', 4:'🎖️'};
-  const rankLabelText = {1:'CHAMPION', 2:'2ND PLACE', 3:'3RD PLACE', 4:'4TH PLACE'};
-  let topHtml = '';
-  [1,2,3,4].forEach(place=>{
-    const name = top[place];
-    if(!name) return;
-    topHtml += `<div class="place-card p${place}">
-      <div class="medal">${medalEmoji[place]}</div>
-      <div class="info">
-        <div class="rank-label">${rankLabelText[place]}</div>
-        <div class="nm">${escapeHtml(name)}</div>
-      </div>
-    </div>`;
-  });
-  if(topHtml){
-    document.getElementById('topSection').style.display = 'block';
-    document.getElementById('topPlacesArea').innerHTML = topHtml;
+    document.getElementById('tournamentTitleLine').textContent = (state.tournamentMeta && state.tournamentMeta.title) || '';
+
+    const entry = {
+      matches: state.matches,
+      thirdPlaceMatch: state.thirdPlaceMatch,
+      championName: state.winnerName,
+      participants: state.people
+    };
+    const placements = AtsuCup.computePlacements(entry);
+
+    const top = {1:null, 2:null, 3:null, 4:null};
+    const restByRound = {};
+    Object.entries(placements).forEach(([name, info])=>{
+      if(info.place && info.place<=4){
+        top[info.place] = name;
+      }else if(info.roundIdx>=0){
+        if(!restByRound[info.roundIdx]) restByRound[info.roundIdx] = [];
+        restByRound[info.roundIdx].push(name);
+      }
+    });
+
+    const medalEmoji = {1:'🥇', 2:'🥈', 3:'🥉', 4:'🎖️'};
+    const rankLabelText = {1:'CHAMPION', 2:'2ND PLACE', 3:'3RD PLACE', 4:'4TH PLACE'};
+    let topHtml = '';
+    [1,2,3,4].forEach(place=>{
+      const name = top[place];
+      if(!name) return;
+      topHtml += `<div class="place-card p${place}">
+        <div class="medal">${medalEmoji[place]}</div>
+        <div class="info">
+          <div class="rank-label">${rankLabelText[place]}</div>
+          <div class="nm">${escapeHtml(name)}</div>
+        </div>
+      </div>`;
+    });
+    if(topHtml){
+      document.getElementById('topSection').style.display = 'block';
+      document.getElementById('topPlacesArea').innerHTML = topHtml;
+    }
+
+    const roundIdxs = Object.keys(restByRound).map(Number).sort((a,b)=>b-a);
+    let restHtml = '';
+    roundIdxs.forEach(ridx=>{
+      const names = restByRound[ridx];
+      const round = state.matches[ridx];
+      if(!round) return;
+      const label = AtsuCup.roundLabel(round.length) + '敗退';
+      restHtml += `<div class="rest-group">
+        <div class="rest-group-title">${escapeHtml(label)}(${names.length}人)</div>
+        <div class="rest-name-list">${names.map(n=>`<span class="rest-name-chip">${escapeHtml(n)}</span>`).join('')}</div>
+      </div>`;
+    });
+    if(restHtml){
+      document.getElementById('restSection').style.display = 'block';
+      document.getElementById('restPlacesArea').innerHTML = restHtml;
+    }
+
+    document.getElementById('actionsSection').style.display = 'block';
+    // 再描画で二重登録にならないよう addEventListener ではなく onclick を使う
+    document.getElementById('toCardBtn').onclick = ()=>{
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = 1000; tmpCanvas.height = 1000;
+      AtsuCup.generateAndSaveCard(tmpCanvas, state.tournamentMeta.title, state.winnerName);
+    };
   }
 
-  const roundIdxs = Object.keys(restByRound).map(Number).sort((a,b)=>b-a);
-  let restHtml = '';
-  roundIdxs.forEach(ridx=>{
-    const names = restByRound[ridx];
-    const round = state.matches[ridx];
-    if(!round) return;
-    const label = AtsuCup.roundLabel(round.length) + '敗退';
-    restHtml += `<div class="rest-group">
-      <div class="rest-group-title">${escapeHtml(label)}(${names.length}人)</div>
-      <div class="rest-name-list">${names.map(n=>`<span class="rest-name-chip">${escapeHtml(n)}</span>`).join('')}</div>
-    </div>`;
-  });
-  if(restHtml){
-    document.getElementById('restSection').style.display = 'block';
-    document.getElementById('restPlacesArea').innerHTML = restHtml;
-  }
-
-  document.getElementById('actionsSection').style.display = 'block';
-  document.getElementById('toCardBtn').addEventListener('click', ()=>{
-    const tmpCanvas = document.createElement('canvas');
-    tmpCanvas.width = 1000; tmpCanvas.height = 1000;
-    AtsuCup.generateAndSaveCard(tmpCanvas, state.tournamentMeta.title, state.winnerName);
-  });
+  render();
+  // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
+  AtsuCup.ready.then(()=>{ render(); });
 })();
 </script>
 </body>

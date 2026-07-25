@@ -42,6 +42,7 @@
     <div class="row">
       <button class="btn btn-primary" id="openRegisterBtn">➕ 新規ユーザー登録</button>
     </div>
+    <div id="syncStatus" style="margin-top:10px;"></div>
     <div id="countBadges" style="margin-top:16px;"></div>
     <div id="rosterList" class="roster-list" style="margin-top:12px;"></div>
     <button class="archived-toggle" id="archivedToggle" style="margin-top:14px;"></button>
@@ -52,6 +53,8 @@
 </div>
 
 <script src="tap-ripple.js"></script>
+<script src="github-db.js"></script>
+<script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
 <script src="user-register-modal.js"></script>
 <script>
@@ -73,6 +76,25 @@
 
   function recOf(name){ return state.userRecDefaults[name] !== false; }
   function isArchived(name){ return !!state.archivedUsers[name]; }
+
+  const syncStatus = document.getElementById("syncStatus");
+  function setSyncStatus(msg, type){
+    syncStatus.innerHTML = msg
+      ? `<div class="empty-state" style="padding:9px 12px; font-size:12.5px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>`
+      : '';
+  }
+  // 端末側は即時に反映済み。そのうえで data/users.json(GitHub) にも書き戻す。
+  // トークン未設定でもローカル操作は妨げず、案内だけ出す。
+  async function syncToGitHub(){
+    if(!GitHubDB.hasToken()){ setSyncStatus('この端末にのみ保存しました(GitHubへ反映するには「設定」でトークンを登録してください)', ''); return; }
+    setSyncStatus('GitHubへ保存中...', '');
+    try{
+      const n = await AtsuCup.saveUsersToData();
+      setSyncStatus(`GitHubへ保存しました(登録者${n}人)`, 'ok');
+    }catch(e){
+      setSyncStatus('GitHubへの保存に失敗しました: ' + ((e && e.message) || e), 'error');
+    }
+  }
 
   function makeRow(name, { archived }){
     const row = document.createElement('div');
@@ -143,6 +165,7 @@
         state.userRecDefaults[name] = !recOf(name);
         AtsuCup.persist();
         renderAll();
+        syncToGitHub();
       });
     });
     document.querySelectorAll('[data-archive]').forEach(el=>{
@@ -164,6 +187,7 @@
         confirmingName = null;
         AtsuCup.persist();
         renderAll();
+        syncToGitHub();
       });
     });
     document.querySelectorAll('[data-restore]').forEach(el=>{
@@ -172,6 +196,7 @@
         state.archivedUsers[name] = false;
         AtsuCup.persist();
         renderAll();
+        syncToGitHub();
       });
     });
   }
@@ -182,10 +207,12 @@
   });
 
   document.getElementById("openRegisterBtn").addEventListener("click", ()=>{
-    UserRegisterModal.open({ onRegistered: ()=> renderAll() });
+    UserRegisterModal.open({ onRegistered: ()=>{ renderAll(); syncToGitHub(); } });
   });
 
   renderAll();
+  // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
+  AtsuCup.ready.then(()=>{ renderAll(); });
 })();
 </script>
 </body>

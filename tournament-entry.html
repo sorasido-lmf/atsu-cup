@@ -54,6 +54,7 @@
       <button class="btn btn-ghost" id="openRegisterBtn">➕ 新規ユーザー登録</button>
       <a class="btn btn-ghost" href="users.html">🧑‍🤝‍🧑 ユーザー管理を開く</a>
     </div>
+    <div id="syncStatus" style="margin-top:10px;"></div>
   </section>
 
   <div class="next-flow-box" id="nextFlowBox">
@@ -64,6 +65,8 @@
 </div>
 
 <script src="tap-ripple.js"></script>
+<script src="github-db.js"></script>
+<script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
 <script src="user-register-modal.js"></script>
 <script>
@@ -179,15 +182,24 @@
 
   document.getElementById("openRegisterBtn").addEventListener("click", ()=>{
     UserRegisterModal.open({
-      onRegistered: (names)=>{
+      onRegistered: async (names)=>{
         // 大会画面から登録した場合は、そのまま今回の参加者としても選出しておく
         names.forEach(addToTournament);
         renderAll();
+        // ユーザーマスタが増えたので data/users.json(GitHub) にも書き戻す
+        const box = document.getElementById('syncStatus');
+        const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
+        if(!GitHubDB.hasToken()){ show('この端末にのみ登録しました(GitHubへ反映するには「設定」でトークンを登録してください)'); return; }
+        show('GitHubへ保存中...');
+        try{ const n = await AtsuCup.saveUsersToData(); show(`GitHubへ保存しました(登録者${n}人)`, '#7cffb0'); }
+        catch(e){ show('GitHubへの保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a'); }
       }
     });
   });
 
   renderAll();
+  // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
+  AtsuCup.ready.then(()=>{ renderAll(); });
 })();
 </script>
 </body>

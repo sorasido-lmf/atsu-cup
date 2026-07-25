@@ -48,30 +48,63 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 - `matches.json` が一次データ、`entries.json` は大会単位の要約（計算軽量化のためのキャッシュ）
 - ユーザーの削除は物理削除ではなく **アーカイブ方式**（`archived: true`）。過去の対戦記録・戦績を保持するため
 
+### アプリとの接続（2026-07-26 実装）
+
+`data/*.json` はアプリが実際に読み書きする本番データである。
+
+**読み込み（トークン不要）**
+- `atsucup-core.js` の `loadFromData()` が **同一オリジンの静的ファイル**（`fetch('data/users.json')` 等）を読む
+- GitHub API を読み込みに使わない理由: **未認証APIは60リクエスト/時**の制限があり、1ページで4ファイル取得するとすぐ枯渇するため
+- 各ページは `render()`（localStorageで即描画）→ `AtsuCup.ready.then(()=> render())`（data/取り込み後に描き直し）の2段構え。**全ページを async 化しない**ための設計
+- 取り込みに失敗しても reject せず `{ok:false}` で解決する。オフラインでも localStorage の内容で動き続ける
+
+**書き込み（トークン必須・GitHub Contents API）**
+| 対象 | トリガー | 実装 |
+|---|---|---|
+| `users.json` | ユーザー管理/大会エントリーでの登録・撮影可否変更・アーカイブ時に**即時** | `AtsuCup.saveUsersToData()` |
+| `tournaments/entries/matches.json` | 大会詳細の「💾 GitHubに保存」ボタンで**明示的に**のみ | `AtsuCup.saveTournamentToData(id)` |
+
+大会を自動保存しないのは、対戦表が勝敗入力のたびに変化しコミットが乱発・競合するため。
+
+**マージ規則**: `mergeRemoteTournaments()` は id ごとに data/ 側を優先して上書きし、data/ に無いローカル大会は保持する。
+オブジェクトごと差し替えず `Object.assign` で中身を更新すること（`video.html` が `t.matches` のライブ参照に書き込むため）。
+
 ### 現状（2026-07-26時点）
 
 | 項目 | 状態 |
 |---|---|
 | `data/users.json` | 実データあり（8人 + テスト由来のA〜G） |
-| `data/tournaments.json` / `entries.json` / `matches.json` | 空の `[]`（未着手） |
-| アプリからの `data/*.json` 読み込み | **未実装**（アプリは `localStorage` のみで動作） |
+| `data/tournaments.json` / `entries.json` / `matches.json` | 空の `[]`。アプリの「💾 GitHubに保存」で最初の大会が入る |
+
+なお `data/SCHEMA.md` は**データではなく設計ドキュメント**のため skip-worktree を外して通常追跡している。
+実データの4つのJSONのみ skip-worktree 対象。
 
 ---
 
 ## GitHub連携について
 
-**ブラウザから GitHub Contents API を直接叩く連携機能は、2026-07-25 に全削除済み。**
-`github-db.js` / `settings.html`(PAT設定画面) / `scripts/verify-db.js` は削除された。
+**書き込み専用で有効**（2026-07-25に一度全削除→2026-07-26にユーザーの決定で再導入）。
 
-- アプリ側のコードに **GitHub API呼び出し・トークン管理・「取り込む/書き出す」ボタン等は一切持たせない**
-- ユーザーからの明示的な指示なしに再導入しないこと
-- `data/*.json` は「gitで管理される参照用マスタデータ」であり、アプリの実行時データ（localStorage）とは**別物**として扱う
+- `github-db.js`: Contents API ラッパー。`getFile` は読み取り（トークン任意）、`putFile` は書き込み（トークン必須）
+- `settings.html`: PAT の登録・接続確認・削除。トークンは `localStorage` の `atsucup:githubPat` に平文保存（静的サイト構成に伴う既知のトレードオフ）
+- 読み込みは API ではなく静的ファイル取得を使う（レート制限のため。前節参照）
+
+### ID ↔ 名前の境界（重要）
+
+- **`data/*.json` は SCHEMA.md 完全準拠の ID キー**（`userId` 等）
+- **アプリ内部（`state.people` / `matches` など）は名前キーのまま**
+- 両者の変換は `atsucup-data.js`（`AtsuCupData`）が一手に引き受ける。`toAppTournaments()` / `fromAppTournament()`
+- アプリ内部を ID キーに移行する案は、全消費者（`computePlacements`・`detail-view.js` 全体など）の書き換えが必要な大工事のため**見送っている**。この境界を勝手に動かさないこと
+
+変換で失われやすい情報に注意:
+- `aSrc`/`bSrc`（撮影不可回避の入れ替え後の対応関係）は `player1SrcIndex`/`player2SrcIndex` として保存する。**これが無いと勝敗のやり直しで勝者が誤った枠に入る**
+- `loser` は列を持たず、読み込み時に `winnerId` から再計算する
 
 ---
 
 ## アプリの実行時データ
 
-- 全データ（大会進行・参加者roster等）は `localStorage`（キー: `atsucup:state:v2`）で完結
+- 大会進行中の作業データは `localStorage`（キー: `atsucup:state:v2`）に保持し、確定した内容を `data/*.json` へ書き出す
 - `pagehide` / `visibilitychange` で強制保存する保険あり（`atsucup-core.js`）
 - `state.tournaments` 配列 + `state.activeId` で複数大会の同時進行に対応。`state.people`/`matches` 等は `Object.defineProperty` のgetter/setterでアクティブな大会へ透過的にプロキシされる
 
@@ -104,7 +137,10 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | `tournament-entry.html` | 大会ごとの参加者選出 |
 | `users.html` | ユーザーマスタ管理（新規登録・撮影可否・アーカイブ/復元） |
 | `hall.html` / `record.html` / `record-detail.html` / `results.html` / `video.html` | 戦績・優勝者・動画 |
-| `atsucup-core.js` | 共通のstate管理・データロジック（全ページ共有） |
+| `settings.html` | GitHub PAT の設定 |
+| `atsucup-core.js` | 共通のstate管理・データロジック・`data/`の読み書き（全ページ共有） |
+| `atsucup-data.js` | `data/*.json`(IDキー) ↔ アプリ内部(名前キー) の変換層 |
+| `github-db.js` | GitHub Contents API ラッパー |
 | `user-register-modal.js` / `walkin-modal.js` | 共通モーダル |
 
 ---

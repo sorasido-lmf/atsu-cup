@@ -20,7 +20,7 @@ GitHubリポジトリで管理する参加者・大会マスタデータ。JSON�
 | id | string | 一意なID（例: t2026-07） |
 | title | string | 大会名 |
 | detail | string | 説明文 |
-| posterImage | string | 画像へのパス（例: assets/posters/t2026-07.jpg） |
+| posterImage | string \| null | ポスター画像。リポジトリ相対パス（例: assets/posters/t2026-07.jpg）または data URL（`data:image/jpeg;base64,...`）。アプリから作成した場合は後者になる |
 | heldAt | string (ISO8601 date) | 開催日 |
 | status | string | "ongoing" \| "completed" |
 
@@ -48,8 +48,18 @@ GitHubリポジトリで管理する参加者・大会マスタデータ。JSON�
 | player2Id | string \| null | 外部キー → users.json |
 | winnerId | string \| null | 外部キー → users.json（未確定はnull） |
 | isBye | boolean | 不戦勝カードかどうか |
+| player1SrcIndex | number \| null | player1が「前ラウンドのどのカードの勝者か」を指すindex（0始まり）。2回戦以降のみ。1回戦とthirdPlaceはnull |
+| player2SrcIndex | number \| null | 同上（player2側） |
 | videoUrl | string | 対戦動画リンク（任意） |
 | playedAt | string (ISO8601) | 対戦確定日時（任意） |
 
 `entries.json`の`placement`/`wins`は本来`matches.json`から導出可能な要約値。
 大会終了時にentriesを確定させるタイミングで、matches.jsonの内容から自動集計して書き込む運用とする。
+
+### player1SrcIndex / player2SrcIndex について
+撮影不可の偏りを避けるため、ラウンド進行時に組み合わせを入れ替えることがある。その結果
+「2回戦のカードkのplayer1 = 1回戦のカード2kの勝者」という既定の対応関係が崩れるため、
+実際の対応関係をこの2列に保持する。**この情報が無いと、後から前ラウンドの勝敗を
+やり直した際に勝者が誤った枠へ入る**ため、導出で代替することはできない。
+
+なお敗者(loser)は`winnerId`とplayer1/player2から一意に定まるため列を持たない（読み込み時に再計算する）。

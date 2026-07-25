@@ -1,0 +1,215 @@
+// data/*.json(SCHEMA.md準拠・IDキー・正規化) ↔ アプリ内部のstate.tournaments(名前キー・ネスト構造)
+// を相互変換する層。アプリ側のロジックは名前キーのまま動かし、永続化するJSONだけをID化する。
+const AtsuCupData = (function(){
+  "use strict";
+
+  const BLANK_CARD = ()=> ({ a:null, b:null, winner:null, loser:null, video:"", bye:false });
+
+  /* ================= 読み込み: data/*.json → アプリ内部 ================= */
+
+  // 勝者と両者から敗者を導出する(bye枠のようにbが居ない場合は敗者なし)
+  function deriveLoser(a, b, winner){
+    if(!winner || !a || !b) return null;
+    return winner === a ? b : a;
+  }
+
+  // 決勝(最終ラウンドが1試合)の勝者を優勝者とみなす。アプリのpickWinnerと同じ判定。
+  function deriveWinnerName(matches){
+    if(!matches.length) return "";
+    const finalRound = matches[matches.length-1];
+    if(finalRound.length !== 1) return "";
+    return finalRound[0].winner || "";
+  }
+
+  // matches行(フラット)を matches[round][index] の二次元配列に組み直す
+  function buildMatchGrid(rows, nameOf){
+    const normal = rows.filter(r=> (r.stage||'normal') === 'normal');
+    if(!normal.length) return [];
+    const maxRound = Math.max(...normal.map(r=> r.round||1));
+    const grid = [];
+    for(let round=1; round<=maxRound; round++){
+      const inRound = normal.filter(r=> (r.round||1) === round);
+      if(!inRound.length){ grid.push([]); continue; }
+      const size = Math.max(...inRound.map(r=> r.matchIndex||0)) + 1;
+      const cards = [];
+      for(let i=0;i<size;i++) cards.push(BLANK_CARD());
+      inRound.forEach(r=>{
+        const a = nameOf(r.player1Id), b = nameOf(r.player2Id), winner = nameOf(r.winnerId);
+        const loser = deriveLoser(a, b, winner);
+        const video = r.videoUrl || "";
+        // キーの並びはアプリ側の生成順(buildRound1 / advanceRound)に合わせる。
+        // 2回戦以降は「前ラウンドのどのカードの勝者か」の対応関係も復元する(撮影不可回避の入れ替えを保持)
+        const hasSrc = round >= 2 && r.player1SrcIndex !== undefined && r.player1SrcIndex !== null;
+        cards[r.matchIndex||0] = hasSrc
+          ? { a, b, aSrc: r.player1SrcIndex, bSrc: r.player2SrcIndex, winner, loser, video }
+          : { a, b, winner, loser, video, bye: !!r.isBye };
+      });
+      grid.push(cards);
+    }
+    return grid;
+  }
+
+  function buildThirdPlace(rows, nameOf){
+    const row = rows.find(r=> r.stage === 'thirdPlace');
+    if(!row) return null;
+    return { a: nameOf(row.player1Id), b: nameOf(row.player2Id), winner: nameOf(row.winnerId) };
+  }
+
+  // data/*.json 一式から、アプリのstate.tournaments形式の配列を組み立てる
+  function toAppTournaments(data){
+    const users = data.users || [];
+    const tournaments = data.tournaments || [];
+    const entries = data.entries || [];
+    const matches = data.matches || [];
+
+    const nameById = {};
+    users.forEach(u=>{ if(u && u.id) nameById[u.id] = u.name; });
+    const nameOf = (id)=> (id === null || id === undefined) ? null : (nameById[id] || null);
+
+    return tournaments.map(t=>{
+      const myEntries = entries.filter(e=> e.tournamentId === t.id);
+      const myMatches = matches.filter(m=> m.tournamentId === t.id);
+      const grid = buildMatchGrid(myMatches, nameOf);
+      return {
+        id: t.id,
+        title: t.title || "",
+        details: t.detail || "",
+        posterUrl: t.posterImage || null,
+        createdAt: t.heldAt || new Date().toISOString(),
+        status: t.status || 'ongoing',
+        people: myEntries.map(e=>({ name: nameOf(e.userId), rec: e.recAtEntry !== false })).filter(p=> !!p.name),
+        order: [], remaining: [],
+        matches: grid,
+        winnerName: deriveWinnerName(grid),
+        thirdPlaceMatch: buildThirdPlace(myMatches, nameOf)
+      };
+    });
+  }
+
+  /* ================= 書き込み: アプリ内部 → data/*.json ================= */
+
+  // 大会の参加者名のうち users.json に未登録のものを採番して追加する。
+  // (途中参加の飛び入りなど、roster経由で登録されずに大会だけに現れる名前を取りこぼさない)
+  function ensureUserIds(names, users, genId){
+    const list = users.slice();
+    const idByName = {};
+    list.forEach(u=>{ if(u && u.name) idByName[u.name] = u.id; });
+    const added = [];
+    names.forEach(name=>{
+      if(!name || idByName[name]) return;
+      const existingIds = new Set(list.map(u=>u.id));
+      const id = genId('u', existingIds);
+      const nu = { id, name, recDefault: true, archived: false, createdAt: new Date().toISOString(), note: "" };
+      list.push(nu);
+      idByName[name] = id;
+      added.push(nu);
+    });
+    return { users: list, idByName, added };
+  }
+
+  // 実際の対戦(bye除く)での勝利数。computeTournamentPointsの勝ち数カウントと同じ基準。
+  function countWins(t, name){
+    let n = 0;
+    (t.matches||[]).forEach(round=>{
+      round.forEach(m=>{ if(m.a && m.b && m.winner === name) n++; });
+    });
+    const tp = t.thirdPlaceMatch;
+    if(tp && tp.a && tp.b && tp.winner === name) n++;
+    return n;
+  }
+
+  // アプリの大会1件を、data/*.json の3テーブル分の行に分解する
+  function fromAppTournament(t, idByName){
+    const idOf = (name)=> (name && idByName[name]) ? idByName[name] : null;
+
+    const tournamentRow = {
+      id: t.id,
+      title: t.title || "",
+      detail: t.details || "",
+      posterImage: t.posterUrl || null,
+      heldAt: t.createdAt || new Date().toISOString(),
+      status: t.status || 'ongoing'
+    };
+
+    // placementは既存の順位計算をそのまま再利用する(history形式のentryを渡す)
+    const placements = AtsuCup.computePlacements({
+      matches: t.matches || [],
+      championName: t.winnerName || null,
+      thirdPlaceMatch: t.thirdPlaceMatch || null,
+      participants: t.people || []
+    });
+
+    const entryRows = (t.people||[]).map(p=>{
+      const userId = idOf(p.name);
+      return {
+        id: `${t.id}_${userId}`,
+        tournamentId: t.id,
+        userId,
+        placement: (placements[p.name] && placements[p.name].place) || null,
+        wins: countWins(t, p.name),
+        recAtEntry: p.rec !== false
+      };
+    });
+
+    const matchRows = [];
+    (t.matches||[]).forEach((round, rIdx)=>{
+      round.forEach((m, mIdx)=>{
+        // 完全な空枠(両者未定・勝者なし)は書き出さない。読み込み時にBLANK_CARDで復元される。
+        if(!m.a && !m.b && !m.winner) return;
+        const row = {
+          id: `${t.id}_r${rIdx+1}_m${mIdx}`,
+          tournamentId: t.id,
+          round: rIdx + 1,          // スキーマは1始まり、アプリの配列indexは0始まり
+          stage: 'normal',
+          matchIndex: mIdx,
+          player1Id: idOf(m.a),
+          player2Id: idOf(m.b),
+          winnerId: idOf(m.winner),
+          isBye: !!m.bye,
+          player1SrcIndex: (m.aSrc === undefined) ? null : m.aSrc,
+          player2SrcIndex: (m.bSrc === undefined) ? null : m.bSrc,
+          videoUrl: m.video || "",
+          playedAt: null
+        };
+        matchRows.push(row);
+      });
+    });
+
+    const tp = t.thirdPlaceMatch;
+    if(tp && (tp.a || tp.b)){
+      matchRows.push({
+        id: `${t.id}_third`,
+        tournamentId: t.id,
+        round: 0,
+        stage: 'thirdPlace',
+        matchIndex: 0,
+        player1Id: idOf(tp.a),
+        player2Id: idOf(tp.b),
+        winnerId: idOf(tp.winner),
+        isBye: false,
+        player1SrcIndex: null,
+        player2SrcIndex: null,
+        videoUrl: "",
+        playedAt: null
+      });
+    }
+
+    return { tournamentRow, entryRows, matchRows };
+  }
+
+  /* ================= users.json ↔ 端末のroster ================= */
+
+  // users.json(ID付き) から、アプリが使う名前キーの3つのマップを作る
+  function toAppRoster(users){
+    const roster = [], userRecDefaults = {}, archivedUsers = {};
+    (users||[]).forEach(u=>{
+      if(!u || !u.name) return;
+      roster.push(u.name);
+      userRecDefaults[u.name] = u.recDefault !== false;
+      archivedUsers[u.name] = !!u.archived;
+    });
+    return { roster, userRecDefaults, archivedUsers };
+  }
+
+  return { toAppTournaments, fromAppTournament, ensureUserIds, toAppRoster, deriveWinnerName, countWins };
+})();

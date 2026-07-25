@@ -105,6 +105,110 @@ const AtsuCup = (function(){
     });
   }
 
+  /* ---------- data/*.json(GitHub側=正) の取り込み ---------- */
+  const DATA_PATHS = { users:'data/users.json', tournaments:'data/tournaments.json', entries:'data/entries.json', matches:'data/matches.json' };
+
+  // リモートの大会をローカルへ取り込む。同じidはリモートで上書きし、リモートに無いローカル大会は保持する。
+  // ★オブジェクトごと差し替えず中身をassignすること(video.html等が t.matches のライブ参照に書き込むため)
+  function mergeRemoteTournaments(remoteList){
+    (remoteList||[]).forEach(rt=>{
+      const local = state.tournaments.find(t=>t.id===rt.id);
+      if(local){ Object.assign(local, rt); }
+      else { state.tournaments.push(rt); }
+    });
+  }
+
+  // users.jsonの内容を端末のマスタ(roster/recDefaults/archived)へ反映する
+  function mergeRemoteUsers(users){
+    const m = AtsuCupData.toAppRoster(users);
+    const set = new Set(state.roster);
+    m.roster.forEach(n=>{ if(!set.has(n)){ state.roster.push(n); set.add(n); } });
+    Object.assign(state.userRecDefaults, m.userRecDefaults);
+    Object.assign(state.archivedUsers, m.archivedUsers);
+  }
+
+  // 読み込みは同一オリジンの静的ファイルから行う(アプリと一緒に配信されているdata/を読む)。
+  // GitHub APIを使わない理由: 未認証APIは60回/時の制限があり、1ページ4ファイル取得では
+  // すぐ枯渇するため。書き込み側(saveTournamentToData)はsha取得が要るのでAPIを使う。
+  async function fetchJson(path){
+    const res = await fetch(path + '?t=' + Date.now(), { cache:'no-store' });
+    if(!res.ok) throw new Error(`${path} の取得に失敗しました(status ${res.status})`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  // data/*.json を取得してstateへ取り込む。失敗してもrejectせず{ok:false}で解決する
+  // (オフラインや取得失敗時でも、localStorageの内容で画面が動き続けるようにするため)
+  async function loadFromData(){
+    if(typeof AtsuCupData === 'undefined') return { ok:false, error:'モジュール未読み込み' };
+    try{
+      const [users, tournaments, entries, matches] = await Promise.all([
+        fetchJson(DATA_PATHS.users),
+        fetchJson(DATA_PATHS.tournaments),
+        fetchJson(DATA_PATHS.entries),
+        fetchJson(DATA_PATHS.matches)
+      ]);
+      mergeRemoteUsers(users);
+      mergeRemoteTournaments(AtsuCupData.toAppTournaments({ users, tournaments, entries, matches }));
+      persist();
+      return { ok:true, counts:{ users:users.length, tournaments:tournaments.length } };
+    }catch(e){
+      console.warn('[atsucup] data/ の取り込みに失敗しました:', e);
+      return { ok:false, error:(e && e.message) || String(e) };
+    }
+  }
+
+  // 端末のユーザーマスタ(roster/recDefaults/archived)を data/users.json へ反映する。
+  // 名前で突き合わせて既存行のidは保ち、未登録の名前だけ新規採番する。
+  async function saveUsersToData(){
+    if(typeof GitHubDB === 'undefined') throw new Error('GitHub連携モジュールが読み込まれていません。');
+    if(!GitHubDB.hasToken()) throw new Error('GitHubトークンが未設定です。「設定」画面から登録してください。');
+    const f = await GitHubDB.getFile(DATA_PATHS.users);
+    const rows = (f.data || []).slice();
+    const byName = new Map(rows.map(u=>[u.name, u]));
+    const existingIds = new Set(rows.map(u=>u.id));
+    state.roster.forEach(name=>{
+      const recDefault = state.userRecDefaults[name] !== false;
+      const archived = !!state.archivedUsers[name];
+      const ex = byName.get(name);
+      if(ex){ ex.recDefault = recDefault; ex.archived = archived; }
+      else{
+        const id = GitHubDB.genId('u', existingIds); existingIds.add(id);
+        const nu = { id, name, recDefault, archived, createdAt:new Date().toISOString(), note:"" };
+        rows.push(nu); byName.set(name, nu);
+      }
+    });
+    await GitHubDB.putFile(DATA_PATHS.users, rows, `ユーザー情報を更新(${rows.length}人)`, f.sha);
+    return rows.length;
+  }
+
+  // 大会1件を data/*.json の3ファイルへ保存する(未登録の参加者名はusers.jsonへ自動追加)
+  async function saveTournamentToData(tournamentId){
+    const t = state.tournaments.find(x=>x.id===tournamentId);
+    if(!t) throw new Error('保存対象の大会が見つかりません。');
+    if(!GitHubDB.hasToken()) throw new Error('GitHubトークンが未設定です。「設定」画面から登録してください。');
+
+    // 1) users.json: 未登録の参加者を採番して追加
+    const uf = await GitHubDB.getFile(DATA_PATHS.users);
+    const names = (t.people||[]).map(p=>p.name);
+    const ensured = AtsuCupData.ensureUserIds(names, uf.data||[], GitHubDB.genId);
+    if(ensured.added.length){
+      await GitHubDB.putFile(DATA_PATHS.users, ensured.users, `参加者を${ensured.added.length}人追加(${t.title})`, uf.sha);
+    }
+
+    const { tournamentRow, entryRows, matchRows } = AtsuCupData.fromAppTournament(t, ensured.idByName);
+    const upsert = async (path, rows, keyFn, label)=>{
+      const f = await GitHubDB.getFile(path);
+      const kept = (f.data||[]).filter(r=> r.tournamentId !== t.id && r.id !== t.id);
+      await GitHubDB.putFile(path, kept.concat(rows), `${label}(${t.title})`, f.sha);
+    };
+    // 2) tournaments / entries / matches を順に差し替える
+    await upsert(DATA_PATHS.tournaments, [tournamentRow], null, '大会を保存');
+    await upsert(DATA_PATHS.entries, entryRows, null, 'エントリーを保存');
+    await upsert(DATA_PATHS.matches, matchRows, null, '対戦結果を保存');
+    return { addedUsers: ensured.added.length, entries: entryRows.length, matches: matchRows.length };
+  }
+
   // localStorageのデータを新形式(tournaments配列)に取り込む。旧形式(tournamentMeta+history+直下people)は移行する。
   function migrate(data){
     state.roster = data.roster || [];
@@ -710,7 +814,13 @@ const AtsuCup = (function(){
     document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') persist(); });
   }
 
+  // data/*.json の取り込みは「最初に AtsuCup.ready を参照した時点」で開始する。
+  // 各ページは restore() の後に参照するため、localStorageの復元→リモート取り込みの順序が保証される。
+  let readyPromise = null;
+
   return {
+    get ready(){ if(!readyPromise) readyPromise = loadFromData(); return readyPromise; },
+    mergeRemoteTournaments, saveTournamentToData, saveUsersToData,
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
     advanceRound, pickWinner, resetMatchResult, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,

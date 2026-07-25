@@ -55,6 +55,8 @@
 </div>
 
 <script src="tap-ripple.js"></script>
+<script src="github-db.js"></script>
+<script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
 <script>
 (function(){
@@ -117,6 +119,8 @@
 
   renderSortTabs();
   renderRankList();
+  // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
+  AtsuCup.ready.then(()=>{ renderSortTabs(); renderRankList(); });
 })();
 </script>
 </body>

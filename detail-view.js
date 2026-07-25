@@ -138,7 +138,11 @@
       <div class="confirm-banner">「${escapeHtml(h.title)}」を大会一覧から削除します。よろしいですか？(元に戻せません)
         <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div></div>` : '';
     content.innerHTML = `
-      <div class="row" style="margin-top:0;"><button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button></div>
+      <div class="row" style="margin-top:0;">
+        <button class="btn btn-gold" id="saveToDataBtn">💾 GitHubに保存</button>
+        <button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
+      </div>
+      <div id="dataSaveStatus"></div>
       <div class="video-card" style="margin-top:14px;">
         ${h.posterUrl?`<img class="poster-img" src="${escapeHtml(h.posterUrl)}" alt="poster">`:''}
         <div class="cur-title">${escapeHtml(h.title)}</div>
@@ -152,6 +156,7 @@
       ${matchRounds || '<div class="empty-state" style="padding:12px;">対戦データがありません。</div>'}
       ${thirdHtml}
       ${confirmHtml}`;
+    document.getElementById('saveToDataBtn').addEventListener('click', ()=> saveTournamentToGitHub(h.id));
     document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderPast(h); });
     if(mode==='confirmDelete'){
       document.getElementById('cancelDeleteBtn').addEventListener('click', ()=>{ mode='view'; renderPast(h); });
@@ -504,12 +509,36 @@
       <div class="row" id="jumpRow" style="display:none; margin-bottom:8px;"><button class="btn btn-ghost" id="jumpNextBtn" style="width:100%;">🎯 次の対戦へ</button></div>
       <div class="tree-scroll" id="treeScroll"></div>
       <div id="advanceArea"></div>
-      <button class="btn btn-ghost" id="saveBracketImgBtn" style="margin-top:12px;">📸 画像で保存</button>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
+        <button class="btn btn-gold" id="saveToDataBtn">💾 GitHubに保存</button>
+      </div>
+      <div id="dataSaveStatus"></div>
       <div id="noticeArea"></div>
       <div id="thirdPlaceArea"></div>
       <div id="championArea"></div>`;
     document.getElementById('saveBracketImgBtn').addEventListener('click', saveBracketImg);
+    document.getElementById('saveToDataBtn').addEventListener('click', ()=> saveTournamentToGitHub(state.tournamentMeta.id));
     renderTree(); renderExtras();
+  }
+
+  // 大会の内容を data/*.json(GitHub) へ保存する。対戦表は勝敗入力のたびに変わるため自動保存はせず、
+  // 明示的なボタン操作でのみ書き込む(コミットの乱発と競合を避けるため)。
+  async function saveTournamentToGitHub(tid){
+    const box = document.getElementById('dataSaveStatus');
+    const btn = document.getElementById('saveToDataBtn');
+    const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
+    if(!GitHubDB.hasToken()){ show('GitHubトークンが未設定です。「設定」画面から登録してください。', '#ff6a6a'); return; }
+    btn.disabled = true; btn.textContent = '保存中...';
+    show('GitHubへ保存中...(users → tournaments → entries → matches の順に更新します)');
+    try{
+      const r = await AtsuCup.saveTournamentToData(tid || (state.tournamentMeta && state.tournamentMeta.id));
+      show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})`, '#7cffb0');
+    }catch(e){
+      show('保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a');
+    }finally{
+      btn.disabled = false; btn.textContent = '💾 GitHubに保存';
+    }
   }
 
   function renderTree(){
@@ -797,4 +826,6 @@
   })();
 
   render();
+  // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
+  AtsuCup.ready.then(()=>{ render(); });
 })();
