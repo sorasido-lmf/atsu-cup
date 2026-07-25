@@ -1,6 +1,5 @@
-// 新規ユーザー登録用の共通モーダル。ユーザー管理画面・大会エントリー画面・途中参加(WalkinModal)から呼び出す。
-// 既定では端末のroster(ユーザーマスタ)に登録するが、opts.persistを渡した呼び出し元は
-// 保存先(GitHub等)を差し替えられる(例: ユーザー管理/大会エントリー画面はGitHubへ直接書き込む)。
+// 新規ユーザー登録用の共通モーダル。ユーザー管理画面・大会エントリー画面の両方から呼び出す。
+// 登録はこの端末のroster(ユーザーマスタ)に対してのみ行う(今回の大会への参加選出はしない)。
 const UserRegisterModal = (function(){
   "use strict";
 
@@ -16,7 +15,6 @@ const UserRegisterModal = (function(){
       .urm-sheet h3{ margin:0 0 10px; font-size:16px; color:var(--cream,#f5efe0); }
       .urm-actions{ display:flex; gap:10px; margin-top:12px; }
       .urm-actions .btn{ flex:1; }
-      .urm-error{ margin-top:10px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:9px 11px; font-size:12.5px; color:#ffb3b3; line-height:1.6; }
     `;
     document.head.appendChild(style);
   }
@@ -28,25 +26,12 @@ const UserRegisterModal = (function(){
 
   function onKeydown(ev){ if(ev.key === 'Escape') close(); }
 
-  async function defaultPersist(names){
-    const state = AtsuCup.state;
-    state.roster = [...state.roster, ...names];
-    if(!state.userRecDefaults) state.userRecDefaults = {};
-    names.forEach(name=>{ state.userRecDefaults[name] = true; });
-    AtsuCup.persist();
-  }
-
-  // open({ onRegistered, existingNames, persist }):
-  //  - onRegistered(names: string[]) : 保存成功後、新規登録された名前の配列を受けて呼ばれる
-  //  - existingNames(string[]|Set, 省略時はstate.roster) : 重複チェックに使う既存名一覧
-  //  - persist(names: string[]) => Promise (省略時は端末rosterへ保存): 失敗時はthrow/rejectするとモーダル内にエラー表示し、閉じない
+  // open({ onRegistered }) : onRegistered(names: string[]) は新規登録された名前の配列を受けて呼ばれる
   function open(opts){
     opts = opts || {};
     ensureStyle();
     close();
     const state = AtsuCup.state;
-    const existing = opts.existingNames ? new Set(opts.existingNames) : new Set(state.roster);
-    const persist = typeof opts.persist === 'function' ? opts.persist : defaultPersist;
     overlayEl = document.createElement('div');
     overlayEl.className = 'urm-overlay';
     overlayEl.innerHTML = `
@@ -58,29 +43,22 @@ const UserRegisterModal = (function(){
           <button class="btn btn-primary" id="urmSave">登録する</button>
           <button class="btn btn-ghost" id="urmCancel">キャンセル</button>
         </div>
-        <div id="urmError"></div>
       </div>
     `;
     document.body.appendChild(overlayEl);
-    const errorBox = overlayEl.querySelector('#urmError');
-    const saveBtn = overlayEl.querySelector('#urmSave');
     overlayEl.addEventListener('click', (ev)=>{ if(ev.target === overlayEl) close(); });
     overlayEl.querySelector('#urmCancel').addEventListener('click', close);
-    saveBtn.addEventListener('click', async ()=>{
-      errorBox.innerHTML = '';
+    overlayEl.querySelector('#urmSave').addEventListener('click', ()=>{
       const lines = overlayEl.querySelector('#urmInput').value.split("\n").map(s=>s.trim()).filter(Boolean);
       if(!lines.length){ alert('名前を入力してください。'); return; }
-      const uniqNew = [...new Set(lines)].filter(n=>!existing.has(n));
+      const uniqNew = [...new Set(lines)].filter(n=>!state.roster.includes(n));
       if(!uniqNew.length){ alert('入力された名前は、すでにすべて登録済みです。'); return; }
-      saveBtn.disabled = true; saveBtn.textContent = '登録中...';
-      try{
-        await persist(uniqNew);
-        close();
-        if(typeof opts.onRegistered === 'function') opts.onRegistered(uniqNew);
-      }catch(e){
-        errorBox.innerHTML = `<div class="urm-error">${AtsuCup.escapeHtml((e && e.message) || String(e))}</div>`;
-        saveBtn.disabled = false; saveBtn.textContent = '登録する';
-      }
+      state.roster = [...state.roster, ...uniqNew];
+      if(!state.userRecDefaults) state.userRecDefaults = {};
+      uniqNew.forEach(name=>{ state.userRecDefaults[name] = true; });
+      AtsuCup.persist();
+      close();
+      if(typeof opts.onRegistered === 'function') opts.onRegistered(uniqNew);
     });
     document.addEventListener('keydown', onKeydown);
     overlayEl.querySelector('#urmInput').focus();
