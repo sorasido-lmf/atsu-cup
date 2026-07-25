@@ -75,7 +75,7 @@
     "id": "u0010",
     "name": "B",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
     "note": ""
   },
