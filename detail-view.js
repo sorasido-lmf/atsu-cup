@@ -22,8 +22,12 @@
   function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
   function isLive(){ const t=AtsuCup.activeT(); return !!(t && t.status==='ongoing'); }
   function findHistory(){ return state.history.find(h=>h.id===id); }
-  function hasPairing(){ return state.matches.length>0 && state.matches[0].length>0 && state.remaining.length===0; }
   function recDefaultOf(name){ return state.userRecDefaults[name] !== false; }
+  // 1回戦のどこか(a/b)に空き枠が残っているか(=まだ全枠埋まっていない)
+  function round1HasEmpty(){
+    if(!state.matches.length) return false;
+    return state.matches[0].some(m=> m.a===null || (!m.bye && m.b===null));
+  }
 
   document.getElementById('rosterCandidates').innerHTML = state.roster.map(n=>`<option value="${escapeHtml(n)}">`).join('');
 
@@ -157,58 +161,30 @@
   }
 
   /* ================= 組み合わせ決定(matchup) ================= */
-  let decideMode = 'roulette';
-  let manualPool = [], manualBuilt = [], manualSeedMode = false;
-
-  function flattenSeeds(){ const seeds=[]; if(state.matches.length){ state.matches[0].forEach(m=>{ if(m.b===null && m.a) seeds.push(m.a); }); } return seeds; }
-  function flattenOrder(){ if(state.matches.length){ const names=[]; state.matches[0].forEach(m=>{ if(m.a) names.push(m.a); if(m.b) names.push(m.b); }); if(names.length) return names; } return state.people.map(p=>p.name); }
-
   function renderMatchup(){
     const hasPeople = state.people.length>0;
     matchupSection.innerHTML = `
       <h2>組み合わせを決める</h2>
       <div id="peopleSummary"></div>
       ${hasPeople ? `
-        <p class="hint" style="margin-top:14px;">ルーレット・自動抽選・手動で1回戦の組み合わせを決めます。決まるまで下のトーナメント表は「？？？」で表示されます。</p>
-        <div class="row">
-          <button class="btn btn-gold" id="rouletteBtn">🎡 ルーレットで決める</button>
-          <button class="btn btn-ghost" id="manualBtn">✋ 手動で決める</button>
-        </div>
+        <p class="hint" style="margin-top:14px;">下のトーナメント表の空いている枠をタップすると、エントリー者から相手を選べます。まとめて決めたい場合は自動抽選も使えます。</p>
         <div class="row">
           <button class="btn btn-primary" id="instantAutoBtn">⚡ ワンタップで自動抽選</button>
           <button class="btn btn-ghost" id="resetOrderBtn">🔄 引き直す</button>
         </div>
-        <div id="manualBox" style="display:none; margin-top:6px;"></div>
       ` : ''}`;
 
     if(hasPeople){
-      document.getElementById('rouletteBtn').addEventListener('click', openRoulette);
-      document.getElementById('manualBtn').addEventListener('click', ()=>{
-        const box = document.getElementById('manualBox');
-        if(box.style.display === 'block'){ box.style.display='none'; return; }
-        if(state.matches.length && state.matches[0].length){
-          const seeds = flattenSeeds();
-          manualBuilt = flattenOrder().map(n=>({name:n, seed:seeds.includes(n)})); manualPool=[];
-        }else{ manualBuilt=[]; manualPool = state.people.map(p=>p.name); }
-        manualSeedMode=false;
-        box.style.display='block';
-        renderManualEditor();
-      });
       document.getElementById('instantAutoBtn').addEventListener('click', ()=>{
         if(!state.people.length) return;
-        AtsuCup.resetDownstream(); state.remaining=[]; state.order = state.people.map(p=>p.name); AtsuCup.persist();
+        state.matches = [AtsuCup.buildRound1(state.people.map(p=>p.name))];
+        state.thirdPlaceMatch = null; state.winnerName = '';
+        AtsuCup.persist();
         render();
       });
       document.getElementById('resetOrderBtn').addEventListener('click', ()=>{ AtsuCup.resetDownstream(); render(); });
     }
     renderPeopleSummary();
-    drawWheel();
-  }
-
-  function refreshMatchup(){
-    renderPeopleSummary();
-    drawWheel();
-    render();
   }
 
   function renderPeopleSummary(){
@@ -230,78 +206,95 @@
       </div>`;
   }
 
-
-  /* ---- 手動編集 ---- */
-  function renderManualEditor(){
-    const manualBox = document.getElementById('manualBox');
-    if(!manualBox) return;
+  /* ---- 1回戦の空き枠ピッカー(候補一覧＋ルーレット) ---- */
+  // 1回戦のどの枠にもまだ入っていない参加者
+  function unplacedEntrants(){
+    const placed = new Set();
+    (state.matches[0]||[]).forEach(m=>{ if(m.a) placed.add(m.a); if(m.b) placed.add(m.b); });
+    return state.people.map(p=>p.name).filter(n=>!placed.has(n));
+  }
+  // 指定の枠に対する候補リストを、撮影不可の偏りを避ける方向に絞り込んで返す。
+  // (pairWithConstraintと同じ「可能な限り混ぜる、足りない時だけ同士」をその場で適用する)
+  function candidatesFor(m, side){
+    const unplaced = unplacedEntrants();
     const recMap = AtsuCup.recMapOf();
-    const total = manualBuilt.length + manualPool.length;
-    const size = AtsuCup.nextPow2(total);
-    const byeCount = size - total;
-    const seedCount = manualBuilt.filter(b=>b.seed).length;
-    const seedDone = seedCount === byeCount;
-    const allPlaced = manualPool.length === 0;
-    const canConfirm = total>0 && allPlaced && seedDone;
-    let applyLabel = 'この組み合わせで決定する';
-    if(!allPlaced) applyLabel = `あと${manualPool.length}人選んでください`;
-    else if(!seedDone) applyLabel = byeCount>seedCount ? `シードをあと${byeCount-seedCount}人選んでください` : `シードが${seedCount-byeCount}人多いです`;
-    manualBox.innerHTML = `
-      <div class="row" style="margin-bottom:6px;">
-        <button type="button" class="btn ${manualSeedMode?'btn-gold':'btn-ghost'}" id="seedModeBtn" style="width:100%;">${manualSeedMode ? '🌱 次にタップした人はシード(不戦勝)になります' : '🌱 次をシード(不戦勝)として追加する'}</button>
-      </div>
-      <p class="hint" style="margin-top:0;">下の候補を対戦させたい順にタップしてください。${byeCount>0?`(シードは${byeCount}人必要・現在${seedCount}人)`:''}</p>
-      ${manualPool.length ? `<div class="manual-seed-label">候補(タップで追加)</div><div class="seed-chip-list" id="manualPoolList">${manualPool.map(name=>`<button type="button" class="seed-chip" data-pooltap="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}</div>` : ''}
-      <div class="manual-seed-label" style="margin-top:16px;">決定した順番${manualBuilt.length?`(${manualBuilt.length}人)`:''}</div>
-      ${manualBuilt.length ? `<p class="hint" style="margin-top:0;">⠿で並び替え、名前タップで書き換え、🌱でシード切替、✕で候補に戻す。上から2人ずつ対戦。</p>
-        <div class="order-list" id="manualOrderList">${manualBuilt.map((b,i)=>`
-          <div class="order-item ${b.seed?'is-seed':''}" data-idx="${i}">
-            <span class="drag-handle">⠿</span><span class="idx">${i+1}</span>
-            <span class="nm-edit" data-edit="${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
-            <span class="cam">${recMap[b.name]?'📹':'🚫'}</span>
-            <button type="button" class="seed-toggle-btn ${b.seed?'active':''}" data-seedtoggleidx="${i}">🌱</button>
-            <button type="button" class="remove-btn" data-removeidx="${i}">✕</button>
-          </div>`).join('')}</div>` : `<div class="empty-state" style="padding:10px;">上の候補をタップして並べてください。</div>`}
-      <div class="row" style="margin-top:14px;"><button class="btn btn-primary" id="applyManualBtn" ${canConfirm?'':'disabled'}>${applyLabel}</button></div>`;
+    const match = state.matches[0][m];
+    if(match.bye){
+      // シード枠: 未配置に撮影不可の人がいれば優先的に候補にする(撮影不可を先に安全な不戦勝へ逃がす)
+      const nonRec = unplaced.filter(n=>!recMap[n]);
+      return nonRec.length ? nonRec : unplaced;
+    }
+    const otherSide = side==='a' ? match.b : match.a;
+    if(otherSide && !recMap[otherSide]){
+      // 相方が撮影不可確定済み: 撮影可能な人が残っていれば、強制ペアを避けるためそちらのみ候補にする
+      const rec = unplaced.filter(n=>recMap[n]);
+      if(rec.length) return rec;
+    }
+    return unplaced;
+  }
 
-    document.getElementById('seedModeBtn').addEventListener('click', ()=>{ manualSeedMode=!manualSeedMode; renderManualEditor(); });
-    manualBox.querySelectorAll('[data-pooltap]').forEach(btn=> btn.addEventListener('click', ()=>{ const name=btn.dataset.pooltap; manualPool=manualPool.filter(n=>n!==name); manualBuilt.push({name, seed:manualSeedMode}); renderManualEditor(); }));
-    manualBox.querySelectorAll('[data-seedtoggleidx]').forEach(btn=> btn.addEventListener('click', ()=>{ const idx=+btn.dataset.seedtoggleidx; manualBuilt[idx].seed=!manualBuilt[idx].seed; renderManualEditor(); }));
-    manualBox.querySelectorAll('[data-removeidx]').forEach(btn=> btn.addEventListener('click', ()=>{ const idx=+btn.dataset.removeidx; const [removed]=manualBuilt.splice(idx,1); manualPool.push(removed.name); renderManualEditor(); }));
-    manualBox.querySelectorAll('[data-edit]').forEach(span=> span.addEventListener('click', ()=>{
-      const oldName=span.dataset.edit; const input=document.createElement('input'); input.type='text'; input.className='nm-edit-input'; input.value=oldName;
-      span.replaceWith(input); input.focus(); input.select();
-      let done=false; const commit=()=>{ if(done)return; done=true; const val=input.value.trim(); if(val&&val!==oldName){ const e=manualBuilt.find(b=>b.name===oldName); if(e)e.name=val; } renderManualEditor(); };
-      input.addEventListener('blur',commit); input.addEventListener('keydown',e=>{ if(e.key==='Enter')input.blur(); });
-    }));
-    const listEl = document.getElementById('manualOrderList');
-    if(listEl){ listEl.querySelectorAll('.order-item').forEach(row=>{
-      const handle = row.querySelector('.drag-handle');
-      handle.addEventListener('pointerdown', (e)=>{
-        e.preventDefault(); const startIdx=+row.dataset.idx; let curIdx=startIdx; const startY=e.clientY;
-        const rows=Array.from(listEl.children); const rowStep=rows.length>1?(rows[1].offsetTop-rows[0].offsetTop):row.offsetHeight;
-        row.classList.add('dragging'); row.setPointerCapture(e.pointerId);
-        function onMove(ev){ const dy=ev.clientY-startY; const steps=Math.round(dy/rowStep); const newIdx=Math.max(0,Math.min(manualBuilt.length-1,startIdx+steps));
-          row.style.transform=`translateY(${dy-(newIdx-startIdx)*rowStep}px)`;
-          if(newIdx!==curIdx){ const item=manualBuilt.splice(curIdx,1)[0]; manualBuilt.splice(newIdx,0,item); const others=Array.from(listEl.children).filter(el=>el!==row); const refEl=others[newIdx]||null; if(refEl)listEl.insertBefore(row,refEl); else listEl.appendChild(row); curIdx=newIdx; } }
-        function onUp(){ row.style.transform=''; row.classList.remove('dragging'); document.removeEventListener('pointermove',onMove); document.removeEventListener('pointerup',onUp); renderManualEditor(); }
-        document.addEventListener('pointermove',onMove); document.addEventListener('pointerup',onUp);
-      });
-    }); }
-    document.getElementById('applyManualBtn').addEventListener('click', ()=>{
-      if(!canConfirm) return;
-      const orderedNames = manualBuilt.map(b=>b.name);
-      const seedNames = manualBuilt.filter(b=>b.seed).map(b=>b.name);
-      state.matches = [AtsuCup.buildRound1Manual(orderedNames, seedNames)];
-      state.order = orderedNames; state.remaining=[]; state.thirdPlaceMatch=null; state.winnerName='';
-      manualBuilt=[]; manualPool=[]; manualSeedMode=false; decideMode='roulette';
+  let slotPickerEl=null;
+  function ensureSlotPickerStyle(){
+    if(document.getElementById('slotPickStyle')) return;
+    const s=document.createElement('style'); s.id='slotPickStyle';
+    s.textContent=`
+      .slotpick-overlay{ position:fixed; inset:0; background:rgba(5,3,10,.72); z-index:200; display:flex; align-items:flex-end; justify-content:center; }
+      .slotpick-sheet{ width:100%; max-width:520px; max-height:80vh; overflow-y:auto; background:#150f22; border:1.5px solid var(--line); border-bottom:none; border-top-left-radius:20px; border-top-right-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
+      .slotpick-sheet h3{ margin:0 0 4px; font-size:16px; color:var(--cream,#f5efe0); }
+      .slotpick-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
+      .slotpick-cand{ background:#0d0a14; border:1.5px solid var(--line); border-radius:10px; padding:9px 8px; font-weight:700; font-size:13px; color:var(--cream); cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .slotpick-cand:active{ background:rgba(255,255,255,.08); }
+      .slotpick-actions{ display:flex; gap:10px; margin-top:14px; }
+      .slotpick-actions .btn{ flex:1; }
+    `;
+    document.head.appendChild(s);
+  }
+  function ensureSlotPickerEl(){
+    ensureSlotPickerStyle();
+    if(slotPickerEl) return;
+    slotPickerEl=document.createElement('div'); slotPickerEl.className='slotpick-overlay'; slotPickerEl.style.display='none';
+    document.body.appendChild(slotPickerEl);
+    slotPickerEl.addEventListener('click', (ev)=>{ if(ev.target===slotPickerEl) closeSlotPicker(); });
+  }
+  function closeSlotPicker(){ if(slotPickerEl) slotPickerEl.style.display='none'; }
+  function openSlotPicker(m, side){
+    ensureSlotPickerEl();
+    const match = state.matches[0][m];
+    const recMap = AtsuCup.recMapOf();
+    const allUnplaced = unplacedEntrants();
+    const restricted = candidatesFor(m, side);
+    const isRestricted = restricted.length !== allUnplaced.length;
+    const place = (name)=>{
+      if(match.bye){ match.a = name; match.winner = name; }
+      else { match[side] = name; }
       AtsuCup.persist();
-      render(); // 確定 → bracket
+      closeSlotPicker();
+      renderTree(); renderExtras();
+    };
+    slotPickerEl.innerHTML = `
+      <div class="slotpick-sheet">
+        <h3>🙋 エントリー者を選ぶ</h3>
+        ${isRestricted ? `<p class="hint" style="margin-top:0; color:#ffb3b3;">撮影不可の偏りを避けるため、候補を絞っています。</p>` : `<p class="hint" style="margin-top:0;">タップでこの枠に入れます。</p>`}
+        ${restricted.length ? `
+          <div class="slotpick-grid">
+            ${restricted.map(n=>`<button type="button" class="slotpick-cand" data-pick="${escapeHtml(n)}">${escapeHtml(n)}${recMap[n]?'':' 🚫'}</button>`).join('')}
+          </div>` : `<div class="empty-state" style="padding:12px 4px;">選べる人がいません。</div>`}
+        <div class="slotpick-actions">
+          <button class="btn btn-gold" id="slotRouletteBtn" ${restricted.length?'':'disabled'}>🎲 ルーレットで決める</button>
+          <button class="btn btn-ghost" id="slotPickerCloseBtn">閉じる</button>
+        </div>
+      </div>`;
+    slotPickerEl.style.display='flex';
+    slotPickerEl.querySelectorAll('[data-pick]').forEach(btn=> btn.addEventListener('click', ()=> place(btn.dataset.pick)));
+    slotPickerEl.querySelector('#slotPickerCloseBtn').addEventListener('click', closeSlotPicker);
+    slotPickerEl.querySelector('#slotRouletteBtn').addEventListener('click', ()=>{
+      openRouletteFor(restricted, (picked)=>{ place(picked); }, !!match.bye);
     });
   }
 
-  /* ---- ルーレットモーダル ---- */
+  /* ---- ルーレットモーダル(候補リスト＋結果コールバックを渡して使う汎用版) ---- */
   let rouletteEl=null, wheelCanvas=null, wheelCtx=null, currentRotation=0, spinning=false;
+  let wheelCandidates=[], wheelOnPick=null;
   const WHEEL_COLORS=["#ff6a2b","#e8b34c","#7c4dff","#2bc9a0","#ff4d94","#4fb0e8","#a8e83b","#ff9145"];
   function ensureRouletteEl(){
     if(rouletteEl) return;
@@ -319,17 +312,22 @@
     rouletteEl.querySelector('#rouletteCloseBtn').addEventListener('click', closeRoulette);
     rouletteEl.querySelector('#spinBtn').addEventListener('click', spin);
   }
-  function openRoulette(){
-    if(!state.remaining.length){
-      // 全員公開済みで開いた場合は何もしない(通常は確定してbracketに移っている)
-      return;
-    }
-    ensureRouletteEl(); rouletteEl.style.display='flex'; rouletteEl.querySelector('#pickedBanner').innerHTML='&nbsp;'; drawWheel();
+  let wheelIsBye=false;
+  // candidates(名前の配列)の中から1人選んでonPick(name)に渡す。呼び出し元が結果の反映方法を決める。
+  // isBye=trueだとシード当選演出(紙吹雪)を出す。
+  function openRouletteFor(candidates, onPick, isBye){
+    if(!candidates.length) return;
+    wheelCandidates = candidates.slice();
+    wheelOnPick = onPick;
+    wheelIsBye = !!isBye;
+    ensureRouletteEl(); rouletteEl.style.display='flex'; rouletteEl.querySelector('#pickedBanner').innerHTML='&nbsp;';
+    rouletteEl.querySelector('#spinBtn').disabled=false;
+    drawWheel();
   }
   function closeRoulette(){ if(rouletteEl) rouletteEl.style.display='none'; }
   function drawWheel(){
     if(!wheelCtx) return;
-    const list = state.remaining.length ? state.remaining : ["参加者を登録してください"];
+    const list = wheelCandidates.length ? wheelCandidates : ["候補がいません"];
     const n=list.length, R=wheelCanvas.width/2;
     wheelCtx.clearRect(0,0,wheelCanvas.width,wheelCanvas.height); wheelCtx.save(); wheelCtx.translate(R,R); wheelCtx.rotate(currentRotation);
     const seg=(Math.PI*2)/n;
@@ -350,10 +348,10 @@
   function easeOutBounce(t){ const n1=7.5625,d1=2.75; if(t<1/d1)return n1*t*t; if(t<2/d1)return n1*(t-=1.5/d1)*t+0.75; if(t<2.5/d1)return n1*(t-=2.25/d1)*t+0.9375; return n1*(t-=2.625/d1)*t+0.984375; }
   const SPIN_STYLES=[ (t)=>easeOutBackSpin(t,0.7+Math.random()*1.3), (t)=>easeOutQuint(t), (t)=>easeOutElastic(t), (t)=>easeOutBounce(t) ];
   function spin(){
-    if(spinning) return; if(!state.remaining.length) return;
+    if(spinning || !wheelCandidates.length) return;
     const spinBtn=rouletteEl.querySelector('#spinBtn'); const pickedBanner=rouletteEl.querySelector('#pickedBanner');
     spinning=true; spinBtn.disabled=true;
-    const n=state.remaining.length, seg=(Math.PI*2)/n; const winnerIdx=Math.floor(Math.random()*n); const targetSegCenter=winnerIdx*seg+seg/2;
+    const n=wheelCandidates.length, seg=(Math.PI*2)/n; const winnerIdx=Math.floor(Math.random()*n); const targetSegCenter=winnerIdx*seg+seg/2;
     const spinDir=Math.random()<0.3?-1:1; const extraSpins=4+Math.random()*4; const duration=2600+Math.random()*1500; const spinEase=SPIN_STYLES[Math.floor(Math.random()*SPIN_STYLES.length)];
     const baseRotation=currentRotation+spinDir*extraSpins*Math.PI*2; const correction=-Math.PI/2-(baseRotation%(Math.PI*2))-targetSegCenter; const finalRotation=baseRotation+correction;
     const startRotation=currentRotation, delta=finalRotation-startRotation, startTime=performance.now();
@@ -361,15 +359,11 @@
       if(t<1){ requestAnimationFrame(frame); }
       else{
         currentRotation=finalRotation; drawWheel(); spinning=false; spinBtn.disabled=false;
-        const picked=state.remaining[winnerIdx]; state.remaining.splice(winnerIdx,1); state.order.push(picked);
-        const isSeed=state.matches.length>0 && state.matches[0].some(m=>m.a===picked&&m.b===null);
-        pickedBanner.classList.toggle('seed',isSeed);
-        if(isSeed){ pickedBanner.textContent='🎉 シード権獲得！ '+picked; spawnSeedParticles(); } else { pickedBanner.textContent='🎯 '+picked; }
-        AtsuCup.persist();
-        renderTree(); // トーナメント表の該当枠が ？？？ → 名前 に変わる
-        if(state.remaining.length===0){
-          setTimeout(()=>{ closeRoulette(); }, 900); // 全員公開 → モーダルを閉じて勝敗入力可能な表示へ
-        }
+        const picked=wheelCandidates[winnerIdx];
+        pickedBanner.classList.toggle('seed', wheelIsBye);
+        if(wheelIsBye){ pickedBanner.textContent='🎉 シード権獲得！ '+picked; spawnSeedParticles(); } else { pickedBanner.textContent='🎯 '+picked; }
+        const onPick=wheelOnPick;
+        setTimeout(()=>{ closeRoulette(); if(onPick) onPick(picked); }, 700);
       }
     }
     requestAnimationFrame(frame);
@@ -382,10 +376,12 @@
   function computeRowH(){
     const lc=initialLeafCount();
     const MIN = lc<=8?40:lc<=16?30:lc<=24?22:18;
-    const MAX = lc<=8?90:lc<=16?60:lc<=24?40:26;
+    // 少人数時に生まれる過大な余白を圧縮するため上限を縮小(旧: 90/60/40/26)
+    const MAX = lc<=8?56:lc<=16?44:lc<=24?32:22;
     const avail=Math.max(200, window.innerHeight-200);
     TREE_ROW_H = lc ? Math.max(MIN, Math.min(MAX, avail/lc)) : MIN;
-    BOX_H = Math.max(20, Math.min(30, TREE_ROW_H-8));
+    // 枠の高さは行の高さに対してできるだけ大きく取る(タップしやすく・余白を圧縮)
+    BOX_H = Math.max(24, Math.min(TREE_ROW_H-6, 46));
   }
   function leafY(i){ return HEADER_H + (i+0.5)*TREE_ROW_H; }
   function jointY(r,i){ if(r===0) return (leafY(2*i)+leafY(2*i+1))/2; return (jointY(r-1,2*i)+jointY(r-1,2*i+1))/2; }
@@ -402,6 +398,7 @@
       +`<text x="${cLeft+BOX_W-26}" y="${centerY+4.5}" font-size="10.5" text-anchor="end">${bRecMap[name]?'📹':'🚫'}</text>`
       +`<text class="tree-edit-icon" data-editr="${r}" data-editm="${i}" data-editside="${side}" x="${cLeft+BOX_W-4}" y="${centerY+4.5}" font-size="12" text-anchor="end">✏️</text>`;
   }
+  // 大会開始後に残っているシード空き枠(➕・WalkinModalで新規登録込みの飛び入り)
   function byeBoxSvg(r,i,centerY){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     treeSlotRects[`bye_${i}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
@@ -409,16 +406,25 @@
       +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6b5f82">シード</text>`
       +`<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
   }
+  // シード保持者(a)がまだ決まっていない間の、b側の非インタラクティブなプレースホルダ
+  function byePlaceholderSvg(centerY){
+    const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
+    return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5" stroke-dasharray="3 3"/>`
+      +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`;
+  }
+  // 1回戦の空き枠: タップでエントリー者ピッカーを開く
+  function slotTapBoxSvg(m,side,centerY,label){
+    const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
+    return `<g class="tree-slot-tap" data-m="${m}" data-side="${side}">`
+      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#5a4a2a" stroke-width="1.5" stroke-dasharray="3 3"/>`
+      +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#e8b34c">${escapeHtml(label)}</text>`
+      +`</g>`;
+  }
+  // 2回戦以降で、まだ勝ち上がりが決まっていない未確定枠
   function pendingBoxSvg(r,centerY){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
       +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">？？？</text>`;
-  }
-  // ルーレットでまだ公開されていない枠(組み合わせは決まっているが名前を伏せている)
-  function hiddenBoxSvg(r,centerY){
-    const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
-    return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5"/>`
-      +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#6b5f82">🎲 ？？？</text>`;
   }
   function buildTreeSVG(){
     treeSlotRects={}; bRecMap=AtsuCup.recMapOf();
@@ -427,25 +433,31 @@
     let framesSvg='', linesSvg='', boxesSvg='', pickBtnSvg='';
     for(let r=0;r<totalRounds;r++){
       const round=state.matches[r]||[]; const matchCount=leafCount/Math.pow(2,r+1);
-      const boxRight=colLeft(r)+BOX_W, joinX=boxRight+STUB_W; const stubRight=(r===totalRounds-1)?joinX+22:colLeft(r+1);
+      const boxRight=colLeft(r)+BOX_W, joinX=boxRight+STUB_W;
       const frameX=colLeft(r)-4; const frameW=(r===totalRounds-1)?(BOX_W+8):COL_W;
       framesSvg+=`<rect x="${frameX}" y="${HEADER_H-2}" width="${frameW}" height="${svgH-HEADER_H}" rx="8" fill="none" stroke="#241d33" stroke-width="1"/>`;
       framesSvg+=`<text x="${colLeft(r)+BOX_W/2}" y="14" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9a8fae">${escapeHtml(roundLabel(matchCount))}</text>`;
       for(let i=0;i<matchCount;i++){
         const m=round[i]; const centerY=jointY(r,i); const upY=centerY-TREE_ROW_H/2, downY=centerY+TREE_ROW_H/2;
-        const bothRevealed = m && m.a && m.b && AtsuCup.isRevealed(m.a) && AtsuCup.isRevealed(m.b);
-        const isForced = bothRevealed && !bRecMap[m.a] && !bRecMap[m.b];
+        const isForced = m && m.a && m.b && !bRecMap[m.a] && !bRecMap[m.b];
+        // カード内の短いコの字のみ(次カラムへ伸びる線は引かない)
         linesSvg+=`<path d="M${boxRight},${upY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
         linesSvg+=`<path d="M${boxRight},${downY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
         linesSvg+=`<path d="M${joinX},${upY} V${downY}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
-        linesSvg+=`<path d="M${joinX},${centerY} H${stubRight}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
-        [['a',m?m.a:null,upY,m?m.aSrc:undefined],['b',m?m.b:null,downY,m?m.bSrc:undefined]].forEach(([side,name,y,src])=>{
-          if(name===null){ if(src===undefined && side==='b' && m && m.a){ boxesSvg+=byeBoxSvg(r,i,y); } else { boxesSvg+=pendingBoxSvg(r,y); } return; }
-          if(!AtsuCup.isRevealed(name)){ boxesSvg+=hiddenBoxSvg(r,y); return; } // ルーレット未公開
+        [['a',m?m.a:null,upY],['b',m?m.b:null,downY]].forEach(([side,name,y])=>{
+          if(name===null){
+            if(r===0 && m && m.bye && side==='b'){
+              // シード枠の空側(b): 保持者(a)が決まっていれば、途中参加として挑戦者を迎えられる
+              if(m.a){ boxesSvg+=byeBoxSvg(r,i,y); }
+              else { boxesSvg+=byePlaceholderSvg(y); } // 保持者未定の間はタップ不可のプレースホルダのみ
+              return;
+            }
+            if(r===0){ boxesSvg+=slotTapBoxSvg(i, side, y, m && m.bye ? 'タップでシードを選ぶ' : 'タップで選ぶ'); return; } // 1回戦の空き枠は常にタップ可能
+            boxesSvg+=pendingBoxSvg(r,y); return;
+          }
           const isWinner=!!m.winner && m.winner===name; boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced);
         });
-        // 勝敗ボタンは両者とも公開済みで未決着のときだけ
-        if(bothRevealed && !m.winner){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
+        if(m && m.a && m.b && !m.winner){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
       }
     }
     let trophySvg=''; if(state.winnerName){ const fy=jointY(totalRounds-1,0); trophySvg=`<text x="${lastColRight+6}" y="${fy+8}" font-size="22">🏆</text>`; }
@@ -454,8 +466,8 @@
 
   function renderBracket(){
     computeRowH();
-    const hint = state.remaining.length
-      ? '上のボタンで組み合わせを決めてください(決まると「？？？」が名前に変わります)。'
+    const hint = round1HasEmpty()
+      ? '空いている枠をタップして、対戦相手を選んでください。'
       : '⚔️で勝敗入力・✏️で名前変更・シード枠の➕で途中参加';
     bracketSection.innerHTML = `
       <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
@@ -478,6 +490,7 @@
     document.querySelectorAll('#treeScroll .tree-pick').forEach(el=> el.addEventListener('click', ()=> openMatchPickModal(+el.dataset.r, +el.dataset.m)));
     document.querySelectorAll('#treeScroll .tree-edit-icon').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startEditTreeName(+el.dataset.editr,+el.dataset.editm,el.dataset.editside); }));
     document.querySelectorAll('#treeScroll .tree-add-icon').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startAddChallenger(+el.dataset.addm); }));
+    document.querySelectorAll('#treeScroll .tree-slot-tap').forEach(el=> el.addEventListener('click', ()=> openSlotPicker(+el.dataset.m, el.dataset.side)));
   }
   function startEditTreeName(r,m,side){
     const match=state.matches[r][m]; if(!match) return; const current=side==='a'?match.a:match.b; const rect=treeSlotRects[`${r}_${m}_${side}`]; const svgEl=document.querySelector('#treeScroll svg'); if(!rect||!svgEl) return;
@@ -561,8 +574,8 @@
   }
   function renderExtras(){
     const recMap=AtsuCup.recMapOf();
-    // 組み合わせが未確定(ルーレット公開中)の間は、進行・警告・優勝などのUIを出さない
-    if(state.remaining.length){
+    // 1回戦の枠がまだ埋まりきっていない間は、進行・警告・優勝などのUIを出さない
+    if(round1HasEmpty()){
       document.getElementById('advanceArea').innerHTML='';
       document.getElementById('jumpRow').style.display='none';
       document.getElementById('noticeArea').innerHTML='';

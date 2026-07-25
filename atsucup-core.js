@@ -227,7 +227,8 @@ const AtsuCup = (function(){
     return round1;
   }
 
-  // 参加者リストから、撮影不可同士が当たらないようラウンド1(不戦勝含む)を組む
+  // 参加者リストから、撮影不可同士が当たらないようラウンド1(不戦勝含む)を組む。
+  // シード(不戦勝)カードは常に配列の末尾(=表示上は一番下)にまとめる。
   function buildRound1(names){
     const recMap = recMapOf();
     const size = nextPow2(names.length);
@@ -241,38 +242,31 @@ const AtsuCup = (function(){
     }
     const pairs = pairWithConstraint(pool, recMap);
     const round1 = [];
-    byePlayers.forEach(p=> round1.push({a:p, b:null, winner:p, loser:null, video:""}));
-    pairs.forEach(([a,b])=> round1.push({a, b, winner:null, loser:null, video:""}));
-    shuffleArray(round1);
+    pairs.forEach(([a,b])=> round1.push({a, b, winner:null, loser:null, video:"", bye:false}));
+    byePlayers.forEach(p=> round1.push({a:p, b:null, winner:p, loser:null, video:"", bye:true}));
     return avoidByeCameraCollision(round1, recMap);
   }
 
-  // 手動で決めた順番(orderedNames)を、そのまま前から2人ずつ組む。人数が2の累乗に足りない分はBYE(不戦勝)になる。
-  // seedNamesを指定すると、その人たちを明示的にBYE(シード)として扱う(手動で対戦相手のいない位置を選べる)。
-  // 指定がなければ、従来通り順番の後ろの人から自動でBYEになる。
-  function buildRound1Manual(orderedNames, seedNames){
-    const size = nextPow2(orderedNames.length);
-    const byeCount = size - orderedNames.length;
-    let pairNames, byeNames;
-    if(seedNames && seedNames.length){
-      byeNames = orderedNames.filter(n=>seedNames.includes(n));
-      pairNames = orderedNames.filter(n=>!seedNames.includes(n));
-    }else{
-      pairNames = orderedNames.slice(0, orderedNames.length - byeCount);
-      byeNames = orderedNames.slice(orderedNames.length - byeCount);
-    }
+  // 参加者数(names)から、まだ誰も割り当てられていない空のラウンド1を組み立てる。
+  // 枠タップで1人ずつ埋めていく方式の初期状態として使う。シード(不戦勝)枠は常に末尾(一番下)にする。
+  function buildEmptyRound1(names){
+    const size = nextPow2(names.length);
+    const matchCount = size/2;
+    const byeCount = size - names.length;
     const round1 = [];
-    byeNames.forEach(p=> round1.push({a:p, b:null, winner:p, loser:null, video:""}));
-    for(let i=0;i<pairNames.length;i+=2){
-      round1.push({a:pairNames[i], b:pairNames[i+1], winner:null, loser:null, video:""});
+    for(let i=0;i<matchCount;i++){
+      round1.push({a:null, b:null, winner:null, loser:null, video:"", bye:false});
     }
-    return avoidByeCameraCollision(round1, recMapOf());
+    for(let i=0;i<byeCount;i++){
+      round1[matchCount-1-i].bye = true;
+    }
+    return round1;
   }
 
   function resetDownstream(){
     state.order = [];
     state.remaining = state.people.map(p=>p.name);
-    state.matches = state.remaining.length ? [buildRound1(state.remaining)] : [];
+    state.matches = state.remaining.length ? [buildEmptyRound1(state.remaining)] : [];
     state.thirdPlaceMatch = null;
     state.winnerName = "";
     persist();
@@ -468,18 +462,12 @@ const AtsuCup = (function(){
     return !state.matches[0].some(m => m.b !== null && m.winner);
   }
 
-  // ルーレットでまだ引かれていない名前は対戦表上でも隠す(演出用)
-  function isRevealed(name){
-    if(name == null) return true;
-    return state.remaining.length === 0 || state.order.includes(name);
-  }
-
   function forcedPairsList(){
     const recMap = recMapOf();
     const forced = [];
     state.matches.forEach((round, r)=>{
       round.forEach(m=>{
-        if(m.a && m.b && isRevealed(m.a) && isRevealed(m.b) && !recMap[m.a] && !recMap[m.b]){
+        if(m.a && m.b && !recMap[m.a] && !recMap[m.b]){
           forced.push({r, a:m.a, b:m.b});
         }
       });
@@ -714,8 +702,8 @@ const AtsuCup = (function(){
 
   return {
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
-    nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildRound1Manual, resetDownstream,
-    advanceRound, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, isRevealed, forcedPairsList, hasDownstreamProgress,
+    nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
+    advanceRound, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
     setActive, activeT,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
