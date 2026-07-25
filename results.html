@@ -32,7 +32,7 @@
 </style>
 </head>
 <body>
-<a class="back-link" href="bracket.html">‹ 対戦表へ</a>
+<a class="back-link" href="tournament-detail.html">‹ 対戦表へ</a>
 <div class="wrap">
   <header class="top">
     <div class="crown-mark">🏆</div>
@@ -60,7 +60,7 @@
       <a class="btn btn-ghost" href="hall.html">歴代優勝者を見る</a>
     </div>
     <div class="row">
-      <a class="btn btn-ghost" style="width:100%;" href="bracket.html">🌳 対戦表を見る</a>
+      <a class="btn btn-ghost" style="width:100%;" id="toDetailBracketBtn" href="tournament-detail.html">🌳 対戦表を見る</a>
     </div>
   </section>
 
@@ -76,11 +76,16 @@
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
 
+  // 「対戦表へ」の戻り先を、開催中の大会の詳細ページに向ける
+  const detailHref = (state.tournamentMeta && state.tournamentMeta.id) ? ('tournament-detail.html?id='+encodeURIComponent(state.tournamentMeta.id)) : 'tournaments.html';
+  const backBtn = document.querySelector('a.back-link'); if(backBtn) backBtn.href = detailHref;
+  const toDetailBracketBtn = document.getElementById('toDetailBracketBtn'); if(toDetailBracketBtn) toDetailBracketBtn.href = detailHref;
+
   if(!state.winnerName){
     document.getElementById('emptyStateBox').innerHTML = `
       <section class="panel">
         <div class="empty-state"><span class="big">🏆</span>まだ優勝者が決まっていません。</div>
-        <a class="btn btn-primary" style="width:100%;" href="bracket.html">対戦表へ戻る →</a>
+        <a class="btn btn-primary" style="width:100%;" href="${detailHref}">対戦表へ戻る →</a>
       </section>
     `;
     return;

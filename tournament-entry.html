@@ -57,7 +57,7 @@
   </section>
 
   <div class="next-flow-box" id="nextFlowBox" style="display:none;">
-    <a class="btn btn-gold" style="width:100%;" href="matchup.html">次へ: 組み合わせを決める →</a>
+    <a class="btn btn-gold" style="width:100%;" id="toDetailLink" href="tournament-detail.html">次へ: 組み合わせを決める →</a>
   </div>
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
@@ -80,6 +80,12 @@
   const selectedList = document.getElementById("selectedList");
   const availableList = document.getElementById("availableList");
   const nextFlowBox = document.getElementById("nextFlowBox");
+
+  // 「次へ」の遷移先を、開催中の大会の詳細ページ(組み合わせ決定)に向ける
+  const toDetailLink = document.getElementById("toDetailLink");
+  if(toDetailLink && state.tournamentMeta && state.tournamentMeta.id){
+    toDetailLink.href = `tournament-detail.html?id=${encodeURIComponent(state.tournamentMeta.id)}`;
+  }
 
   function recDefaultOf(name){ return state.userRecDefaults[name] !== false; }
 
