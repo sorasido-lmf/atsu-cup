@@ -3,7 +3,7 @@
 const GitHubDB = (function(){
   "use strict";
 
-  const OWNER = "aknkakykhk-maker";
+  const OWNER = "sorasido-lmf";
   const REPO = "atsu-cup";
   const BRANCH = "main";
   const PAT_KEY = "atsucup:githubPat";
