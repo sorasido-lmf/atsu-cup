@@ -64,7 +64,7 @@
     const cardOf = (t, guest)=>{
       const badge = t.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`;
       return `<a class="ongoing-card" href="tournament-detail.html?id=${encodeURIComponent(t.id)}">
-        ${badge}${guest?' <span class="status-badge open" style="background:none; border:1px solid var(--line);">練習用</span>':''}
+        ${badge}${guest?' <span class="status-badge open" style="background:none; border:1px solid var(--line);">ローカル</span>':''}
         <div class="cur-title" style="margin-top:6px;">${escapeHtml(t.title)}</div>
         ${t.winnerName?`<div class="cur-line champ">👑 ${escapeHtml(t.winnerName)}</div>`:''}
       </a>`;

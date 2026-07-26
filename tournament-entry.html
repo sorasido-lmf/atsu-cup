@@ -39,7 +39,9 @@
   </header>
 
   <div id="flowBanner"></div>
+  <div id="blockedBox" style="display:none;"></div>
 
+  <div id="entryPanels">
   <section class="panel">
     <h2><span class="num">01</span> 今回参加する人</h2>
     <div id="countBadges"></div>
@@ -59,6 +61,7 @@
 
   <div class="next-flow-box" id="nextFlowBox">
     <a class="btn btn-gold" style="width:100%;" id="toDetailLink" href="tournament-detail.html">‹ 大会詳細に戻る</a>
+  </div>
   </div>
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
@@ -85,6 +88,17 @@
   const selectedList = document.getElementById("selectedList");
   const availableList = document.getElementById("availableList");
   const nextFlowBox = document.getElementById("nextFlowBox");
+  const entryPanels = document.getElementById("entryPanels");
+  const blockedBox = document.getElementById("blockedBox");
+
+  // ログイン中の練習用大会、非ログイン中のDB大会など、今の自分では編集できない大会への
+  // 直接アクセスをブロックする(大会詳細のisReadOnlyView/isCrossPoolと同じ考え方)
+  function isBlocked(){
+    const owningPool = AtsuCup.poolKindOfTournamentId(id);
+    if(!id || !owningPool) return false;
+    const guestNow = AtsuCup.isGuestMode();
+    return (owningPool==='auth' && guestNow) || (owningPool==='guest' && !guestNow);
+  }
 
   // 大会名を明記し、戻り先(この大会の詳細ページ)を各リンクに設定する
   const detailHref = (state.tournamentMeta && state.tournamentMeta.id) ? `tournament-detail.html?id=${encodeURIComponent(state.tournamentMeta.id)}` : 'index.html';
@@ -122,6 +136,14 @@
   }
 
   function renderAll(){
+    if(isBlocked()){
+      entryPanels.style.display = 'none';
+      blockedBox.style.display = 'block';
+      blockedBox.innerHTML = `<div class="empty-state"><span class="big">🚫</span>この大会のエントリーは編集できません。<br><a class="btn btn-ghost" href="${detailHref}" style="margin-top:12px;">大会詳細へ戻る</a></div>`;
+      return;
+    }
+    entryPanels.style.display = '';
+    blockedBox.style.display = 'none';
     renderBadges();
 
     // 今回参加する人(選択中)・2列表示

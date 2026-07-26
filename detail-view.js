@@ -15,6 +15,9 @@
   AtsuCup.setActive(id);
 
   let mode = 'view'; // 'view'|'editing'|'confirmEnd'|'confirmDelete'
+  let readOnly = false; // 非ログイン中にDB(認証プール)大会を見ている: 編集UIを一切出さない
+  function isGuestTournament(){ return AtsuCup.poolKindOfTournamentId(id)==='guest'; }
+  function localTagHtml(){ return isGuestTournament() ? ' <span class="status-badge open" style="background:none; border:1px solid var(--line);">ローカル</span>' : ''; }
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
   function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
@@ -26,10 +29,15 @@
     if(!state.matches.length) return false;
     return state.matches[0].some(m=> m.a===null || (!m.bye && m.b===null));
   }
-  // ログイン中はゲスト大会を、未ログイン中は認証済み大会を、URL直指定で開こうとしていないか
+  // ログイン中に(ログインで削除されるはずの)練習用大会をURL直指定で開こうとしていないか。
+  // 逆方向(非ログイン中にDB大会を開く)はブロックせず、読み取り専用(readOnly)として閲覧を許可する
+  // (「過去の大会のログは閲覧のみ可」という要件のため)。
   function isCrossPool(){
-    const owningPool = AtsuCup.poolKindOfTournamentId(id);
-    return !!owningPool && owningPool !== (AtsuCup.isGuestMode() ? 'guest' : 'auth');
+    return isGuestTournament() && !AtsuCup.isGuestMode();
+  }
+  // 非ログイン中にDB(認証プール)大会を見ている: 保存はおろかローカル編集もさせない(編集UIを一切出さない)
+  function isReadOnlyView(){
+    return AtsuCup.poolKindOfTournamentId(id)==='auth' && AtsuCup.isGuestMode();
   }
   function renderBlocked(){
     hideSub(); content.style.display='block';
@@ -42,18 +50,21 @@
   function render(){
     if(!id){ renderNotFound(); return; }
     if(isCrossPool()){ renderBlocked(); return; }
+    readOnly = isReadOnlyView();
     if(isLive()){
-      if(mode === 'editing'){ renderEditForm(); return; }
+      if(mode === 'editing' && !readOnly){ renderEditForm(); return; }
+      mode = readOnly ? 'view' : mode;
       renderLiveHeader();
       // 組み合わせ操作(まだ対戦が始まっておらず参加者がいる間)とトーナメント表を、必要に応じて両方表示する
-      const decidable = AtsuCup.bracketNotStarted() && state.people.length>0;
+      // readOnly中は組み合わせ決定(編集操作)を一切見せない
+      const decidable = !readOnly && AtsuCup.bracketNotStarted() && state.people.length>0;
       const hasTree = state.matches.length>0 && state.matches[0].length>0;
       matchupSection.style.display = decidable ? 'block' : 'none';
       if(decidable) renderMatchup();
       bracketSection.style.display = hasTree ? 'block' : 'none';
       if(hasTree) renderBracket();
-      // 参加者0で組み合わせも無いときは、エントリー誘導だけ出す
-      if(!decidable && !hasTree){
+      // 参加者0で組み合わせも無いときは、エントリー誘導だけ出す(readOnly中は誘導も出さない)
+      if(!decidable && !hasTree && !readOnly){
         matchupSection.style.display = 'block';
         renderMatchup();
       }
@@ -75,7 +86,7 @@
   function renderLiveHeader(){
     content.style.display='block';
     const meta = state.tournamentMeta;
-    const statusBadge = state.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`;
+    const statusBadge = (state.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`) + localTagHtml();
     const confirmHtml = mode==='confirmEnd' ? `
       <div class="confirm-banner">
         ${state.winnerName ? "この大会を終了して「大会一覧」に保存します。よろしいですか？" : "この大会はまだ優勝者が決まっていません。それでも終了して「大会一覧」に保存しますか？"}
@@ -88,11 +99,12 @@
       ${meta.details?`<div class="cur-details">${escapeHtml(meta.details)}</div>`:''}
       ${state.winnerName?`<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>`:''}
       ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div class="cur-line third">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
-      <div class="row">
+      ${readOnly ? '' : `<div class="row">
         <button class="btn btn-ghost" id="editBtn">編集する</button>
         <button class="btn btn-ghost" id="endBtn">この大会を終了する</button>
-      </div>
+      </div>`}
       ${confirmHtml}`;
+    if(readOnly) return;
     document.getElementById('editBtn').addEventListener('click', ()=>{ mode='editing'; render(); });
     document.getElementById('endBtn').addEventListener('click', ()=>{ mode='confirmEnd'; renderLiveHeader(); });
     if(mode==='confirmEnd'){
@@ -146,12 +158,13 @@
       <div class="confirm-banner">「${escapeHtml(h.title)}」を大会一覧から削除します。よろしいですか？(元に戻せません)
         <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div></div>` : '';
     content.innerHTML = `
-      <div class="row" style="margin-top:0;">
+      ${readOnly ? '' : `<div class="row" style="margin-top:0;">
         ${saveButtonHtml()}
         <button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
       </div>
-      <div id="dataSaveStatus"></div>
+      <div id="dataSaveStatus"></div>`}
       <div class="video-card" style="margin-top:14px;">
+        ${localTagHtml() ? `<div style="margin-bottom:8px;">${localTagHtml()}</div>` : ''}
         ${h.posterUrl?`<img class="poster-img" src="${escapeHtml(h.posterUrl)}" alt="poster">`:''}
         <div class="cur-title">${escapeHtml(h.title)}</div>
         ${h.details?`<div class="cur-details">${escapeHtml(h.details)}</div>`:''}
@@ -164,11 +177,13 @@
       ${matchRounds || '<div class="empty-state" style="padding:12px;">対戦データがありません。</div>'}
       ${thirdHtml}
       ${confirmHtml}`;
-    wireSaveButton(h.id);
-    document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderPast(h); });
-    if(mode==='confirmDelete'){
-      document.getElementById('cancelDeleteBtn').addEventListener('click', ()=>{ mode='view'; renderPast(h); });
-      document.getElementById('confirmDeleteBtn').addEventListener('click', ()=>{ state.history = state.history.filter(x=>x.id!==h.id); AtsuCup.persist(); location.href='tournaments.html'; });
+    if(!readOnly){
+      wireSaveButton(h.id);
+      document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderPast(h); });
+      if(mode==='confirmDelete'){
+        document.getElementById('cancelDeleteBtn').addEventListener('click', ()=>{ mode='view'; renderPast(h); });
+        document.getElementById('confirmDeleteBtn').addEventListener('click', ()=>{ state.history = state.history.filter(x=>x.id!==h.id); AtsuCup.persist(); location.href='tournaments.html'; });
+      }
     }
     window.scrollTo({top:0, behavior:'instant'});
   }
@@ -434,13 +449,14 @@
       +`<text x="${cLeft+BOX_W-8}" y="${centerY+4.5}" font-size="10.5" text-anchor="end">${bRecMap[name]?'📹':'🚫'}</text>`
       +`</g>`;
   }
-  // 大会開始後に残っているシード空き枠(➕・WalkinModalで新規登録込みの飛び入り)
+  // 大会開始後に残っているシード空き枠(➕・WalkinModalで新規登録込みの飛び入り)。readOnly中は➕を出さない
   function byeBoxSvg(r,i,centerY){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     treeSlotRects[`bye_${i}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
+    const addIcon = readOnly ? '' : `<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
     return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5" stroke-dasharray="3 3"/>`
       +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6b5f82">シード</text>`
-      +`<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
+      +addIcon;
   }
   // シード保持者(a)がまだ決まっていない間の、b側の非インタラクティブなプレースホルダ
   function byePlaceholderSvg(centerY){
@@ -448,9 +464,13 @@
     return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5" stroke-dasharray="3 3"/>`
       +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`;
   }
-  // 1回戦の空き枠: タップでエントリー者ピッカーを開く。D&Dのドロップ先にもなる
+  // 1回戦の空き枠: タップでエントリー者ピッカーを開く。D&Dのドロップ先にもなる。readOnly中は非インタラクティブな「未定」表示のみ
   function slotTapBoxSvg(m,side,centerY,label){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
+    if(readOnly){
+      return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
+        +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">未定</text>`;
+    }
     treeSlotRects[`0_${m}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     return `<g class="tree-slot tree-slot-tap" data-r="0" data-m="${m}" data-side="${side}">`
       +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#5a4a2a" stroke-width="1.5" stroke-dasharray="3 3"/>`
@@ -496,10 +516,10 @@
             boxesSvg+=pendingBoxSvg(r,i,side,y); return;
           }
           const isWinner=!!m.winner && m.winner===name; const hasWinner=!!m.winner;
-          const dndOn = slotDndEligible(r,i,side);
+          const dndOn = !readOnly && slotDndEligible(r,i,side);
           boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced,hasWinner,dndOn);
         });
-        if(m && m.a && m.b){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
+        if(!readOnly && m && m.a && m.b){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
       }
     }
     let trophySvg=''; if(state.winnerName){ const fy=jointY(totalRounds-1,0); trophySvg=`<text x="${lastColRight+6}" y="${fy+8}" font-size="22">🏆</text>`; }
@@ -508,9 +528,11 @@
 
   function renderBracket(){
     computeRowH();
-    const hint = round1HasEmpty()
-      ? '空いている枠をタップして、対戦相手を選んでください。ドラッグ&ドロップで枠の移動・入れ替え・取り消しもできます。'
-      : '⚔️で勝敗入力・シード枠の➕で途中参加・ドラッグ&ドロップで枠の移動/入れ替え';
+    const hint = readOnly
+      ? '対戦表(閲覧のみ)'
+      : round1HasEmpty()
+        ? '空いている枠をタップして、対戦相手を選んでください。ドラッグ&ドロップで枠の移動・入れ替え・取り消しもできます。'
+        : '⚔️で勝敗入力・シード枠の➕で途中参加・ドラッグ&ドロップで枠の移動/入れ替え';
     bracketSection.innerHTML = `
       <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
       <p class="hint" style="margin:2px 0 8px;">${hint}</p>
@@ -519,14 +541,14 @@
       <div id="advanceArea"></div>
       <div class="row" style="margin-top:12px;">
         <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
-        ${saveButtonHtml()}
+        ${readOnly ? '' : saveButtonHtml()}
       </div>
       <div id="dataSaveStatus"></div>
       <div id="noticeArea"></div>
       <div id="thirdPlaceArea"></div>
       <div id="championArea"></div>`;
     document.getElementById('saveBracketImgBtn').addEventListener('click', saveBracketImg);
-    wireSaveButton(state.tournamentMeta.id);
+    if(!readOnly) wireSaveButton(state.tournamentMeta.id);
     renderTree(); renderExtras();
   }
 
@@ -561,7 +583,8 @@
   }
 
   function renderTree(){
-    const ts=document.getElementById('treeScroll'); ts.innerHTML=buildTreeSVG(); ts.style.setProperty('--svg-natural-w', lastSvgW+'px'); wireTreeInteractions();
+    const ts=document.getElementById('treeScroll'); ts.innerHTML=buildTreeSVG(); ts.style.setProperty('--svg-natural-w', lastSvgW+'px');
+    if(!readOnly) wireTreeInteractions();
   }
   function wireTreeInteractions(){
     document.querySelectorAll('#treeScroll .tree-pick').forEach(el=> el.addEventListener('click', ()=> openMatchPickModal(+el.dataset.r, +el.dataset.m)));
@@ -773,7 +796,9 @@
   }
   function pickBtnHtml(name,winner,r,m,side,recMap){
     const isWinner=winner===name;
-    return `<div class="pick-btn ${isWinner?'winner':''}"><span class="pick-main" data-r="${r}" data-m="${m}" data-side="${side}"><span class="avatar">${escapeHtml(initials(name))}</span><span class="nm">${escapeHtml(name)}</span><span>${recMap[name]?'📹':'🚫'}</span></span><button class="pick-edit-btn" data-editname data-side="${side}">✏️</button></div>`;
+    const mainAttrs = readOnly ? '' : ` data-r="${r}" data-m="${m}" data-side="${side}"`;
+    const editBtn = readOnly ? '' : `<button class="pick-edit-btn" data-editname data-side="${side}">✏️</button>`;
+    return `<div class="pick-btn ${isWinner?'winner':''}"><span class="pick-main"${mainAttrs}><span class="avatar">${escapeHtml(initials(name))}</span><span class="nm">${escapeHtml(name)}</span><span>${recMap[name]?'📹':'🚫'}</span></span>${editBtn}</div>`;
   }
   function swappedMatchIndices(r){
     if(r===0) return new Set(); const cur=state.matches[r]; if(!cur) return new Set(); const swapped=new Set();
@@ -790,9 +815,10 @@
       document.getElementById('championArea').innerHTML='';
       return;
     }
-    // 次のラウンドへ進む
+    // 次のラウンドへ進む(readOnly中は進行操作を出さない)
     const advanceArea=document.getElementById('advanceArea'); const lastR=state.matches.length-1; const lastRound=lastR>=0?state.matches[lastR]:null;
-    if(lastRound && lastRound.length>1){
+    if(readOnly){ advanceArea.innerHTML=''; }
+    else if(lastRound && lastRound.length>1){
       const nextLabel=AtsuCup.roundLabel(lastRound.length/2);
       advanceArea.innerHTML=`<button class="btn btn-gold" id="advanceRoundBtn" style="width:100%; margin-top:10px;">▶ ${escapeHtml(nextLabel)}へ進む</button><div id="advanceConfirm"></div>`;
       const doAdvance=()=>{ AtsuCup.advanceRound(lastR); renderTree(); renderExtras(); };
@@ -819,8 +845,10 @@
     if(state.thirdPlaceMatch){
       const tp=state.thirdPlaceMatch;
       thirdArea.innerHTML=`<h3 class="section-title" style="margin-top:16px;">🥉 3位決定戦</h3><div class="video-card" id="thirdPlaceCard"><div class="match-pick-row">${pickBtnHtml(tp.a,tp.winner,'third',0,'a',recMap)}<span class="vs-label">VS</span>${pickBtnHtml(tp.b,tp.winner,'third',0,'b',recMap)}</div></div>`;
-      thirdArea.querySelectorAll('.pick-main[data-r]').forEach(el=> el.addEventListener('click', ()=> pick('third',0,el.dataset.side)));
-      thirdArea.querySelectorAll('[data-editname]').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startEditThirdName(el.dataset.side, el.closest('.pick-btn')); }));
+      if(!readOnly){
+        thirdArea.querySelectorAll('.pick-main[data-r]').forEach(el=> el.addEventListener('click', ()=> pick('third',0,el.dataset.side)));
+        thirdArea.querySelectorAll('[data-editname]').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startEditThirdName(el.dataset.side, el.closest('.pick-btn')); }));
+      }
     } else { thirdArea.innerHTML=''; }
 
     const championArea=document.getElementById('championArea');
