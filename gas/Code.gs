@@ -3,16 +3,20 @@
  *
  * 役割: スプレッドシートを正本として保持し、data/*.json と同じ形のJSONへ相互変換する。
  *
- * === Phase 1 (このファイルの現状) ===
- * 読み取り(doGet)と初期セットアップのみ。**書き込みAPI(doPost)はまだ無い** =
- * デプロイしても外部から書き換えられる口は存在しない。
+ * 書き込み(doPost)は必ず以下を通す:
+ *   GoogleログインのIDトークン検証 → adminsシートの許可リスト照合 → シート更新 → GitHubへpush
  *
- * === Phase 2 で追加予定 ===
- * doPost(GoogleログインのIDトークン検証 → adminsシート照合 → シート更新 → GitHubへpush)
+ * ⚠️ このWebアプリは「実行するユーザー: 自分」でデプロイするため、呼び出した人が誰でも
+ *    オーナー権限でシートを触れてしまう。スプレッドシートの共有設定は防御にならない。
+ *    防御しているのは下の verifyIdToken_() と assertAdmin_() だけなので、絶対に外さないこと。
  *
  * --- Script Properties に設定が必要なキー ---
- *   SPREADSHEET_ID : このスクリプトが読み書きするスプレッドシートのID
- *   (Phase 2 で GITHUB_PAT / GITHUB_OWNER / GITHUB_REPO / OAUTH_CLIENT_ID を追加)
+ *   SPREADSHEET_ID   : 読み書きするスプレッドシートのID
+ *   OAUTH_CLIENT_ID  : GCPで作ったOAuth 2.0 クライアントID(IDトークンのaud検証に使う・必須)
+ *   GITHUB_PAT       : GitHubへJSONを書き出すためのトークン(Contents: Read and write)
+ *   GITHUB_OWNER     : 例 sorasido-lmf
+ *   GITHUB_REPO      : 例 atsu-cup
+ *   GITHUB_BRANCH    : 省略時 main
  */
 
 /* ============================================================
@@ -210,8 +214,360 @@ function doGet(e) {
 }
 
 /* ============================================================
+ * 認証 (ここがこのシステムの唯一の防御線)
+ * ============================================================ */
+
+function prop_(key, fallback) {
+  var v = PropertiesService.getScriptProperties().getProperty(key);
+  if (v === null || v === '') {
+    if (fallback !== undefined) return fallback;
+    throw new Error('Script Properties に ' + key + ' が設定されていません。');
+  }
+  return v;
+}
+
+/** 認証・認可の失敗を、サーバ内部エラーと区別するための印 */
+function authError_(msg) {
+  var e = new Error(msg);
+  e.isAuth = true;
+  return e;
+}
+
+/**
+ * GoogleのIDトークンを検証してメールアドレスを返す。
+ *
+ * aud(このトークンが誰向けに発行されたか)の検証が最重要。
+ * これを省くと、他のサイト向けに発行されたトークンを持ってくるだけで通ってしまう。
+ */
+function verifyIdToken_(idToken) {
+  if (!idToken) throw authError_('ログインが必要です。');
+
+  var res = UrlFetchApp.fetch(
+    'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken),
+    { muteHttpExceptions: true }
+  );
+  if (res.getResponseCode() !== 200) {
+    throw authError_('ログイン情報を確認できませんでした。もう一度ログインしてください。');
+  }
+
+  var info = JSON.parse(res.getContentText());
+  if (info.aud !== prop_('OAUTH_CLIENT_ID')) throw authError_('このアプリ向けのログインではありません。');
+  if (String(info.email_verified) !== 'true')  throw authError_('メールアドレスが確認できていないアカウントです。');
+  if (Number(info.exp) * 1000 < Date.now())    throw authError_('ログインの有効期限が切れました。もう一度ログインしてください。');
+  if (!info.email)                             throw authError_('メールアドレスを取得できませんでした。');
+
+  return String(info.email).trim().toLowerCase();
+}
+
+/** adminsシートに載っているか確認し、役割を返す。載っていなければ拒否。 */
+function assertAdmin_(email) {
+  var values = sheet_('admins').getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim().toLowerCase() === email) {
+      return String(values[i][1] || 'admin').trim();
+    }
+  }
+  throw authError_('このアカウント(' + email + ')には編集権限がありません。管理者に追加を依頼してください。');
+}
+
+function writeAudit_(email, action, target) {
+  try {
+    sheet_('audit').appendRow([new Date().toISOString(), email, action, target || '']);
+  } catch (e) {
+    // 監査ログの失敗で本処理を巻き添えにしない
+    Logger.log('audit記録に失敗: ' + e);
+  }
+}
+
+/* ============================================================
+ * GitHubへの書き出し
+ * PATはScript Properties(サーバ側)にあり、ブラウザからは到達できない。
+ * ============================================================ */
+
+function githubApiUrl_(path) {
+  return 'https://api.github.com/repos/' + prop_('GITHUB_OWNER') + '/' + prop_('GITHUB_REPO') + '/contents/' + path;
+}
+
+function pushToGitHub_(path, rows, message) {
+  var pat    = prop_('GITHUB_PAT');
+  var branch = prop_('GITHUB_BRANCH', 'main');
+  var url    = githubApiUrl_(path);
+  var headers = { Authorization: 'token ' + pat, Accept: 'application/vnd.github+json' };
+
+  // 既存ファイルの sha を取る(無ければ新規作成)
+  var get = UrlFetchApp.fetch(url + '?ref=' + branch, { headers: headers, muteHttpExceptions: true });
+  var sha = null;
+  if (get.getResponseCode() === 200) {
+    sha = JSON.parse(get.getContentText()).sha;
+  } else if (get.getResponseCode() !== 404) {
+    throw new Error('GitHubの取得に失敗しました(' + get.getResponseCode() + '): ' + path);
+  }
+
+  var body = {
+    message: message,
+    // 日本語を含むのでUTF-8を明示する
+    content: Utilities.base64Encode(JSON.stringify(rows, null, 2) + '\n', Utilities.Charset.UTF_8),
+    branch: branch
+  };
+  if (sha) body.sha = sha;
+
+  var put = UrlFetchApp.fetch(url, {
+    method: 'put', contentType: 'application/json', headers: headers,
+    payload: JSON.stringify(body), muteHttpExceptions: true
+  });
+  if (put.getResponseCode() >= 300) {
+    throw new Error('GitHubへの保存に失敗しました(' + put.getResponseCode() + '): ' + put.getContentText().slice(0, 200));
+  }
+}
+
+/** 指定テーブルをシートから読み直してGitHubへ書き出す */
+function exportTables_(tables, message) {
+  tables.forEach(function (name) {
+    pushToGitHub_('data/' + name + '.json', readSheet_(name), message);
+  });
+}
+
+/* ============================================================
+ * 書き込み処理
+ * ============================================================ */
+
+/**
+ * 名前の一覧を受け取り、usersシートに未登録のものへIDを採番して追加する。
+ * IDの一意性はサーバ側で担保する(複数端末から同時に登録されても衝突しないように)。
+ * 戻り値: { idByName, added }
+ */
+function ensureUsers_(names) {
+  var rows = readSheet_('users');
+  var idByName = {};
+  var used = {};
+  rows.forEach(function (u) { idByName[u.name] = u.id; used[u.id] = true; });
+
+  var added = [];
+  (names || []).forEach(function (name) {
+    if (!name || idByName[name]) return;
+    var n = 1, id;
+    do { id = 'u' + ('000' + n).slice(-4); n++; } while (used[id]);
+    used[id] = true;
+    var nu = { id: id, name: name, recDefault: true, archived: false, createdAt: new Date().toISOString(), note: '' };
+    rows.push(nu);
+    idByName[name] = id;
+    added.push(nu);
+  });
+
+  if (added.length) writeSheet_('users', rows);
+  return { idByName: idByName, added: added, rows: rows };
+}
+
+/**
+ * action: saveUsers
+ * payload.users = [{ name, recDefault, archived }] (アプリ側の名前キーのマスタ)
+ * 名前で突き合わせ、既存行のidは保ったまま値を更新する。未登録の名前は採番して追加。
+ */
+function actionSaveUsers_(payload) {
+  var incoming = (payload && payload.users) || [];
+  var rows = readSheet_('users');
+  var byName = {};
+  var used = {};
+  rows.forEach(function (u) { byName[u.name] = u; used[u.id] = true; });
+
+  var added = 0, updated = 0;
+  incoming.forEach(function (u) {
+    if (!u || !u.name) return;
+    var recDefault = u.recDefault !== false;
+    var archived = u.archived === true;
+    var ex = byName[u.name];
+    if (ex) {
+      if (ex.recDefault !== recDefault || ex.archived !== archived) {
+        ex.recDefault = recDefault; ex.archived = archived; updated++;
+      }
+    } else {
+      var n = 1, id;
+      do { id = 'u' + ('000' + n).slice(-4); n++; } while (used[id]);
+      used[id] = true;
+      var nu = { id: id, name: u.name, recDefault: recDefault, archived: archived,
+                 createdAt: new Date().toISOString(), note: '' };
+      rows.push(nu); byName[u.name] = nu; added++;
+    }
+  });
+
+  writeSheet_('users', rows);
+  exportTables_(['users'], 'ユーザー情報を更新(' + rows.length + '人)');
+  return { total: rows.length, added: added, updated: updated };
+}
+
+/**
+ * action: saveTournament
+ * payload = { tournamentRow, entryRows, matchRows, participantNames }
+ *
+ * entryRows.userId / matchRows.player*Id には **ID ではなく名前** が入っている前提。
+ * (順位や勝敗の導出はクライアント側の検証済みロジックに任せ、
+ *  ID採番だけをサーバ側で行うための設計。keyedBy='name' で明示する)
+ */
+function actionSaveTournament_(payload) {
+  if (!payload || !payload.tournamentRow) throw new Error('保存する大会データがありません。');
+  if (payload.keyedBy !== 'name') throw new Error('payload.keyedBy が name ではありません。');
+
+  var tid = payload.tournamentRow.id;
+  if (!tid) throw new Error('大会IDがありません。');
+
+  // 1) 参加者のIDを確定させる
+  var names = payload.participantNames || [];
+  var ensured = ensureUsers_(names);
+  var idOf = function (name) {
+    if (name === null || name === undefined || name === '') return null;
+    return ensured.idByName[name] || null;
+  };
+
+  // 2) 名前 → ID へ置き換える
+  var entryRows = (payload.entryRows || []).map(function (r) {
+    var uid = idOf(r.userId);
+    return {
+      id: tid + '_' + uid, tournamentId: tid, userId: uid,
+      placement: (r.placement === undefined ? null : r.placement),
+      wins: r.wins || 0,
+      recAtEntry: r.recAtEntry !== false
+    };
+  });
+  var matchRows = (payload.matchRows || []).map(function (r) {
+    return {
+      id: r.id, tournamentId: tid, round: r.round, stage: r.stage, matchIndex: r.matchIndex,
+      player1Id: idOf(r.player1Id), player2Id: idOf(r.player2Id), winnerId: idOf(r.winnerId),
+      isBye: r.isBye === true,
+      player1SrcIndex: (r.player1SrcIndex === undefined ? null : r.player1SrcIndex),
+      player2SrcIndex: (r.player2SrcIndex === undefined ? null : r.player2SrcIndex),
+      videoUrl: r.videoUrl || '',
+      playedAt: (r.playedAt === undefined ? null : r.playedAt)
+    };
+  });
+
+  // 3) この大会の既存行を落として差し替える
+  var tournaments = readSheet_('tournaments').filter(function (t) { return t.id !== tid; });
+  tournaments.push(payload.tournamentRow);
+  writeSheet_('tournaments', tournaments);
+
+  var entries = readSheet_('entries').filter(function (r) { return r.tournamentId !== tid; });
+  writeSheet_('entries', entries.concat(entryRows));
+
+  var matches = readSheet_('matches').filter(function (r) { return r.tournamentId !== tid; });
+  writeSheet_('matches', matches.concat(matchRows));
+
+  // 4) GitHubへ書き出す(usersも増えている可能性があるため含める)
+  var tables = ['tournaments', 'entries', 'matches'];
+  if (ensured.added.length) tables.unshift('users');
+  exportTables_(tables, '大会を保存: ' + (payload.tournamentRow.title || tid));
+
+  return {
+    tournamentId: tid,
+    entries: entryRows.length,
+    matches: matchRows.length,
+    addedUsers: ensured.added.length
+  };
+}
+
+/* ============================================================
+ * doPost (書き込みの唯一の入口)
+ * ============================================================ */
+
+/**
+ * ⚠️ GASのContentServiceはHTTPステータスコードを変えられず、常に200を返す。
+ *    そのため成否は必ずレスポンスボディの ok で判定すること(クライアント側も同様)。
+ */
+function doPost(e) {
+  var email = null, action = null;
+  try {
+    if (!e || !e.postData || !e.postData.contents) throw new Error('リクエストが空です。');
+    var body = JSON.parse(e.postData.contents);
+    action = body.action;
+
+    // --- 防御線: ここを通らないと以降の処理には進めない ---
+    email = verifyIdToken_(body.idToken);
+    var role = assertAdmin_(email);
+
+    if (action === 'ping') {
+      return jsonResponse_({ ok: true, email: email, role: role });
+    }
+
+    // 同時書き込みでシートが壊れないよう直列化する
+    var lock = LockService.getScriptLock();
+    if (!lock.tryLock(30000)) throw new Error('他の更新処理と競合しました。少し待ってからやり直してください。');
+    try {
+      var result;
+      if (action === 'saveUsers')           result = actionSaveUsers_(body.payload);
+      else if (action === 'saveTournament') result = actionSaveTournament_(body.payload);
+      else throw new Error('不明なaction: ' + action);
+
+      writeAudit_(email, action, (body.payload && body.payload.tournamentRow && body.payload.tournamentRow.title) || '');
+      return jsonResponse_({ ok: true, email: email, role: role, result: result });
+    } finally {
+      lock.releaseLock();
+    }
+
+  } catch (err) {
+    var msg = String(err && err.message || err);
+    if (err && err.isAuth) {
+      writeAudit_(email || '(未認証)', 'DENIED:' + action, msg);
+      return jsonResponse_({ ok: false, code: 'FORBIDDEN', error: msg });
+    }
+    Logger.log('doPost失敗: ' + msg);
+    return jsonResponse_({ ok: false, code: 'ERROR', error: msg });
+  }
+}
+
+/* ============================================================
  * セットアップ用(GASエディタから手動で1回だけ実行する)
  * ============================================================ */
+
+/**
+ * デプロイ前の設定チェック。Script Propertiesの不足と、GitHub/シートへの到達性を確認する。
+ * 実行ログに結果が出る。
+ */
+function checkConfig() {
+  var out = [];
+  var required = ['SPREADSHEET_ID', 'OAUTH_CLIENT_ID', 'GITHUB_PAT', 'GITHUB_OWNER', 'GITHUB_REPO'];
+  var props = PropertiesService.getScriptProperties();
+  var missing = required.filter(function (k) { return !props.getProperty(k); });
+
+  if (missing.length) {
+    out.push('❌ 未設定のプロパティ: ' + missing.join(', '));
+  } else {
+    out.push('✅ Script Properties は揃っている');
+  }
+
+  try {
+    var names = ss_().getSheets().map(function (s) { return s.getName(); });
+    var need = DATA_SHEETS.concat(['admins', 'audit']);
+    var lack = need.filter(function (n) { return names.indexOf(n) === -1; });
+    out.push(lack.length ? '❌ 足りないシート: ' + lack.join(', ') : '✅ シートは揃っている (' + readSheet_('users').length + '人登録済み)');
+  } catch (e) {
+    out.push('❌ スプレッドシートを開けない: ' + e.message);
+  }
+
+  try {
+    var admins = sheet_('admins').getDataRange().getValues().length - 1;
+    out.push(admins > 0 ? '✅ adminsに' + admins + '件登録されている' : '❌ adminsシートが空です。自分のメールアドレスを登録してください');
+  } catch (e) {
+    out.push('❌ adminsシートを読めない: ' + e.message);
+  }
+
+  if (missing.indexOf('GITHUB_PAT') === -1 && missing.indexOf('GITHUB_OWNER') === -1) {
+    try {
+      var res = UrlFetchApp.fetch(githubApiUrl_('data/users.json') + '?ref=' + prop_('GITHUB_BRANCH', 'main'), {
+        headers: { Authorization: 'token ' + prop_('GITHUB_PAT'), Accept: 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      var code = res.getResponseCode();
+      out.push(code === 200 ? '✅ GitHubへ到達できる(data/users.json が見つかった)'
+             : code === 404 ? '⚠️ GitHubへ到達できるが data/users.json が無い(初回書き込みで作成される)'
+             : code === 401 ? '❌ GitHubの認証に失敗(PATが無効か権限不足)'
+             : '❌ GitHub応答: ' + code);
+    } catch (e) {
+      out.push('❌ GitHubへの接続に失敗: ' + e.message);
+    }
+  }
+
+  Logger.log(out.join('\n'));
+  return out;
+}
 
 /** 6つのシートを作成し、ヘッダと書式を整える。既にあるシートには触らない。 */
 function initSheets() {

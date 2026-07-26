@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>あつ杯 GAS連携テスト</title>
+<link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .t-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .t-log{
+    background:#08060c; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.7; color:var(--cream);
+    white-space:pre-wrap; word-break:break-all; max-height:420px; overflow-y:auto; margin-top:10px;
+  }
+  .t-ok{ color:#7cffb0; } .t-ng{ color:#ff6a6a; } .t-warn{ color:#ffd479; } .t-dim{ color:var(--muted); }
+  .t-state{ font-size:13px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#0d0a14; }
+</style>
+</head>
+<body>
+<a class="back-link" href="index.html">‹ トップへ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">🧪</div>
+    <h1>GAS連携テスト</h1>
+    <div class="sub">PHASE 2 VERIFICATION</div>
+  </header>
+
+  <section class="panel">
+    <h2><span class="num">01</span> 設定の確認</h2>
+    <div id="configBox" class="t-state"></div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="num">02</span> ログイン</h2>
+    <div id="signinBtnArea" style="margin-bottom:10px;"></div>
+    <div id="authState" class="t-state"></div>
+    <div class="t-row" style="margin-top:10px;">
+      <button class="btn btn-ghost" id="signOutBtn">ログアウト</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="num">03</span> テストを実行</h2>
+    <p class="hint">上から順に実行してください。<b>「権限のないアカウントが拒否されること」の確認が最重要</b>です。</p>
+    <div class="t-row">
+      <button class="btn btn-primary" id="pingBtn">① 接続・権限の確認(ping)</button>
+      <button class="btn btn-ghost" id="noTokenBtn">② トークン無しで書き込み</button>
+      <button class="btn btn-ghost" id="badTokenBtn">③ 改ざんトークンで書き込み</button>
+    </div>
+    <div class="t-row">
+      <button class="btn btn-gold" id="saveUsersBtn">④ ユーザーマスタを保存</button>
+      <button class="btn btn-gold" id="saveTournamentBtn">⑤ テスト大会を保存</button>
+    </div>
+    <div class="t-row">
+      <button class="btn btn-ghost" id="clearLogBtn">ログを消す</button>
+    </div>
+    <div id="log" class="t-log">まだ実行していません。</div>
+  </section>
+
+  <footer class="note">このページは検証用です。アプリ本体の動作には影響しません。</footer>
+</div>
+
+<script src="gas-config.js"></script>
+<script src="google-auth.js"></script>
+<script src="gas-db.js"></script>
+<script src="atsucup-data.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const logEl = document.getElementById('log');
+  let lines = [];
+  function log(msg, cls){
+    lines.push('<span class="' + (cls||'') + '">' + AtsuCup.escapeHtml(msg) + '</span>');
+    logEl.innerHTML = lines.join('\n');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function ok(m){ log('✅ ' + m, 't-ok'); }
+  function ng(m){ log('❌ ' + m, 't-ng'); }
+  function warn(m){ log('⚠️ ' + m, 't-warn'); }
+  function dim(m){ log('   ' + m, 't-dim'); }
+
+  /* --- 01 設定 --- */
+  function renderConfig(){
+    const c = (typeof AtsuCupGasConfig !== 'undefined') ? AtsuCupGasConfig : {};
+    const rows = [
+      ['GAS_URL', c.GAS_URL],
+      ['OAUTH_CLIENT_ID', c.OAUTH_CLIENT_ID]
+    ].map(([k,v])=>{
+      const filled = !!v;
+      const shown = filled ? (v.length > 48 ? v.slice(0,24) + '…' + v.slice(-12) : v) : '(未設定)';
+      return `<div>${filled?'✅':'❌'} <b>${k}</b>: <span class="${filled?'':'t-ng'}">${AtsuCup.escapeHtml(shown)}</span></div>`;
+    }).join('');
+    document.getElementById('configBox').innerHTML = rows +
+      (c.GAS_URL && c.OAUTH_CLIENT_ID ? '' : '<div class="t-warn" style="margin-top:8px;">gas-config.js に値を入れてください。</div>');
+  }
+
+  /* --- 02 ログイン --- */
+  function renderAuth(){
+    const s = GoogleAuth.getState();
+    document.getElementById('authState').innerHTML = s.signedIn
+      ? `✅ ログイン中: <b>${AtsuCup.escapeHtml(s.email)}</b>`
+      : '未ログイン。上のボタンからログインしてください。';
+  }
+  GoogleAuth.onStateChange(renderAuth);
+
+  document.getElementById('signOutBtn').addEventListener('click', ()=>{
+    GoogleAuth.signOut(); renderAuth(); log('ログアウトしました。');
+  });
+
+  /* --- 03 テスト --- */
+  document.getElementById('pingBtn').addEventListener('click', async ()=>{
+    log('--- ① ping ---');
+    try{
+      const r = await GasDB.ping();
+      ok(`接続成功。email=${r.email} / role=${r.role}`);
+      dim('このアカウントは admins シートに登録されています。');
+    }catch(e){
+      if(e.code === 'FORBIDDEN'){
+        warn('拒否されました: ' + e.message);
+        dim('adminsシートにこのメールアドレスを登録すれば通るようになります。');
+      }else{
+        ng(e.message);
+      }
+    }
+  });
+
+  // トークン無しで直接POST(未認証の書き込みが弾かれるか)
+  document.getElementById('noTokenBtn').addEventListener('click', async ()=>{
+    log('--- ② トークン無しで書き込み ---');
+    try{
+      const res = await fetch(AtsuCupGasConfig.GAS_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'saveUsers', payload:{ users:[{name:'不正テスト', recDefault:true, archived:false}] } })
+      });
+      const d = await res.json();
+      if(d.ok){ ng('!!! 拒否されませんでした。認証が機能していません !!!'); }
+      else{ ok('正しく拒否された: ' + d.error); }
+    }catch(e){ ng('通信エラー: ' + e.message); }
+  });
+
+  // 改ざんしたトークンで直接POST
+  document.getElementById('badTokenBtn').addEventListener('click', async ()=>{
+    log('--- ③ 改ざんトークンで書き込み ---');
+    const real = GoogleAuth.getIdToken();
+    // payload部分を書き換えた偽トークン(署名が合わなくなる)
+    const fake = real
+      ? real.split('.').map((p,i)=> i===1 ? btoa(JSON.stringify({email:'attacker@example.com', aud:'x', exp: Math.floor(Date.now()/1000)+3600})).replace(/=/g,'') : p).join('.')
+      : 'aaa.bbb.ccc';
+    try{
+      const res = await fetch(AtsuCupGasConfig.GAS_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ idToken: fake, action:'saveUsers', payload:{ users:[{name:'不正テスト2', recDefault:true, archived:false}] } })
+      });
+      const d = await res.json();
+      if(d.ok){ ng('!!! 拒否されませんでした。トークン検証が機能していません !!!'); }
+      else{ ok('正しく拒否された: ' + d.error); }
+    }catch(e){ ng('通信エラー: ' + e.message); }
+  });
+
+  // 現在のdata/users.jsonの内容をそのまま送り返す(内容は変わらないはず)
+  document.getElementById('saveUsersBtn').addEventListener('click', async ()=>{
+    log('--- ④ ユーザーマスタを保存 ---');
+    try{
+      const res = await fetch('data/users.json?t=' + Date.now(), {cache:'no-store'});
+      const users = await res.json();
+      dim(`現在の data/users.json: ${users.length}人`);
+      const payload = users.map(u=>({ name:u.name, recDefault:u.recDefault!==false, archived:!!u.archived }));
+      const r = await GasDB.saveUsers(payload);
+      ok(`保存成功。合計${r.total}人 (新規${r.added} / 更新${r.updated})`);
+      dim('シートとGitHubの data/users.json が更新されています。');
+    }catch(e){
+      (e.code==='FORBIDDEN' ? warn : ng)(e.message);
+    }
+  });
+
+  // テスト用の大会を1件保存する
+  document.getElementById('saveTournamentBtn').addEventListener('click', async ()=>{
+    log('--- ⑤ テスト大会を保存 ---');
+    try{
+      const res = await fetch('data/users.json?t=' + Date.now(), {cache:'no-store'});
+      const users = await res.json();
+      if(users.length < 4){ ng('テストには4人以上の登録者が必要です。'); return; }
+      const n = users.slice(0,4).map(u=>u.name);
+      dim('参加者: ' + n.join(', '));
+
+      const t = {
+        id: 't_gastest_' + Date.now(),
+        title: 'GAS連携テスト大会',
+        details: 'gas-test.html から作成',
+        posterUrl: null,
+        createdAt: new Date().toISOString(),
+        status: 'completed',
+        people: n.map((name,i)=>({ name, rec: i%2===0 })),
+        order: [], remaining: [],
+        matches: [
+          [
+            { a:n[0], b:n[1], winner:n[0], loser:n[1], video:'', bye:false },
+            { a:n[2], b:n[3], winner:n[3], loser:n[2], video:'', bye:false }
+          ],
+          [ { a:n[0], b:n[3], aSrc:0, bSrc:1, winner:n[0], loser:n[3], video:'' } ]
+        ],
+        winnerName: n[0],
+        thirdPlaceMatch: null
+      };
+
+      // 名前のまま送る(ID解決はGAS側)
+      const identity = {};
+      n.forEach(name=> identity[name] = name);
+      const bundle = AtsuCupData.fromAppTournament(t, identity);
+      bundle.participantNames = n;
+
+      dim(`entries=${bundle.entryRows.length} / matches=${bundle.matchRows.length}`);
+      const r = await GasDB.saveTournament(bundle);
+      ok(`保存成功。大会=${r.tournamentId} entries=${r.entries} matches=${r.matches} 新規ユーザー=${r.addedUsers}`);
+      dim('GitHub Pagesの反映には数十秒かかります。反映後にトップ画面で確認してください。');
+      warn('この大会はテスト用です。確認後にスプレッドシートから行を削除してください。');
+    }catch(e){
+      (e.code==='FORBIDDEN' ? warn : ng)(e.message);
+    }
+  });
+
+  document.getElementById('clearLogBtn').addEventListener('click', ()=>{ lines=[]; logEl.textContent='まだ実行していません。'; });
+
+  /* --- 初期化 --- */
+  renderConfig();
+  renderAuth();
+  if(AtsuCupGasConfig.OAUTH_CLIENT_ID){
+    GoogleAuth.renderButton(document.getElementById('signinBtnArea'))
+      .then(()=> setTimeout(renderAuth, 500))
+      .catch(e=> log('ログインボタンの表示に失敗: ' + e.message, 't-ng'));
+    // ボタン押下後にトークンが入るのを拾う
+    setInterval(renderAuth, 1000);
+  }else{
+    document.getElementById('signinBtnArea').innerHTML =
+      '<div class="t-warn">gas-config.js に OAUTH_CLIENT_ID を設定するとログインボタンが出ます。</div>';
+  }
+})();
+</script>
+</body>
+</html>
