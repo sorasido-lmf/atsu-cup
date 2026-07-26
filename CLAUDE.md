@@ -64,6 +64,21 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | `users.json` | ユーザー管理/大会エントリーでの登録・撮影可否変更・アーカイブ時に**即時** | `AtsuCup.saveUsersToData()` → `GasDB.saveUsers()` |
 | `tournaments/entries/matches.json` | 大会詳細の「💾 GitHubに保存」ボタンで**明示的に**のみ | `AtsuCup.saveTournamentToData(id)` → `GasDB.saveTournament()` |
 
+### 反映タイミングの一覧（2026-07-26 整理・重要）
+
+「アプリでの編集」から「スプレッドシート/GitHubへの反映」までの間隔はデータ種別によって全く違う。**この非対称性を前提にサポート・デバッグすること。**
+
+| データ | 編集操作 | 反映タイミング | 実装箇所 |
+|---|---|---|---|
+| ユーザーの登録・撮影可否デフォルト・アーカイブ/復元 | `users.html`での各操作 | **操作の都度、即時** | `users.html`の各ハンドラ末尾で`syncToGitHub()` |
+| ユーザーの新規登録（大会エントリー画面経由） | `tournament-entry.html`の「新規ユーザー登録」 | **登録の都度、即時** | `tournament-entry.html`の`onRegistered`コールバック |
+| 大会限定の撮影可否上書き（`person.rec`） | `tournament-entry.html`の📹/🚫トグル | **反映されるのは大会保存時のみ**（`entries.json`の`recAtEntry`列）。**ここ単体でのGitHub反映は無い** | `tournament-entry.html`、`fromAppTournament`の`recAtEntry`算出 |
+| 参加者の選出・組み合わせ・勝敗入力・ラウンド進行など、大会に関するすべての変更 | 大会詳細画面での各種操作 | **反映されない。「💾 GitHubに保存」ボタンを押した時のみ** | `detail-view.js`の`saveTournamentToGitHub()` |
+| スプレッドシートの手編集 | 人がシートを直接編集 | **反映されない。`gas/Code.gs`の`pushSheetChangesToGitHub()`をGASエディタから手動実行するまでGitHubへは伝わらない** | `gas/README.md` |
+| GitHub上の`data/*.json` → 開発者のローカル | 上記いずれかでGitHubが更新された後 | **反映されない。`git update-index --no-skip-worktree`→`git checkout data`→`--skip-worktree`の手動取り込みが必要** | 前節「データ管理方針」 |
+
+大会データが「保存ボタンを押すまで一切外に出ない」設計は意図的（対戦表は入力の都度変化するため、自動保存だとコミットが乱発・競合する）。ユーザーには「保存ボタンを押し忘れると反映されない」ことを案内すること。
+
 大会を自動保存しないのは、対戦表が勝敗入力のたびに変化しコミットが乱発・競合するため。
 
 **マージ規則**: `mergeRemoteTournaments()` は id ごとに data/ 側を優先して上書きし、data/ に無いローカル大会は保持する。
@@ -207,3 +222,4 @@ GASのWebアプリは「実行するユーザー: 自分」でデプロイして
 
 - **`git push` はユーザーの明示的な許可を得てから行う。** ローカルコミットは各機能の完成ごとに行ってよい
 - 検証にテストデータを使った場合、ターンの終わりに必ず `localStorage` から削除すること（実データのみを残す）
+- **コードに影響する変更をpushする際は、必ず `version.json` の `build` と `atsucup-core.js` の `BUILD_DATE` を同じ値（日付+時刻、JST）に更新すること。** これを怠ると更新バナーが出ず、ユーザーの端末に古いJSがキャッシュされたまま残り、削除済みのモジュールを参照してエラーになる（2026-07-26に実際に発生: `github-db.js`削除後、2日以上バージョンを更新し忘れ、キャッシュされた古い`atsucup-core.js`が存在しない`GitHubDB`を参照してエラーを出した）
