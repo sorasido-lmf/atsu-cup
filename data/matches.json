@@ -88,5 +88,20 @@
     "player2SrcIndex": 1,
     "videoUrl": "",
     "playedAt": null
+  },
+  {
+    "id": "t1785075398196fgthh6_r1_m0",
+    "tournamentId": "t1785075398196fgthh6",
+    "round": 1,
+    "stage": "normal",
+    "matchIndex": 0,
+    "player1Id": "u0001",
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": false,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
+    "videoUrl": "",
+    "playedAt": null
   }
 ]
