@@ -54,8 +54,11 @@
     const ongoing = list.filter(t=>t.status==='ongoing').slice().sort(byNewest);
     const completed = list.filter(t=>t.status==='completed').slice().sort(byNewest);
     [...ongoing, ...completed].forEach(t=>{
+      // 並び順は 公式大会→制限杯→進行中/完了→ローカル で固定
+      const officialTag = t.isOfficial ? ' <span class="flag-badge official" style="padding:2px 8px; font-size:10.5px;">🏅 公式大会</span>' : '';
+      const restrictedTag = t.isRestricted ? ' <span class="flag-badge restricted" style="padding:2px 8px; font-size:10.5px;">🔒 制限杯</span>' : '';
       const localTag = t.pool==='guest' ? ' <span class="status-badge open" style="background:none; border:1px solid var(--line); padding:2px 8px; font-size:10.5px;">ローカル</span>' : '';
-      const statusHtml = (t.status==='ongoing'
+      const statusHtml = officialTag + restrictedTag + (t.status==='ongoing'
         ? `<span class="status-badge open" style="padding:2px 8px; font-size:10.5px;">進行中</span>`
         : (t.winnerName ? '👑 '+escapeHtml(t.winnerName) : '結果未記録')) + localTag;
       const el = document.createElement("div");

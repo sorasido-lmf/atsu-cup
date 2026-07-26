@@ -48,20 +48,44 @@
   const confirmBox = document.getElementById("confirmBox");
   const formBox = document.getElementById("formBox");
 
+  let isOfficial = false, isRestricted = false;
+  function flagToggleHtml(){
+    return `
+      <button type="button" class="flag-toggle-btn official ${isOfficial?'on':'off'}" id="tfOfficial">🏅 公式大会</button>
+      <button type="button" class="flag-toggle-btn restricted ${isRestricted?'on':'off'}" id="tfRestricted">🔒 制限杯</button>
+    `;
+  }
+  // トグルは他の入力欄(タイトル等)を巻き込んで再描画しないよう、フォーム全体は作り直さず
+  // ボタン自身のクラスだけ直接切り替える
+  function wireFlagToggles(){
+    document.getElementById('tfOfficial').addEventListener('click', (ev)=>{
+      isOfficial=!isOfficial; ev.currentTarget.classList.toggle('on', isOfficial); ev.currentTarget.classList.toggle('off', !isOfficial);
+    });
+    document.getElementById('tfRestricted').addEventListener('click', (ev)=>{
+      isRestricted=!isRestricted; ev.currentTarget.classList.toggle('on', isRestricted); ev.currentTarget.classList.toggle('off', !isRestricted);
+    });
+  }
+
   function renderForm(){
     formBox.innerHTML = `
       <div class="video-card">
         <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" placeholder="例: 第30回 あつ杯"></div>
         <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;"></textarea></div>
+        <div class="field" style="margin-bottom:8px;"><label>開催日</label><input type="date" id="tfHeldDate"></div>
         <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
+        <div class="field" style="margin-bottom:8px;">${flagToggleHtml()}</div>
         <div class="row">
           <button class="btn btn-primary" id="tfSave">この内容で作成する</button>
         </div>
       </div>
     `;
+    const heldDateInput = document.getElementById('tfHeldDate');
+    if(!heldDateInput.value) heldDateInput.value = AtsuCup.dateInputValueOf(new Date().toISOString());
+    wireFlagToggles();
     document.getElementById("tfSave").addEventListener("click", async ()=>{
       const title = document.getElementById("tfTitle").value.trim();
       const details = document.getElementById("tfDetails").value.trim();
+      const heldDate = document.getElementById("tfHeldDate").value;
       const fileInput = document.getElementById("tfPoster");
       if(!title){ alert("大会名を入力してください。"); return; }
       const saveBtn = document.getElementById("tfSave");
@@ -72,7 +96,8 @@
           posterUrl = await AtsuCup.resizeImageToDataUrl(fileInput.files[0], 900, 0.75);
         }
         const id = AtsuCup.newTournamentId();
-        state.tournamentMeta = { id, title, details, posterUrl }; // setterが新しい大会として追加し操作対象にする
+        const createdAt = AtsuCup.isoFromDateInputValue(heldDate);
+        state.tournamentMeta = { id, title, details, posterUrl, createdAt, isOfficial, isRestricted }; // setterが新しい大会として追加し操作対象にする
         AtsuCup.persist();
         location.href = `tournament-detail.html?id=${encodeURIComponent(id)}`;
       }catch(e){

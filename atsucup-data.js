@@ -83,7 +83,9 @@ const AtsuCupData = (function(){
     users.forEach(u=>{ if(u && u.id) nameById[u.id] = u.name; });
     const nameOf = (id)=> (id === null || id === undefined) ? null : (nameById[id] || null);
 
-    return tournaments.map(t=>{
+    // アーカイブ済み(削除扱い)の大会はそもそも取り込まない。これにより歴代優勝者・戦績・
+    // 大会一覧など、state.tournamentsを参照する箇所すべてから自動的に除外される。
+    return tournaments.filter(t=> !t.archived).map(t=>{
       const myEntries = entries.filter(e=> e.tournamentId === t.id);
       const myMatches = matches.filter(m=> m.tournamentId === t.id);
       const grid = buildMatchGrid(myMatches, nameOf, myEntries.length);
@@ -94,6 +96,8 @@ const AtsuCupData = (function(){
         posterUrl: t.posterImage || null,
         createdAt: t.heldAt || new Date().toISOString(),
         status: t.status || 'ongoing',
+        isOfficial: !!t.isOfficial,
+        isRestricted: !!t.isRestricted,
         people: myEntries.map(e=>({ name: nameOf(e.userId), rec: e.recAtEntry !== false })).filter(p=> !!p.name),
         order: [], remaining: [],
         matches: grid,
@@ -139,13 +143,17 @@ const AtsuCupData = (function(){
   function fromAppTournament(t, idByName){
     const idOf = (name)=> (name && idByName[name]) ? idByName[name] : null;
 
+    // archivedは含めない(通常保存では触らない専用フィールド。GAS側のactionSaveTournament_が
+    // 既存行の値をそのまま引き継ぐ。archiveTournamentアクションのみがここを変更する)。
     const tournamentRow = {
       id: t.id,
       title: t.title || "",
       detail: t.details || "",
       posterImage: t.posterUrl || null,
       heldAt: t.createdAt || new Date().toISOString(),
-      status: t.status || 'ongoing'
+      status: t.status || 'ongoing',
+      isOfficial: !!t.isOfficial,
+      isRestricted: !!t.isRestricted
     };
 
     // placementは既存の順位計算をそのまま再利用する(history形式のentryを渡す)

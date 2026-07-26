@@ -63,7 +63,8 @@ const AtsuCup = (function(){
   function newBlankTournament(meta){
     return {
       id: meta.id, title: meta.title||"", details: meta.details||"", posterUrl: meta.posterUrl||null,
-      createdAt: new Date().toISOString(), status: 'ongoing',
+      createdAt: meta.createdAt || new Date().toISOString(), status: 'ongoing',
+      isOfficial: !!meta.isOfficial, isRestricted: !!meta.isRestricted,
       people: [], order: [], remaining: [], matches: [], winnerName: "", thirdPlaceMatch: null
     };
   }
@@ -89,12 +90,22 @@ const AtsuCup = (function(){
   });
   Object.defineProperty(state, 'tournamentMeta', {
     enumerable:false,
-    get(){ const t=activeT(); return t ? {id:t.id,title:t.title,details:t.details,posterUrl:t.posterUrl} : {id:null,title:"",details:"",posterUrl:null}; },
+    get(){
+      const t=activeT();
+      return t
+        ? {id:t.id,title:t.title,details:t.details,posterUrl:t.posterUrl,createdAt:t.createdAt,isOfficial:!!t.isOfficial,isRestricted:!!t.isRestricted}
+        : {id:null,title:"",details:"",posterUrl:null,createdAt:null,isOfficial:false,isRestricted:false};
+    },
     set(v){
       if(!v || !v.title){ state.activeId = null; return; } // 空メタ代入はアクティブ解除(旧endの名残)
       const kind = poolKindOfTournamentId(v.id);
       const existing = kind ? tournamentsOf(kind).find(t=>t.id===v.id) : null;
-      if(existing){ existing.title=v.title; existing.details=v.details; existing.posterUrl=v.posterUrl; state.activeId=existing.id; state.activePool=kind; }
+      if(existing){
+        existing.title=v.title; existing.details=v.details; existing.posterUrl=v.posterUrl;
+        existing.createdAt = v.createdAt || existing.createdAt;
+        existing.isOfficial = !!v.isOfficial; existing.isRestricted = !!v.isRestricted;
+        state.activeId=existing.id; state.activePool=kind;
+      }
       else {
         const nt=newBlankTournament(v);
         const k = currentPoolKind();
@@ -111,6 +122,7 @@ const AtsuCup = (function(){
       const map = t=>({
         id:t.id, title:t.title, details:t.details, posterUrl:t.posterUrl, createdAt:t.createdAt,
         finished:!!t.winnerName, championName:t.winnerName||null,
+        isOfficial:!!t.isOfficial, isRestricted:!!t.isRestricted,
         matches:t.matches, thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people
       });
       return state.guestTournaments.filter(t=>t.status==='completed').map(map)
@@ -333,6 +345,35 @@ const AtsuCup = (function(){
     const { tournamentRow, entryRows, matchRows } = AtsuCupData.fromAppTournament(t, identity);
 
     return GasDB.saveTournament({ tournamentRow, entryRows, matchRows, participantNames: names });
+  }
+
+  // 大会をアーカイブする(行削除ではなくサーバー側でarchived=trueを立てる)。
+  // 成功したらローカルのstate.tournamentsからも取り除く(次回data/*.json再取得時も
+  // toAppTournamentsがarchived済みを除外するので、二重にガードされる)。
+  async function archiveTournamentInData(tournamentId){
+    if(poolKindOfTournamentId(tournamentId)!=='auth') throw new Error('練習用(ローカル)の大会はこの方法では削除できません。');
+    if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
+    if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
+    const r = await GasDB.archiveTournament(tournamentId);
+    state.tournaments = state.tournaments.filter(t=>t.id!==tournamentId);
+    persist();
+    return r;
+  }
+
+  // <input type="date">の値(YYYY-MM-DD) ⇔ ISO日時文字列の相互変換。
+  // toISOString()はUTC変換されるため、そのまま使うとタイムゾーンによって表示日が1日ズレることがある。
+  // ローカルの年月日で組み立てる/パースすることでズレを防ぐ。
+  function dateInputValueOf(iso){
+    if(!iso) return '';
+    const d = new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function isoFromDateInputValue(str){
+    if(!str) return new Date().toISOString();
+    const [y,m,d] = str.split('-').map(Number);
+    return new Date(y, m-1, d).toISOString();
   }
 
   // localStorageのデータを新形式(tournaments配列)に取り込む。旧形式(tournamentMeta+history+直下people)は移行する。
@@ -909,7 +950,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 02:40";
+  const BUILD_DATE = "2026-07-27 03:20";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -957,7 +998,8 @@ const AtsuCup = (function(){
 
   return {
     get ready(){ if(!readyPromise) readyPromise = loadFromData(); return readyPromise; },
-    mergeRemoteTournaments, saveTournamentToData, saveUsersToData,
+    mergeRemoteTournaments, saveTournamentToData, saveUsersToData, archiveTournamentInData,
+    dateInputValueOf, isoFromDateInputValue,
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
     advanceRound, pickWinner, resetMatchResult, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,

@@ -84,5 +84,10 @@ const GasDB = (function(){
     return call('saveTournament', Object.assign({ keyedBy: 'name' }, bundle));
   }
 
-  return { canWrite, currentEmail, call, ping, saveUsers, saveTournament };
+  /** 大会をアーカイブする(行削除ではなくarchivedフラグを立てるだけ)。 */
+  async function archiveTournament(tournamentId){
+    return call('archiveTournament', { tournamentId });
+  }
+
+  return { canWrite, currentEmail, call, ping, saveUsers, saveTournament, archiveTournament };
 })();

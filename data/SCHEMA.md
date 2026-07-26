@@ -21,8 +21,13 @@ GitHubリポジトリで管理する参加者・大会マスタデータ。JSON�
 | title | string | 大会名 |
 | detail | string | 説明文 |
 | posterImage | string \| null | ポスター画像。リポジトリ相対パス（例: assets/posters/t2026-07.jpg）または data URL（`data:image/jpeg;base64,...`）。アプリから作成した場合は後者になる |
-| heldAt | string (ISO8601 date) | 開催日 |
+| heldAt | string (ISO8601 date) | 開催日。アプリの大会作成/編集フォームで指定した日付(内部的には`createdAt`と呼ぶ) |
 | status | string | "ongoing" \| "completed" |
+| archived | boolean | アーカイブ済み(=アプリ上で削除された)かどうか(デフォルトfalse)。行の物理削除は行わず、trueが立つと`toAppTournaments()`がそもそも読み込まない(大会一覧・歴代優勝者・戦績すべてに出てこなくなる)。entries/matchesはそのまま残るため、復元は可能(このフラグを手動でfalseに戻す) |
+| isOfficial | boolean | 「公式大会」フラグ(デフォルトfalse)。集計での利用は未実装、保存/表示のみ |
+| isRestricted | boolean | 「制限杯」フラグ(デフォルトfalse)。集計での利用は未実装、保存/表示のみ |
+
+**2026-07-27追加**: `archived`/`isOfficial`/`isRestricted`の3列は、既存データがある列の途中に挿入すると値がズレるため、必ず`status`の後ろ(最終列)に追加すること。GASの`readSheet_()`は列名をシートのヘッダから引き当てるため、**実際のGoogle Sheetの`tournaments`タブにも同名の列を先に追加してからデプロイする**必要がある(手順は`gas/README.md`参照)。
 
 ## entries.json（大会参加者データ = 1行1エントリー、大会単位の要約）
 | カラム | 型 | 説明 |

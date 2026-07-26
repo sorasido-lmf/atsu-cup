@@ -38,12 +38,18 @@ var SCHEMA = {
     { k: 'note',       t: 'str'  }
   ],
   tournaments: [
-    { k: 'id',          t: 'str'  },
-    { k: 'title',       t: 'str'  },
-    { k: 'detail',      t: 'str'  },
-    { k: 'posterImage', t: 'str?' },
-    { k: 'heldAt',      t: 'str'  },
-    { k: 'status',      t: 'str'  }
+    { k: 'id',            t: 'str'  },
+    { k: 'title',         t: 'str'  },
+    { k: 'detail',        t: 'str'  },
+    { k: 'posterImage',   t: 'str?' },
+    { k: 'heldAt',        t: 'str'  },
+    { k: 'status',        t: 'str'  },
+    // 2026-07-27追加。既存データがある列の途中に挿入すると値がズレるため、必ず末尾に追加すること。
+    // シート側にも同名の列(archived/isOfficial/isRestricted)を末尾に追加してからデプロイすること
+    // (readSheet_は列名をヘッダから引き当てるため、シート側に列が無いと例外になる)。
+    { k: 'archived',      t: 'bool' },
+    { k: 'isOfficial',    t: 'bool' },
+    { k: 'isRestricted',  t: 'bool' }
   ],
   entries: [
     { k: 'id',           t: 'str'  },
@@ -456,9 +462,16 @@ function actionSaveTournament_(payload) {
     };
   });
 
-  // 3) この大会の既存行を落として差し替える
-  var tournaments = readSheet_('tournaments').filter(function (t) { return t.id !== tid; });
-  tournaments.push(payload.tournamentRow);
+  // 3) この大会の既存行を落として差し替える。
+  //    ⚠️ archivedはクライアントの通常保存では送られてこないフィールド(archiveTournamentアクション専用)。
+  //    素朴に行を丸ごと置き換えると保存のたびにarchivedがfalseへ戻り、削除(アーカイブ)済みの大会が
+  //    誤って復元されてしまうため、既存行のarchived値をここで引き継ぐ。
+  var existingTournaments = readSheet_('tournaments');
+  var oldRow = existingTournaments.filter(function (t) { return t.id === tid; })[0];
+  var newRow = payload.tournamentRow;
+  newRow.archived = oldRow ? oldRow.archived : false;
+  var tournaments = existingTournaments.filter(function (t) { return t.id !== tid; });
+  tournaments.push(newRow);
   writeSheet_('tournaments', tournaments);
 
   var entries = readSheet_('entries').filter(function (r) { return r.tournamentId !== tid; });
@@ -478,6 +491,25 @@ function actionSaveTournament_(payload) {
     matches: matchRows.length,
     addedUsers: ensured.added.length
   };
+}
+
+/**
+ * 大会をアーカイブする(行削除ではなくarchived=trueを立てるだけ)。
+ * entries/matchesには一切触れない(復元可能性を残すため)。
+ */
+function actionArchiveTournament_(payload) {
+  if (!payload || !payload.tournamentId) throw new Error('tournamentIdが指定されていません。');
+  var tid = payload.tournamentId;
+
+  var tournaments = readSheet_('tournaments');
+  var found = false;
+  tournaments.forEach(function (t) { if (t.id === tid) { t.archived = true; found = true; } });
+  if (!found) throw new Error('大会が見つかりません: ' + tid);
+
+  writeSheet_('tournaments', tournaments);
+  exportTables_(['tournaments'], '大会をアーカイブ: ' + tid);
+
+  return { tournamentId: tid, archived: true };
 }
 
 /* ============================================================
@@ -508,11 +540,14 @@ function doPost(e) {
     if (!lock.tryLock(30000)) throw new Error('他の更新処理と競合しました。少し待ってからやり直してください。');
     try {
       var result;
-      if (action === 'saveUsers')           result = actionSaveUsers_(body.payload);
-      else if (action === 'saveTournament') result = actionSaveTournament_(body.payload);
+      if (action === 'saveUsers')                result = actionSaveUsers_(body.payload);
+      else if (action === 'saveTournament')      result = actionSaveTournament_(body.payload);
+      else if (action === 'archiveTournament')   result = actionArchiveTournament_(body.payload);
       else throw new Error('不明なaction: ' + action);
 
-      writeAudit_(email, action, (body.payload && body.payload.tournamentRow && body.payload.tournamentRow.title) || '');
+      writeAudit_(email, action, (body.payload && (
+        (body.payload.tournamentRow && body.payload.tournamentRow.title) || body.payload.tournamentId
+      )) || '');
       return jsonResponse_({ ok: true, email: email, role: role, result: result });
     } finally {
       lock.releaseLock();

@@ -18,6 +18,16 @@
   let readOnly = false; // 非ログイン中にDB(認証プール)大会を見ている: 編集UIを一切出さない
   function isGuestTournament(){ return AtsuCup.poolKindOfTournamentId(id)==='guest'; }
   function localTagHtml(){ return isGuestTournament() ? ' <span class="status-badge open" style="background:none; border:1px solid var(--line);">ローカル</span>' : ''; }
+  // 公式大会/制限杯バッジ。並び順は呼び出し側で 公式大会→制限杯→進行中/完了→ローカル に固定する
+  function flagBadgesHtml(t){
+    const official = t && t.isOfficial ? '<span class="flag-badge official">🏅 公式大会</span> ' : '';
+    const restricted = t && t.isRestricted ? '<span class="flag-badge restricted">🔒 制限杯</span> ' : '';
+    return official + restricted;
+  }
+  function heldDateLine(iso){
+    const d = iso ? new Date(iso).toLocaleDateString('ja-JP') : '';
+    return d ? `<div class="cur-details" style="color:var(--muted);">開催日: ${d}</div>` : '';
+  }
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
   function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
@@ -86,7 +96,7 @@
   function renderLiveHeader(){
     content.style.display='block';
     const meta = state.tournamentMeta;
-    const statusBadge = (state.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`) + localTagHtml();
+    const statusBadge = flagBadgesHtml(meta) + (state.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`) + localTagHtml();
     const confirmHtml = mode==='confirmEnd' ? `
       <div class="confirm-banner">
         ${state.winnerName ? "この大会を終了して「大会一覧」に保存します。よろしいですか？" : "この大会はまだ優勝者が決まっていません。それでも終了して「大会一覧」に保存しますか？"}
@@ -97,6 +107,7 @@
       ${meta.posterUrl?`<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">`:''}
       <div class="cur-title">${escapeHtml(meta.title)}</div>
       ${meta.details?`<div class="cur-details">${escapeHtml(meta.details)}</div>`:''}
+      ${heldDateLine(meta.createdAt)}
       ${state.winnerName?`<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>`:''}
       ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div class="cur-line third">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
       ${readOnly ? '' : `<div class="row">
@@ -116,24 +127,39 @@
   function renderEditForm(){
     hideSub(); content.style.display='block';
     const meta = state.tournamentMeta;
+    let editOfficial = !!meta.isOfficial, editRestricted = !!meta.isRestricted;
     content.innerHTML = `
       <div class="video-card">
         <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" value="${escapeHtml(meta.title)}"></div>
         <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;">${escapeHtml(meta.details||'')}</textarea></div>
+        <div class="field" style="margin-bottom:8px;"><label>開催日</label><input type="date" id="tfHeldDate" value="${AtsuCup.dateInputValueOf(meta.createdAt)}"></div>
         <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
+        <div class="field" style="margin-bottom:8px;">
+          <button type="button" class="flag-toggle-btn official ${editOfficial?'on':'off'}" id="tfOfficial">🏅 公式大会</button>
+          <button type="button" class="flag-toggle-btn restricted ${editRestricted?'on':'off'}" id="tfRestricted">🔒 制限杯</button>
+        </div>
         <div class="row"><button class="btn btn-primary" id="tfSave">更新する</button><button class="btn btn-ghost" id="tfCancel">キャンセル</button></div>
       </div>`;
     document.getElementById('tfCancel').addEventListener('click', ()=>{ mode='view'; render(); });
+    // トグルは他の入力欄を巻き込まないよう、ボタン自身のクラスだけ直接切り替える
+    document.getElementById('tfOfficial').addEventListener('click', (ev)=>{
+      editOfficial=!editOfficial; ev.currentTarget.classList.toggle('on', editOfficial); ev.currentTarget.classList.toggle('off', !editOfficial);
+    });
+    document.getElementById('tfRestricted').addEventListener('click', (ev)=>{
+      editRestricted=!editRestricted; ev.currentTarget.classList.toggle('on', editRestricted); ev.currentTarget.classList.toggle('off', !editRestricted);
+    });
     document.getElementById('tfSave').addEventListener('click', async ()=>{
       const title = document.getElementById('tfTitle').value.trim();
       const details = document.getElementById('tfDetails').value.trim();
+      const heldDate = document.getElementById('tfHeldDate').value;
       const fileInput = document.getElementById('tfPoster');
       if(!title){ alert('大会名を入力してください。'); return; }
       const saveBtn = document.getElementById('tfSave'); saveBtn.disabled=true; saveBtn.textContent='保存中...';
       try{
         let posterUrl = meta.posterUrl;
         if(fileInput.files && fileInput.files[0]){ posterUrl = await AtsuCup.resizeImageToDataUrl(fileInput.files[0], 900, 0.75); }
-        state.tournamentMeta = { id: meta.id, title, details, posterUrl };
+        const createdAt = AtsuCup.isoFromDateInputValue(heldDate);
+        state.tournamentMeta = { id: meta.id, title, details, posterUrl, createdAt, isOfficial: editOfficial, isRestricted: editRestricted };
         AtsuCup.persist(); mode='view'; render();
       }catch(e){ alert('保存に失敗しました: '+(e.message||e)); saveBtn.disabled=false; saveBtn.textContent='更新する'; }
     });
@@ -154,17 +180,25 @@
     }).join('')).join('');
     let thirdHtml = '';
     if(h.thirdPlaceMatch){ const tp=h.thirdPlaceMatch; thirdHtml = `<div class="video-card"><div class="vs"><span class="rlabel">3位決定戦</span> ${escapeHtml(tp.a)} vs ${escapeHtml(tp.b)} ${tp.winner?`<span class="rlabel">勝者: ${escapeHtml(tp.winner)}</span>`:'<span class="rlabel">未決着</span>'}</div></div>`; }
+    // ゲスト(ローカル)大会は完全削除で本当に元に戻せないが、DB大会はアーカイブ(復元可能)なので文言を分ける
+    const isGuestT = isGuestTournament();
+    const confirmMsg = isGuestT
+      ? `「${escapeHtml(h.title)}」を大会一覧から削除します。よろしいですか？(元に戻せません)`
+      : `「${escapeHtml(h.title)}」を大会一覧から削除します。よろしいですか？(データは残りますが一覧には出なくなります。復元が必要な場合は管理者にご連絡ください)`;
     const confirmHtml = mode==='confirmDelete' ? `
-      <div class="confirm-banner">「${escapeHtml(h.title)}」を大会一覧から削除します。よろしいですか？(元に戻せません)
-        <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div></div>` : '';
+      <div class="confirm-banner">${confirmMsg}
+        <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div>
+        <div id="deleteErrorArea"></div>
+      </div>` : '';
     content.innerHTML = `
       ${readOnly ? '' : `<div class="row" style="margin-top:0;">
         ${saveButtonHtml()}
         <button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
       </div>
-      <div id="dataSaveStatus"></div>`}
+      <div id="dataSaveStatus"></div>
+      ${confirmHtml}`}
       <div class="video-card" style="margin-top:14px;">
-        ${localTagHtml() ? `<div style="margin-bottom:8px;">${localTagHtml()}</div>` : ''}
+        <div style="margin-bottom:8px;">${flagBadgesHtml(h)}${localTagHtml()}</div>
         ${h.posterUrl?`<img class="poster-img" src="${escapeHtml(h.posterUrl)}" alt="poster">`:''}
         <div class="cur-title">${escapeHtml(h.title)}</div>
         ${h.details?`<div class="cur-details">${escapeHtml(h.details)}</div>`:''}
@@ -175,14 +209,30 @@
       ${rows.map(r=>`<div class="place-row ${r.place===1?'p1':''}"><span class="p">${r.place?('#'+r.place):'-'}</span><span style="flex:1;">${escapeHtml(r.name)}</span><span>${escapeHtml(r.label)}</span></div>`).join('') || '<div class="empty-state" style="padding:12px;">参加者データがありません。</div>'}
       <h3 class="section-title" style="margin-top:18px;">⚔️ 対戦結果</h3>
       ${matchRounds || '<div class="empty-state" style="padding:12px;">対戦データがありません。</div>'}
-      ${thirdHtml}
-      ${confirmHtml}`;
+      ${thirdHtml}`;
     if(!readOnly){
       wireSaveButton(h.id);
       document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderPast(h); });
       if(mode==='confirmDelete'){
         document.getElementById('cancelDeleteBtn').addEventListener('click', ()=>{ mode='view'; renderPast(h); });
-        document.getElementById('confirmDeleteBtn').addEventListener('click', ()=>{ state.history = state.history.filter(x=>x.id!==h.id); AtsuCup.persist(); location.href='tournaments.html'; });
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async ()=>{
+          if(isGuestT){
+            state.history = state.history.filter(x=>x.id!==h.id);
+            AtsuCup.persist();
+            location.href='tournaments.html';
+            return;
+          }
+          const btn = document.getElementById('confirmDeleteBtn');
+          const errBox = document.getElementById('deleteErrorArea');
+          btn.disabled = true; btn.textContent = '削除中...';
+          try{
+            await AtsuCup.archiveTournamentInData(h.id);
+            location.href='tournaments.html';
+          }catch(e){
+            errBox.innerHTML = `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:#ff6a6a;">削除に失敗しました: ${escapeHtml((e&&e.message)||String(e))}</div>`;
+            btn.disabled = false; btn.textContent = '削除する';
+          }
+        });
       }
     }
     window.scrollTo({top:0, behavior:'instant'});

@@ -139,6 +139,25 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
 }
 .status-badge.open{color:var(--ok); background:#0c2318; border:1px solid #1f5c42;}
 .status-badge.done{color:var(--gold); background:#241a0c; border:1px solid var(--gold-dim);}
+
+/* 公式大会/制限杯タグ。進行中/ローカル(status-badge、角丸20px)より控えめな角丸にして区別する。
+   公式大会=塗り強め(一番目立つ)、制限杯=枠線寄り(公式より弱め)。並び順は呼び出し側で
+   公式大会→制限杯→進行中/完了→ローカルの順に固定する。 */
+.flag-badge{
+  display:inline-block; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+  padding:3px 10px; border-radius:6px; margin:0 4px 10px 0;
+}
+.flag-badge.official{ color:#1a1006; background:var(--gold); border:1px solid var(--gold-dim); }
+.flag-badge.restricted{ color:#c9b8ff; background:rgba(139,109,255,.14); border:1px solid rgba(139,109,255,.45); }
+
+/* 大会作成/編集フォームの公式大会/制限杯トグルボタン。offは.flag-badgeと同じ枠だがmuted表示。 */
+.flag-toggle-btn{
+  font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700;
+  padding:6px 12px; border-radius:6px; cursor:pointer; margin:0 6px 8px 0;
+}
+.flag-toggle-btn.official.on{ color:#1a1006; background:var(--gold); border:1px solid var(--gold-dim); }
+.flag-toggle-btn.restricted.on{ color:#c9b8ff; background:rgba(139,109,255,.14); border:1px solid rgba(139,109,255,.45); }
+.flag-toggle-btn.official.off, .flag-toggle-btn.restricted.off{ color:var(--muted); background:transparent; border:1px solid var(--line); }
 .poster-img{width:100%; border-radius:12px; display:block; margin-bottom:12px; border:1px solid var(--line);}
 .cur-title{
   font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:19px; color:var(--gold);
