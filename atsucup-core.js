@@ -768,7 +768,7 @@ const AtsuCup = (function(){
 
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-26 23:55";
+  const BUILD_DATE = "2026-07-27 00:10";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -783,7 +783,15 @@ const AtsuCup = (function(){
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
         .then(res=> res.ok ? res.json() : null)
         .then(data=>{
-          if(data && data.build && data.build !== BUILD_DATE){ banner.style.display = 'flex'; }
+          if(!(data && data.build && data.build !== BUILD_DATE)) return;
+          banner.style.display = 'flex';
+          // 初回訪問者やバナーに気づかないユーザーがキャッシュ済みの古いJSのまま
+          // 使い続けてしまわないよう、検知時に1回だけ自動でリロードして自己修復する
+          // (無限リロードを避けるため、このタブのセッション内で1回のみ)
+          if(!sessionStorage.getItem('atsucupAutoReloaded')){
+            sessionStorage.setItem('atsucupAutoReloaded', '1');
+            location.reload();
+          }
         })
         .catch(()=>{});
     }
