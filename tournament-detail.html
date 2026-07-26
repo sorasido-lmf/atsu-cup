@@ -134,6 +134,9 @@
   .tree-scroll{
     overflow-x:auto; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
     background:#0a0810; padding:8px 0; max-height:92vh;
+    /* iOSでエントリー名を長押しした際に、D&Dより先にテキスト選択/コピーの吹き出しが
+       出てしまいドラッグが妨げられるのを防ぐ(実機のみで再現、2026-07-27) */
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
   }
   .tree-scroll svg{ display:block; width:max(100%, var(--svg-natural-w, 0px)); height:auto; }
   .tree-pick{ cursor:pointer; }
