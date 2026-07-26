@@ -47,9 +47,12 @@
       container.innerHTML = `<div class="empty-state" style="padding:16px 10px;">大会はまだありません。<br>トップページの「大会を作成する」から作成してください。</div>`;
       return;
     }
-    // 進行中を先頭に、それぞれ新しい順に並べる(複数同時進行に対応)
-    const ongoing = list.filter(t=>t.status==='ongoing').slice().reverse();
-    const completed = list.filter(t=>t.status==='completed').slice().reverse();
+    // 進行中を先頭に、それぞれ新しい順に並べる(複数同時進行に対応)。
+    // ゲスト/認証プールを結合したリストなので、配列の並び順(挿入順+reverse)ではなく
+    // createdAtで直接ソートする(でないとプールごとに固まって「新しい順」が崩れる)。
+    const byNewest = (a,b)=> new Date(b.createdAt) - new Date(a.createdAt);
+    const ongoing = list.filter(t=>t.status==='ongoing').slice().sort(byNewest);
+    const completed = list.filter(t=>t.status==='completed').slice().sort(byNewest);
     [...ongoing, ...completed].forEach(t=>{
       const localTag = t.pool==='guest' ? ' <span class="status-badge open" style="background:none; border:1px solid var(--line); padding:2px 8px; font-size:10.5px;">ローカル</span>' : '';
       const statusHtml = (t.status==='ongoing'
