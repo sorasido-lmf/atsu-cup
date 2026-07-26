@@ -2,7 +2,7 @@
   {
     "id": "u0001",
     "name": "ソラシド",
-    "recDefault": true,
+    "recDefault": false,
     "archived": false,
     "createdAt": "2026-07-25T13:30:06.668Z",
     "note": ""
