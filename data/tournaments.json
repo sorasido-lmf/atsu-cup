@@ -14,5 +14,21 @@
     "posterImage": null,
     "heldAt": "2026-07-25T16:05:46.602Z",
     "status": "ongoing"
+  },
+  {
+    "id": "t_gastest_1785067347562",
+    "title": "GAS連携テスト大会",
+    "detail": "gas-test.html から作成",
+    "posterImage": null,
+    "heldAt": "2026-07-26T12:02:27.562Z",
+    "status": "completed"
+  },
+  {
+    "id": "t_gastest_1785067530906",
+    "title": "GAS連携テスト大会",
+    "detail": "gas-test.html から作成",
+    "posterImage": null,
+    "heldAt": "2026-07-26T12:05:30.906Z",
+    "status": "completed"
   }
 ]
