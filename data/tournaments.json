@@ -8,19 +8,19 @@
     "status": "completed"
   },
   {
-    "id": "t1784995546602h2fhgh",
-    "title": "あつ杯テスト",
-    "detail": "",
-    "posterImage": null,
-    "heldAt": "2026-07-25T16:05:46.602Z",
-    "status": "ongoing"
-  },
-  {
     "id": "t1785075398196fgthh6",
     "title": "あつ杯テスト",
     "detail": "",
     "posterImage": null,
     "heldAt": "2026-07-26T14:16:38.197Z",
+    "status": "completed"
+  },
+  {
+    "id": "t1784995546602h2fhgh",
+    "title": "あつ杯テスト",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2026-07-25T16:05:46.602Z",
     "status": "completed"
   }
 ]
