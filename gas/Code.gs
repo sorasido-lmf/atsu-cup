@@ -320,10 +320,26 @@ function pushToGitHub_(path, rows, message) {
   }
 }
 
-/** 指定テーブルをシートから読み直してGitHubへ書き出す */
+/**
+ * 指定テーブルをシートから読み直してGitHubへ書き出す。
+ *
+ * 事故防止: シートが空なのにGitHub側にデータがある場合は書き出しを中断する。
+ * (移行前や、旧方式でGitHubを直接更新した後に書き込むと、空のシートで上書きして
+ *  GitHub側のデータを失うため。先に importFromGitHub() を実行させる)
+ */
 function exportTables_(tables, message) {
   tables.forEach(function (name) {
-    pushToGitHub_('data/' + name + '.json', readSheet_(name), message);
+    var rows = readSheet_(name);
+    if (!rows.length) {
+      var existing = readJsonFromGitHub_('data/' + name + '.json');
+      if (existing.length) {
+        throw new Error(
+          '安全のため中断しました: シートの「' + name + '」は空ですが、GitHubには' + existing.length + '行あります。' +
+          'このまま書き出すとGitHub側のデータが消えます。先に importFromGitHub() を実行してください。'
+        );
+      }
+    }
+    pushToGitHub_('data/' + name + '.json', rows, message);
   });
 }
 
@@ -516,6 +532,71 @@ function doPost(e) {
 /* ============================================================
  * セットアップ用(GASエディタから手動で1回だけ実行する)
  * ============================================================ */
+
+/* ------------------------------------------------------------
+ * GitHub → シート の取り込み
+ *
+ * このシステムは「シートが正本、GitHubはその書き出し先」という向きで動く。
+ * したがって GitHub 側にだけ存在するデータがある状態で書き込みを行うと、
+ * シートの内容(空)で上書きされてGitHub側が消える。
+ * 移行時や、旧方式(アプリから直接GitHubへ書く)で更新した後は、必ず先にこれを実行すること。
+ * ------------------------------------------------------------ */
+
+/** GitHubから data/xxx.json を生JSONで取得する */
+function readJsonFromGitHub_(path) {
+  var res = UrlFetchApp.fetch(githubApiUrl_(path) + '?ref=' + prop_('GITHUB_BRANCH', 'main'), {
+    headers: { Authorization: 'token ' + prop_('GITHUB_PAT'), Accept: 'application/vnd.github.raw' },
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  if (code === 404) return [];
+  if (code !== 200) throw new Error('GitHubからの取得に失敗(' + code + '): ' + path);
+  var text = res.getContentText();
+  return text.trim() ? JSON.parse(text) : [];
+}
+
+/**
+ * 【変更なし・確認のみ】GitHubとシートの差分を報告する。
+ * 取り込みや書き込みを行う前に、まずこれで状況を把握すること。
+ */
+function compareWithGitHub() {
+  var out = [];
+  DATA_SHEETS.forEach(function (name) {
+    var sheetRows = readSheet_(name);
+    var ghRows = readJsonFromGitHub_('data/' + name + '.json');
+    var sIds = {}; sheetRows.forEach(function (r) { sIds[r.id] = true; });
+    var gIds = {}; ghRows.forEach(function (r) { gIds[r.id] = true; });
+    var onlyGh = ghRows.filter(function (r) { return !sIds[r.id]; });
+    var onlySheet = sheetRows.filter(function (r) { return !gIds[r.id]; });
+
+    var line = name + ': シート' + sheetRows.length + '行 / GitHub' + ghRows.length + '行';
+    if (onlyGh.length)    line += '\n   ⚠️ GitHubにのみ存在(取り込まないと消える): ' + onlyGh.map(function (r) { return r.id; }).join(', ');
+    if (onlySheet.length) line += '\n   ℹ️ シートにのみ存在(次の書き込みでGitHubへ反映される): ' + onlySheet.map(function (r) { return r.id; }).join(', ');
+    if (!onlyGh.length && !onlySheet.length && sheetRows.length) line += ' ✅ id集合は一致';
+    out.push(line);
+  });
+  Logger.log(out.join('\n'));
+  return out;
+}
+
+/**
+ * GitHubの data/*.json をシートへ取り込む(シートを上書きする)。
+ * 上書き前の内容は実行ログへ出力するので、必要なら手動で復元できる。
+ */
+function importFromGitHub() {
+  var out = [];
+  DATA_SHEETS.forEach(function (name) {
+    var before = readSheet_(name);
+    if (before.length) {
+      Logger.log('--- 上書き前の ' + name + ' (復元用) ---\n' + JSON.stringify(before));
+    }
+    var rows = readJsonFromGitHub_('data/' + name + '.json');
+    writeSheet_(name, rows);
+    out.push(name + ': ' + before.length + '行 → ' + rows.length + '行');
+  });
+  Logger.log('GitHub → シート の取り込みが完了しました。\n' + out.join('\n'));
+  return out;
+}
 
 /**
  * デプロイ前の設定チェック。Script Propertiesの不足と、GitHub/シートへの到達性を確認する。

@@ -83,6 +83,37 @@
 
 ---
 
+---
+
+## 🔴 データの向きと、移行時の必須手順
+
+このシステムは **「シートが正本、GitHubはその書き出し先」** という一方向で動く。
+
+```
+スプレッドシート ──書き出し──▶ GitHub data/*.json ──▶ アプリが読む
+```
+
+したがって **GitHub側にだけ存在するデータがある状態で書き込むと、シートの内容で上書きされて消える。**
+
+以下のタイミングでは、**書き込み前に必ず `importFromGitHub()` を実行**すること。
+
+- スプレッドシートへの移行時（初回）
+- 旧方式（アプリから直接GitHubへPATで書く）で更新した後
+- 他の誰かがGitHub上で `data/*.json` を直接編集した後
+
+### 手順
+
+1. **`compareWithGitHub()`** を実行（変更なし・確認のみ）
+   `⚠️ GitHubにのみ存在` と出た行があれば、取り込みが必要
+2. **`importFromGitHub()`** を実行
+   GitHubの内容でシートを上書きする（上書き前の内容は実行ログに出るので復元可能）
+3. もう一度 `compareWithGitHub()` で `✅ id集合は一致` を確認
+
+なお `exportTables_()` には安全装置があり、**シートが空なのにGitHubにデータがある場合は書き出しを中断**する。
+ただしこれは「シートが完全に空」のケースしか検知できないため、上の手順を省略しないこと。
+
+---
+
 ## シート構成
 
 `data/SCHEMA.md` と1対1で対応する。**列名はスキーマ通りにすること**（`Code.gs` は列名でヘッダを引き当てるため、列の並べ替えは可能だが改名は不可）。
@@ -112,8 +143,11 @@
 
 | 関数 | 用途 |
 |---|---|
+| `checkConfig()` | Script Properties の不足・シート・admins・GitHub到達性をまとめて検査 |
+| `compareWithGitHub()` | **変更なし。** シートとGitHubの差分を報告する |
+| `importFromGitHub()` | GitHubの `data/*.json` でシートを上書きする（移行・復旧用） |
 | `initSheets()` | 6シートを作成し、ヘッダと書式を設定（初回のみ） |
-| `seedUsers()` | 既存の15人を `users` へ投入（初回のみ） |
+| `seedUsers()` | 既存の15人を `users` へ投入（初回のみ・`importFromGitHub()` を使うなら不要） |
 | `dumpUsersJson()` | `users` をJSONでログ出力（`data/users.json` との比較用） |
 | `selfTestRoundTrip()` | シート→JSON→シート→JSON で内容が変わらないか検証 |
 | `doGet(e)` | `?table=users` で単一、パラメータ無しで全テーブルをJSONで返す（**検証用**） |
