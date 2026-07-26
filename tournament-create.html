@@ -82,6 +82,12 @@
     });
   }
 
+  if(AtsuCup.isGuestMode()){
+    confirmBox.innerHTML = `<div class="confirm-banner" style="border-color:var(--ember2); margin-bottom:16px;">
+      未ログインです。ここで作る大会は<b>練習用</b>としてこの端末にのみ保存され、歴代優勝者・戦績には反映されません。ログインすると削除されます。
+    </div>`;
+  }
+
   // 複数大会を同時進行できるので、前の大会の確認は不要。常に新規作成フォームを表示する
   renderForm();
 })();

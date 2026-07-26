@@ -201,6 +201,45 @@ GASのWebアプリは「実行するユーザー: 自分」でデプロイして
 
 ---
 
+## ゲスト/認証済みの二重プール分離（2026-07-27 導入）
+
+**過去のデータをだれでも削除できることを避けつつ、ふらっと使いたい人にも使ってもらえるようにする**ため、ロースター/大会データを完全に2つの入れ物に分離している（「同じ配列にタグを付けて区別する」方式ではなく、最初から別のキーに分ける方式を採用。名前重複の曖昧さや集計側のフィルタ漏れが原理的に起きないため）。
+
+### state形状
+
+```
+state = {
+  // 認証プール: data/*.json(スプレッドシート)由来 + GASへ保存する対象
+  roster, userRecDefaults, archivedUsers, tournaments,
+  // ゲストプール: 未ログイン時の練習用。この端末だけ。サーバーへは絶対に出さない
+  guestRoster, guestUserRecDefaults, guestArchivedUsers, guestTournaments,
+  // 共通のアクティブ大会ポインタ(どちらのプールの大会かを activePool が示す)
+  activeId, activePool // 'auth' | 'guest'
+}
+```
+
+### 不変条件
+
+**ログイン中はゲストプールが空でなければならない。** `GoogleAuth`のログイン状態変化(`onStateChange`、core側で自動購読)と`restore()`実行時の両方で`enforceGuestSeparation()`が呼ばれ、ログイン中にゲストプールが非空なら非ダイスミス(Esc・オーバーレイクリック不可)の確認バナーを出す。「削除してログインする」で`clearGuestPool()`、「ログインをやめる」で自動`GoogleAuth.signOut()`(どちらもタップ後`location.reload()`)。
+
+これは、2026-07-26に直した「`mergeRemoteTournaments()`はローカルの進行状況を黙って失わせない」原則の**唯一の、ユーザーが明示的にタップした場合だけの例外**。認証プールには一切触れない。
+
+### アクセス方法(`pool()`アクセサ)
+
+各ページは `const P = AtsuCup.pool();` を **render/handler関数の内側で毎回呼ぶ**(トップレベルでキャッシュしない)。ログイン中は認証プール、未ログインはゲストプールを指す`{roster, userRecDefaults, archivedUsers, tournaments}`の生きた参照が返る。`AtsuCup.isGuestMode()`/`AtsuCup.authPool()`/`AtsuCup.guestPool()`/`AtsuCup.poolKindOfTournamentId(id)`も利用可能。
+
+`activeT()`/`setActive()`/`state.people`/`state.matches`等の既存のgetter/setterプロキシは無変更のまま、`state.activePool`経由で両プールに対応済み。**集計関数(`computeAllTimeStats`/`allFinishedEntries`/`championEntries`)は無変更** — 認証プール(`state.roster`/`state.tournaments`)のみを読むため、ゲストデータは原理的に混ざらない。
+
+### プールを跨いだ閲覧のガード
+
+ログイン中に非ログイン時代の練習用大会をURL直指定で開こうとした場合(逆も同様)、`detail-view.js`の`isCrossPool()`が検知し「この大会は表示できません」を表示してトップへ誘導する(読み取り専用レンダリングは作らない設計)。
+
+### 既存データとの関係
+
+`STORE_KEY`(`atsucup:state:v2`)はバージョンを上げていない。この機能導入前から存在した`state.roster`/`state.tournaments`は、そのまま認証プールとして扱われる。
+
+---
+
 ## 実装上の注意
 
 ### ネイティブダイアログを使わない
@@ -227,7 +266,7 @@ GASのWebアプリは「実行するユーザー: 自分」でデプロイして
 | `tournament-detail.html` + `detail-view.js` | 大会詳細。進行中/終了済みを `?id=` で出し分け。組み合わせ決定・対戦表・勝敗入力を統合 |
 | `tournament-entry.html` | 大会ごとの参加者選出 |
 | `users.html` | ユーザーマスタ管理（新規登録・撮影可否・アーカイブ/復元） |
-| `hall.html` / `record.html` / `record-detail.html` / `results.html` / `video.html` | 戦績・優勝者・動画 |
+| `hall.html` / `record.html` / `record-detail.html` / `results.html` | 戦績・優勝者(認証プールのみ集計。無変更) |
 | `settings.html` | Googleログイン・接続確認 |
 | `atsucup-core.js` | 共通のstate管理・データロジック・`data/`の読み書き（全ページ共有） |
 | `atsucup-data.js` | `data/*.json`(IDキー) ↔ アプリ内部(名前キー) の構造変換層 |
@@ -239,7 +278,6 @@ GASのWebアプリは「実行するユーザー: 自分」でデプロイして
 
 ## 未対応・今後の課題（TODO）
 
-- **書き込み(GitHubへの反映)には認証があるが、UI上の操作自体には制限が無い**。`users.html` のアーカイブ/復元・撮影可否編集・新規登録の**ボタン自体は誰でも押せる**（未ログインなら「この端末にのみ保存しました」という案内が出るだけで、操作は止まらない）。「アーカイブ済みを表示」トグルの閲覧制限も未実装。**これは意図的な未対応であり、バグとして扱わないこと。** ユーザーからの明示的な依頼があった際に着手する
 - GASの `role` は現状 `admin` の1種類のみ運用。`editor`（大会のみ可・ユーザーマスタ不可）等の細分化は未着手
 - スプレッドシートの手編集からアプリへの双方向同期は無い（シートは閲覧・緊急修正用。手編集後は `gas/Code.gs` の関数でGitHubへ反映が必要。`gas/README.md` 参照）
 

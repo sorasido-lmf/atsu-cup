@@ -26,7 +26,6 @@
     <div class="menu-grid">
       <a class="menu-card" href="tournaments.html"><span class="ic">📜</span>大会一覧</a>
       <a class="menu-card" href="users.html"><span class="ic">🧑‍🤝‍🧑</span>ユーザー管理</a>
-      <a class="menu-card" href="video.html"><span class="ic">🎬</span>対戦動画</a>
       <a class="menu-card" href="hall.html"><span class="ic">👑</span>歴代優勝者</a>
       <a class="menu-card" href="record.html"><span class="ic">📊</span>戦績</a>
       <a class="menu-card" href="settings.html"><span class="ic">⚙️</span>設定</a>
@@ -52,27 +51,33 @@
   const currentTournamentBox = document.getElementById("currentTournamentBox");
 
   function renderCurrentTournamentBox(){
+    // 練習用(ゲスト)の進行中大会を先に、認証済みの進行中大会を続けて表示する
+    // (ログイン中はゲストプールが常に空になる不変条件があるため、ログイン状態を個別に見る必要はない)
+    const guestOngoing = state.guestTournaments.filter(t=>t.status==='ongoing');
     const ongoing = state.tournaments.filter(t=>t.status==='ongoing');
-    if(!ongoing.length){
+    if(!guestOngoing.length && !ongoing.length){
       currentTournamentBox.innerHTML = `<div class="empty-state"><span class="big">🏆</span>開催中の大会はありません。</div>
         <a class="btn btn-primary" style="width:100%; margin-top:12px;" href="tournament-create.html">➕ 大会を作成する</a>`;
       return;
     }
     // 開催中の大会を全件表示(複数同時進行に対応)
-    const cards = ongoing.map(t=>{
+    const cardOf = (t, guest)=>{
       const badge = t.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`;
       return `<a class="ongoing-card" href="tournament-detail.html?id=${encodeURIComponent(t.id)}">
-        ${badge}
+        ${badge}${guest?' <span class="status-badge open" style="background:none; border:1px solid var(--line);">練習用</span>':''}
         <div class="cur-title" style="margin-top:6px;">${escapeHtml(t.title)}</div>
         ${t.winnerName?`<div class="cur-line champ">👑 ${escapeHtml(t.winnerName)}</div>`:''}
       </a>`;
-    }).join('');
+    };
+    const cards = guestOngoing.map(t=>cardOf(t,true)).join('') + ongoing.map(t=>cardOf(t,false)).join('');
     currentTournamentBox.innerHTML = cards + `<a class="btn btn-primary" style="width:100%; margin-top:10px;" href="tournament-create.html">➕ 新しい大会を作成する</a>`;
   }
 
   renderCurrentTournamentBox();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
   AtsuCup.ready.then(()=>{ renderCurrentTournamentBox(); });
+  // ログイン状態が変わったら(このタブ内で)描き直す
+  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=> renderCurrentTournamentBox());
 })();
 </script>
 </body>

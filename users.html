@@ -62,22 +62,20 @@
 <script>
 (function(){
   "use strict";
-  const state = AtsuCup.state;
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
-  if(!state.userRecDefaults) state.userRecDefaults = {};
-  if(!state.archivedUsers) state.archivedUsers = {};
 
   const countBadges = document.getElementById("countBadges");
   const rosterList = document.getElementById("rosterList");
   const archivedToggle = document.getElementById("archivedToggle");
   const archivedList = document.getElementById("archivedList");
+  const panelHeading = document.querySelector(".panel h2");
 
   let showArchived = false;
   let confirmingName = null; // アーカイブ確認中の名前(ネイティブconfirm()は使わずインラインで確認する)
 
-  function recOf(name){ return state.userRecDefaults[name] !== false; }
-  function isArchived(name){ return !!state.archivedUsers[name]; }
+  function recOf(P, name){ return P.userRecDefaults[name] !== false; }
+  function isArchived(P, name){ return !!P.archivedUsers[name]; }
 
   const syncStatus = document.getElementById("syncStatus");
   function setSyncStatus(msg, type){
@@ -86,8 +84,9 @@
       : '';
   }
   // 端末側は即時に反映済み。そのうえで data/users.json(GitHub) にも書き戻す。
-  // トークン未設定でもローカル操作は妨げず、案内だけ出す。
+  // 未ログイン(練習モード)ではサーバーへは一切反映せず、この端末にのみ保存する。
   async function syncToGitHub(){
+    if(AtsuCup.isGuestMode()){ setSyncStatus('練習モードです。この端末にのみ保存しました(ログインするとサーバーに反映できます)。', ''); return; }
     if(!GasDB.canWrite()){ setSyncStatus('この端末にのみ保存しました(GitHubへ反映するには「設定」でGoogleログインしてください)', ''); return; }
     setSyncStatus('GitHubへ保存中...', '');
     try{
@@ -98,7 +97,7 @@
     }
   }
 
-  function makeRow(name, { archived }){
+  function makeRow(P, name, { archived }){
     const row = document.createElement('div');
     if(confirmingName === name){
       row.className = 'roster-row confirming';
@@ -119,7 +118,7 @@
         <button class="rm" data-restore="${escapeHtml(name)}" title="復元">♻️ 復元</button>
       `;
     }else{
-      const isRec = recOf(name);
+      const isRec = recOf(P, name);
       row.innerHTML = `
         <span class="nm">${escapeHtml(name)}</span>
         <button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>
@@ -130,10 +129,12 @@
   }
 
   function renderAll(){
-    const activeNames = state.roster.filter(n=>!isArchived(n));
-    const archivedNames = state.roster.filter(isArchived);
+    const P = AtsuCup.pool();
+    if(panelHeading) panelHeading.textContent = AtsuCup.isGuestMode() ? '登録済みユーザー(練習用・この端末のみ)' : '登録済みユーザー';
+    const activeNames = P.roster.filter(n=>!isArchived(P, n));
+    const archivedNames = P.roster.filter(n=>isArchived(P, n));
 
-    const rec = activeNames.filter(recOf).length;
+    const rec = activeNames.filter(n=>recOf(P, n)).length;
     countBadges.innerHTML = `
       <span class="count-badge">登録者: ${activeNames.length}人</span>
       <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
@@ -143,7 +144,7 @@
     if(!activeNames.length){
       rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
     }else{
-      activeNames.forEach(name=> rosterList.appendChild(makeRow(name, { archived:false })));
+      activeNames.forEach(name=> rosterList.appendChild(makeRow(P, name, { archived:false })));
     }
 
     archivedToggle.textContent = showArchived
@@ -157,14 +158,14 @@
       if(!archivedNames.length){
         archivedList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">アーカイブ済みのユーザーはいません。</div>`;
       }else{
-        archivedNames.forEach(name=> archivedList.appendChild(makeRow(name, { archived:true })));
+        archivedNames.forEach(name=> archivedList.appendChild(makeRow(P, name, { archived:true })));
       }
     }
 
     document.querySelectorAll('[data-cam]').forEach(el=>{
       el.addEventListener('click', ()=>{
         const name = el.dataset.cam;
-        state.userRecDefaults[name] = !recOf(name);
+        P.userRecDefaults[name] = !recOf(P, name);
         AtsuCup.persist();
         renderAll();
         syncToGitHub();
@@ -185,7 +186,7 @@
     document.querySelectorAll('[data-confirm-archive]').forEach(el=>{
       el.addEventListener('click', ()=>{
         const name = el.dataset.confirmArchive;
-        state.archivedUsers[name] = true;
+        P.archivedUsers[name] = true;
         confirmingName = null;
         AtsuCup.persist();
         renderAll();
@@ -195,7 +196,7 @@
     document.querySelectorAll('[data-restore]').forEach(el=>{
       el.addEventListener('click', ()=>{
         const name = el.dataset.restore;
-        state.archivedUsers[name] = false;
+        P.archivedUsers[name] = false;
         AtsuCup.persist();
         renderAll();
         syncToGitHub();
@@ -215,6 +216,8 @@
   renderAll();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
   AtsuCup.ready.then(()=>{ renderAll(); });
+  // ログイン状態が変わったら(このタブ内で)、対象プールが切り替わるので描き直す
+  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=> renderAll());
 })();
 </script>
 </body>

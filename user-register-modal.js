@@ -31,7 +31,6 @@ const UserRegisterModal = (function(){
     opts = opts || {};
     ensureStyle();
     close();
-    const state = AtsuCup.state;
     overlayEl = document.createElement('div');
     overlayEl.className = 'urm-overlay';
     overlayEl.innerHTML = `
@@ -49,13 +48,13 @@ const UserRegisterModal = (function(){
     overlayEl.addEventListener('click', (ev)=>{ if(ev.target === overlayEl) close(); });
     overlayEl.querySelector('#urmCancel').addEventListener('click', close);
     overlayEl.querySelector('#urmSave').addEventListener('click', ()=>{
+      const P = AtsuCup.pool();
       const lines = overlayEl.querySelector('#urmInput').value.split("\n").map(s=>s.trim()).filter(Boolean);
       if(!lines.length){ alert('名前を入力してください。'); return; }
-      const uniqNew = [...new Set(lines)].filter(n=>!state.roster.includes(n));
+      const uniqNew = [...new Set(lines)].filter(n=>!P.roster.includes(n));
       if(!uniqNew.length){ alert('入力された名前は、すでにすべて登録済みです。'); return; }
-      state.roster = [...state.roster, ...uniqNew];
-      if(!state.userRecDefaults) state.userRecDefaults = {};
-      uniqNew.forEach(name=>{ state.userRecDefaults[name] = true; });
+      P.roster = [...P.roster, ...uniqNew];
+      uniqNew.forEach(name=>{ P.userRecDefaults[name] = true; });
       AtsuCup.persist();
       close();
       if(typeof opts.onRegistered === 'function') opts.onRegistered(uniqNew);

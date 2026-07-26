@@ -17,6 +17,11 @@
     <div class="sub">TOURNAMENTS</div>
   </header>
 
+  <section class="panel" id="guestTournamentPanel" style="display:none;">
+    <h2>練習用の大会(この端末のみ・記録には残りません)</h2>
+    <div id="guestTournamentList"></div>
+  </section>
+
   <section class="panel">
     <h2>大会一覧</h2>
     <p class="hint">タップすると、その大会の詳細(順位・対戦結果・動画)を確認できます。</p>
@@ -40,16 +45,18 @@
   AtsuCup.restore();
 
   const tournamentList = document.getElementById('tournamentList');
+  const guestTournamentPanel = document.getElementById('guestTournamentPanel');
+  const guestTournamentList = document.getElementById('guestTournamentList');
 
-  function renderList(){
-    tournamentList.innerHTML = "";
-    if(!state.tournaments.length){
-      tournamentList.innerHTML = `<div class="empty-state" style="padding:16px 10px;">大会はまだありません。<br>トップページの「大会を作成する」から作成してください。</div>`;
+  function renderTournamentItems(container, list, emptyMsg){
+    container.innerHTML = "";
+    if(!list.length){
+      if(emptyMsg) container.innerHTML = `<div class="empty-state" style="padding:16px 10px;">${emptyMsg}</div>`;
       return;
     }
     // 進行中を先頭に、それぞれ新しい順に並べる(複数同時進行に対応)
-    const ongoing = state.tournaments.filter(t=>t.status==='ongoing').slice().reverse();
-    const completed = state.tournaments.filter(t=>t.status==='completed').slice().reverse();
+    const ongoing = list.filter(t=>t.status==='ongoing').slice().reverse();
+    const completed = list.filter(t=>t.status==='completed').slice().reverse();
     [...ongoing, ...completed].forEach(t=>{
       const statusHtml = t.status==='ongoing'
         ? `<span class="status-badge open" style="padding:2px 8px; font-size:10.5px;">進行中</span>`
@@ -65,13 +72,21 @@
         <div class="arrow">›</div>
       `;
       el.addEventListener("click", ()=> location.href = `tournament-detail.html?id=${encodeURIComponent(t.id)}`);
-      tournamentList.appendChild(el);
+      container.appendChild(el);
     });
+  }
+
+  function renderList(){
+    renderTournamentItems(tournamentList, state.tournaments, '大会はまだありません。<br>トップページの「大会を作成する」から作成してください。');
+    guestTournamentPanel.style.display = state.guestTournaments.length ? 'block' : 'none';
+    if(state.guestTournaments.length) renderTournamentItems(guestTournamentList, state.guestTournaments, '');
   }
 
   renderList();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
   AtsuCup.ready.then(()=>{ renderList(); });
+  // ログイン状態が変わったら(このタブ内で)描き直す
+  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=> renderList());
 })();
 </script>
 </body>

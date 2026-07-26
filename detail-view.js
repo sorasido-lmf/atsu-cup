@@ -6,8 +6,6 @@
   const escapeHtml = AtsuCup.escapeHtml;
   const roundLabel = AtsuCup.roundLabel;
   AtsuCup.restore();
-  if(!state.userRecDefaults) state.userRecDefaults = {};
-  if(!state.archivedUsers) state.archivedUsers = {};
 
   const content = document.getElementById('content');
   const matchupSection = document.getElementById('matchupSection');
@@ -22,18 +20,28 @@
   function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
   function isLive(){ const t=AtsuCup.activeT(); return !!(t && t.status==='ongoing'); }
   function findHistory(){ return state.history.find(h=>h.id===id); }
-  function recDefaultOf(name){ return state.userRecDefaults[name] !== false; }
+  function recDefaultOf(name){ return AtsuCup.pool().userRecDefaults[name] !== false; }
   // 1回戦のどこか(a/b)に空き枠が残っているか(=まだ全枠埋まっていない)
   function round1HasEmpty(){
     if(!state.matches.length) return false;
     return state.matches[0].some(m=> m.a===null || (!m.bye && m.b===null));
   }
+  // ログイン中はゲスト大会を、未ログイン中は認証済み大会を、URL直指定で開こうとしていないか
+  function isCrossPool(){
+    const owningPool = AtsuCup.poolKindOfTournamentId(id);
+    return !!owningPool && owningPool !== (AtsuCup.isGuestMode() ? 'guest' : 'auth');
+  }
+  function renderBlocked(){
+    hideSub(); content.style.display='block';
+    content.innerHTML = `<div class="empty-state"><span class="big">🚫</span>この大会は表示できません。<br><a class="btn btn-ghost" href="tournaments.html" style="margin-top:12px;">大会一覧へ戻る</a></div>`;
+  }
 
-  document.getElementById('rosterCandidates').innerHTML = state.roster.map(n=>`<option value="${escapeHtml(n)}">`).join('');
+  document.getElementById('rosterCandidates').innerHTML = AtsuCup.pool().roster.map(n=>`<option value="${escapeHtml(n)}">`).join('');
 
   /* ================= ルート ================= */
   function render(){
     if(!id){ renderNotFound(); return; }
+    if(isCrossPool()){ renderBlocked(); return; }
     if(isLive()){
       if(mode === 'editing'){ renderEditForm(); return; }
       renderLiveHeader();
@@ -139,7 +147,7 @@
         <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div></div>` : '';
     content.innerHTML = `
       <div class="row" style="margin-top:0;">
-        <button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>
+        ${saveButtonHtml()}
         <button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
       </div>
       <div id="dataSaveStatus"></div>
@@ -156,7 +164,7 @@
       ${matchRounds || '<div class="empty-state" style="padding:12px;">対戦データがありません。</div>'}
       ${thirdHtml}
       ${confirmHtml}`;
-    document.getElementById('saveToDataBtn').addEventListener('click', ()=> saveTournamentToGitHub(h.id));
+    wireSaveButton(h.id);
     document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderPast(h); });
     if(mode==='confirmDelete'){
       document.getElementById('cancelDeleteBtn').addEventListener('click', ()=>{ mode='view'; renderPast(h); });
@@ -511,15 +519,26 @@
       <div id="advanceArea"></div>
       <div class="row" style="margin-top:12px;">
         <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
-        <button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>
+        ${saveButtonHtml()}
       </div>
       <div id="dataSaveStatus"></div>
       <div id="noticeArea"></div>
       <div id="thirdPlaceArea"></div>
       <div id="championArea"></div>`;
     document.getElementById('saveBracketImgBtn').addEventListener('click', saveBracketImg);
-    document.getElementById('saveToDataBtn').addEventListener('click', ()=> saveTournamentToGitHub(state.tournamentMeta.id));
+    wireSaveButton(state.tournamentMeta.id);
     renderTree(); renderExtras();
+  }
+
+  // ゲスト(練習用)大会はサーバーに保存できないため、ボタンの代わりに案内文を出す
+  function saveButtonHtml(){
+    return AtsuCup.isGuestMode()
+      ? '<p class="hint" style="margin:0; color:var(--muted);">練習用の大会のため、サーバーへの保存はできません。</p>'
+      : '<button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>';
+  }
+  function wireSaveButton(tid){
+    const btn = document.getElementById('saveToDataBtn');
+    if(btn) btn.addEventListener('click', ()=> saveTournamentToGitHub(tid));
   }
 
   // 大会の内容を data/*.json(GitHub) へ保存する。対戦表は勝敗入力のたびに変わるため自動保存はせず、
@@ -828,4 +847,6 @@
   render();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
   AtsuCup.ready.then(()=>{ render(); });
+  // ログイン状態が変わったら(このタブ内で)、プール跨ぎガードや候補ロースターが変わるので描き直す
+  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=> render());
 })();

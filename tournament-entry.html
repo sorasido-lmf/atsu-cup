@@ -77,8 +77,6 @@
   const state = AtsuCup.state;
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
-  if(!state.userRecDefaults) state.userRecDefaults = {};
-  if(!state.archivedUsers) state.archivedUsers = {};
   // ?id= の大会を操作対象にする
   const id = new URLSearchParams(location.search).get('id');
   if(id) AtsuCup.setActive(id);
@@ -94,7 +92,7 @@
   const backLink = document.getElementById("backLink"); if(backLink) backLink.href = detailHref;
   const nameEl = document.getElementById("entryTournamentName"); if(nameEl && state.tournamentMeta.title) nameEl.textContent = state.tournamentMeta.title;
 
-  function recDefaultOf(name){ return state.userRecDefaults[name] !== false; }
+  function recDefaultOf(name){ return AtsuCup.pool().userRecDefaults[name] !== false; }
 
   if(new URLSearchParams(location.search).get('flow') === 'new'){
     document.getElementById('flowBanner').innerHTML = `<div class="flow-banner">✅ 大会を作成しました。続けてこの大会に参加する人を選んでください。選び終わったら下の「次へ」から組み合わせを決められます。</div>`;
@@ -148,12 +146,14 @@
     }
 
     // 登録済み(アーカイブ除く)だが今回は未選択の人・3列表示
-    const activeRoster = state.roster.filter(name => !state.archivedUsers[name]);
+    // ログイン中は本物のロースターのみ、未ログインは練習用ロースターのみを候補にする(混在させない)
+    const P = AtsuCup.pool();
+    const activeRoster = P.roster.filter(name => !P.archivedUsers[name]);
     const unselected = activeRoster.filter(name => !state.people.some(p=>p.name===name));
     availableList.className = '';
     availableList.innerHTML = "";
     if(!activeRoster.length){
-      availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
+      availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">${AtsuCup.isGuestMode() ? 'まだ練習用の登録者がいません。「新規ユーザー登録」から追加してください。' : 'まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。'}</div>`;
     }else if(!unselected.length){
       availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">登録済みの人は全員選択中です。</div>`;
     }else{
@@ -188,9 +188,10 @@
         // 大会画面から登録した場合は、そのまま今回の参加者としても選出しておく
         names.forEach(addToTournament);
         renderAll();
-        // ユーザーマスタが増えたので data/users.json(GitHub) にも書き戻す
+        // ユーザーマスタが増えたので data/users.json(GitHub) にも書き戻す(練習モードでは行わない)
         const box = document.getElementById('syncStatus');
         const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
+        if(AtsuCup.isGuestMode()){ show('練習モードです。この端末にのみ登録しました。'); return; }
         if(!GasDB.canWrite()){ show('この端末にのみ登録しました(GitHubへ反映するには「設定」でGoogleログインしてください)'); return; }
         show('GitHubへ保存中...');
         try{ const n = await AtsuCup.saveUsersToData(); show(`GitHubへ保存しました(登録者${n}人)`, '#7cffb0'); }
@@ -202,6 +203,8 @@
   renderAll();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
   AtsuCup.ready.then(()=>{ renderAll(); });
+  // ログイン状態が変わったら(このタブ内で)、候補ロースターが切り替わるので描き直す
+  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=> renderAll());
 })();
 </script>
 </body>

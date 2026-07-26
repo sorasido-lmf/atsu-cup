@@ -11,7 +11,7 @@ const GoogleAuth = (function(){
   const GIS_SRC = 'https://accounts.google.com/gsi/client';
 
   let gisLoaded = null;
-  let onChange = null;
+  const listeners = []; // 複数ページ/複数機能が同時に購読できるようにする(単一のonChangeだと上書き事故が起きるため)
 
   function clientId(){
     const id = (typeof AtsuCupGasConfig !== 'undefined') && AtsuCupGasConfig.OAUTH_CLIENT_ID;
@@ -48,7 +48,8 @@ const GoogleAuth = (function(){
   }
   function storeToken(t){
     try{ t ? sessionStorage.setItem(TOKEN_KEY, t) : sessionStorage.removeItem(TOKEN_KEY); }catch(e){}
-    if(typeof onChange === 'function') onChange(getState());
+    const s = getState();
+    listeners.forEach(fn=>{ try{ fn(s); }catch(e){ /* 1つのリスナーの例外で他を止めない */ } });
   }
 
   // 期限切れ(約1時間)のトークンは無効として扱う
@@ -134,8 +135,11 @@ const GoogleAuth = (function(){
     try{ if(window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); }catch(e){}
   }
 
-  // ログイン状態が変わったときに呼ばれるコールバックを登録する
-  function onStateChange(fn){ onChange = fn; }
+  // ログイン状態が変わったときに呼ばれるコールバックを登録する(複数登録可)。解除関数を返す。
+  function onStateChange(fn){
+    listeners.push(fn);
+    return ()=>{ const i=listeners.indexOf(fn); if(i>=0) listeners.splice(i,1); };
+  }
 
   return { signIn, signOut, renderButton, getIdToken, isSignedIn, getEmail, getState, onStateChange, loadGis };
 })();

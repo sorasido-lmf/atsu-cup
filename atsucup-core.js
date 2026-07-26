@@ -7,15 +7,59 @@ const AtsuCup = (function(){
   // 複数の大会を同時に進行できるよう、各大会が自分の進行データ(people/matches等)を持つ。
   // 端末共通のデータ(roster/userRecDefaults/archivedUsers)だけstate直下に置く。
   const state = {
+    // ---- 認証プール: ログイン中に使う。data/*.json(スプレッドシート)由来 + GASへ保存する対象 ----
     roster: [],       // [name, ...] この端末に登録済みの参加者マスタ(大会をまたいで再利用)
     userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値
     archivedUsers: {}, // {name: boolean} アーカイブ済みユーザー
     tournaments: [],  // [{id,title,details,posterUrl,createdAt,status,people,order,remaining,matches,winnerName,thirdPlaceMatch}]
-    activeId: null    // 現在操作対象の大会id(各画面が ?id= から setActive でセット)
+    // ---- ゲストプール: 未ログイン時の練習用。この端末だけ。サーバーへは絶対に出さない ----
+    guestRoster: [],
+    guestUserRecDefaults: {},
+    guestArchivedUsers: {},
+    guestTournaments: [],
+    // ---- 共通のアクティブ大会ポインタ(どちらのプールの大会かを activePool が示す) ----
+    activeId: null,   // 現在操作対象の大会id(各画面が ?id= から setActive でセット)
+    activePool: 'auth' // 'auth' | 'guest'
   };
 
-  function activeT(){ return state.tournaments.find(t=>t.id===state.activeId) || null; }
-  function setActive(id){ state.activeId = id || null; }
+  // ログイン状態の判定はGoogleAuthに一本化する(サーバー側の許可判定はGAS側のallowlistが正、ここは表示/出し分けのみに使う)
+  function signedIn(){ return typeof GoogleAuth !== 'undefined' && GoogleAuth.isSignedIn(); }
+  function currentPoolKind(){ return signedIn() ? 'auth' : 'guest'; }
+  function isGuestMode(){ return currentPoolKind() === 'guest'; }
+  function tournamentsOf(kind){ return kind === 'guest' ? state.guestTournaments : state.tournaments; }
+  // roster/userRecDefaults/archivedUsers/tournaments への「生きた」参照をまとめて返す(呼び出し側は
+  // render/handler関数の内側で毎回呼ぶこと。トップレベルでキャッシュするとログイン状態変化に追従しない)
+  function poolOf(kind){
+    const guest = kind === 'guest';
+    return {
+      kind,
+      get roster(){ return guest ? state.guestRoster : state.roster; },
+      set roster(v){ if(guest) state.guestRoster = v; else state.roster = v; },
+      get userRecDefaults(){ return guest ? state.guestUserRecDefaults : state.userRecDefaults; },
+      set userRecDefaults(v){ if(guest) state.guestUserRecDefaults = v; else state.userRecDefaults = v; },
+      get archivedUsers(){ return guest ? state.guestArchivedUsers : state.archivedUsers; },
+      set archivedUsers(v){ if(guest) state.guestArchivedUsers = v; else state.archivedUsers = v; },
+      get tournaments(){ return tournamentsOf(kind); },
+      set tournaments(v){ if(guest) state.guestTournaments = v; else state.tournaments = v; }
+    };
+  }
+  function pool(){ return poolOf(currentPoolKind()); }
+  function authPool(){ return poolOf('auth'); }
+  function guestPool(){ return poolOf('guest'); }
+  function poolKindOfTournamentId(id){
+    if(!id) return null;
+    if(state.guestTournaments.some(t=>t.id===id)) return 'guest';
+    if(state.tournaments.some(t=>t.id===id)) return 'auth';
+    return null;
+  }
+  function guestPoolHasData(){ return !!(state.guestRoster.length || state.guestTournaments.length); }
+
+  function activeT(){ return tournamentsOf(state.activePool || 'auth').find(t=>t.id===state.activeId) || null; }
+  function setActive(id){
+    if(!id){ state.activeId = null; state.activePool = currentPoolKind(); return; }
+    state.activeId = id;
+    state.activePool = poolKindOfTournamentId(id) || currentPoolKind();
+  }
   function newBlankTournament(meta){
     return {
       id: meta.id, title: meta.title||"", details: meta.details||"", posterUrl: meta.posterUrl||null,
@@ -48,24 +92,34 @@ const AtsuCup = (function(){
     get(){ const t=activeT(); return t ? {id:t.id,title:t.title,details:t.details,posterUrl:t.posterUrl} : {id:null,title:"",details:"",posterUrl:null}; },
     set(v){
       if(!v || !v.title){ state.activeId = null; return; } // 空メタ代入はアクティブ解除(旧endの名残)
-      const existing = state.tournaments.find(t=>t.id===v.id);
-      if(existing){ existing.title=v.title; existing.details=v.details; existing.posterUrl=v.posterUrl; state.activeId=existing.id; }
-      else { const nt=newBlankTournament(v); state.tournaments.push(nt); state.activeId=nt.id; }
+      const kind = poolKindOfTournamentId(v.id);
+      const existing = kind ? tournamentsOf(kind).find(t=>t.id===v.id) : null;
+      if(existing){ existing.title=v.title; existing.details=v.details; existing.posterUrl=v.posterUrl; state.activeId=existing.id; state.activePool=kind; }
+      else {
+        const nt=newBlankTournament(v);
+        const k = currentPoolKind();
+        tournamentsOf(k).push(nt);
+        state.activeId=nt.id; state.activePool=k;
+      }
     }
   });
-  // 後方互換: state.history は「終了済みの大会」を旧history形式(participants/championName)で見せる
+  // 後方互換: state.history は「終了済みの大会」を旧history形式(participants/championName)で見せる。
+  // ゲスト/認証済み両プールにまたがって扱う(detail-view.jsのfindHistory/削除処理がプールを意識せず動くように)。
   Object.defineProperty(state, 'history', {
     enumerable:false,
     get(){
-      return state.tournaments.filter(t=>t.status==='completed').map(t=>({
+      const map = t=>({
         id:t.id, title:t.title, details:t.details, posterUrl:t.posterUrl, createdAt:t.createdAt,
         finished:!!t.winnerName, championName:t.winnerName||null,
         matches:t.matches, thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people
-      }));
+      });
+      return state.guestTournaments.filter(t=>t.status==='completed').map(map)
+        .concat(state.tournaments.filter(t=>t.status==='completed').map(map));
     },
     set(v){
       // 「state.history = state.history.filter(...)」による削除に対応(渡された配列に無いcompletedを削除)
       const keep = new Set((v||[]).map(h=>h.id));
+      state.guestTournaments = state.guestTournaments.filter(t=> t.status!=='completed' || keep.has(t.id));
       state.tournaments = state.tournaments.filter(t=> t.status!=='completed' || keep.has(t.id));
     }
   });
@@ -78,8 +132,9 @@ const AtsuCup = (function(){
       // 容量オーバー等で保存に失敗した場合、ポスター画像を除いてでも他の進行状況(参加者・対戦表・結果)は必ず保存する
       try{
         const fallback = {
-          ...state, // enumerableな実データ(roster/userRecDefaults/archivedUsers/tournaments/activeId)のみ
-          tournaments: state.tournaments.map(t=>({ ...t, posterUrl: null }))
+          ...state, // enumerableな実データ(roster/userRecDefaults/archivedUsers/tournaments/guest*/activeId等)のみ
+          tournaments: state.tournaments.map(t=>({ ...t, posterUrl: null })),
+          guestTournaments: state.guestTournaments.map(t=>({ ...t, posterUrl: null }))
         };
         localStorage.setItem(STORE_KEY, JSON.stringify(fallback));
         console.error('[atsucup] persist: quota exceeded, saved without local poster image', e);
@@ -98,11 +153,16 @@ const AtsuCup = (function(){
       const raw = localStorage.getItem(STORE_KEY);
       if(raw) migrate(JSON.parse(raw));
     }catch(e){}
-    // 各大会の参加者で、登録者マスタ(roster)に無い人がいれば反映しておく
+    // 各大会の参加者で、登録者マスタ(roster)に無い人がいれば反映しておく(認証済み/ゲスト、互いに混ぜない)
     const rosterSet = new Set(state.roster);
     state.tournaments.forEach(t=>{
       (t.people||[]).forEach(p=>{ if(!rosterSet.has(p.name)){ state.roster.push(p.name); rosterSet.add(p.name); } });
     });
+    const guestRosterSet = new Set(state.guestRoster);
+    state.guestTournaments.forEach(t=>{
+      (t.people||[]).forEach(p=>{ if(!guestRosterSet.has(p.name)){ state.guestRoster.push(p.name); guestRosterSet.add(p.name); } });
+    });
+    enforceGuestSeparation();
   }
 
   /* ---------- data/*.json(GitHub側=正) の取り込み ---------- */
@@ -117,6 +177,12 @@ const AtsuCup = (function(){
   // 保存内容は「ローカルにまだ無い大会」としてしか自動反映されなくなる
   // (＝同じ大会を他端末の最新保存内容で更新したい場合は、ローカル側の該当大会を
   // 一旦削除するなど手動の取り込み操作が必要になる)。
+  //
+  // ⚠️ ゲスト/認証済みプール分離(2026-07-27)の`clearGuestPool()`は、この「ローカル進行状況を
+  // 黙って失わせない」原則の**唯一の、ユーザーが明示的にタップした場合だけの例外**。
+  // ログインした瞬間にゲストプールだけを削除する(認証プールには一切触れない)、かつ
+  // 削除前に非ダイスミスの確認バナーでユーザーの明示操作を必須にしている。詳細は
+  // enforceGuestSeparation()/clearGuestPool()を参照。
   function mergeRemoteTournaments(remoteList){
     (remoteList||[]).forEach(rt=>{
       const local = state.tournaments.find(t=>t.id===rt.id);
@@ -164,9 +230,80 @@ const AtsuCup = (function(){
     }
   }
 
+  /* ---------- ゲスト/認証済みプールの分離: ログイン時の自己申告制リセット ---------- */
+  // 不変条件: ログイン中はゲストプールが空でなければならない。
+  // これを満たすため、ログイン状態への変化を検知するたびに enforceGuestSeparation() を呼ぶ。
+  function clearGuestPool(){
+    state.guestRoster = [];
+    state.guestUserRecDefaults = {};
+    state.guestArchivedUsers = {};
+    state.guestTournaments = [];
+    if(state.activePool === 'guest'){ state.activeId = null; state.activePool = 'auth'; }
+    persist();
+  }
+
+  let guestWipeBannerShown = false;
+  function enforceGuestSeparation(){
+    if(!signedIn()) return; // 非ログインならゲストプールを使い続けるだけなので何もしない
+    if(!guestPoolHasData()) return; // ゲストプールが空なら不変条件は既に満たされている
+    if(guestWipeBannerShown) return; // 二重表示防止
+    showGuestWipeBanner();
+  }
+
+  // 非ダイスミス(Esc・オーバーレイクリックでは閉じない)の確認バナー。
+  // confirm()/alert()は使わない(プロジェクトの方針)。タップでの明示操作を必須にする。
+  function showGuestWipeBanner(){
+    if(typeof document === 'undefined') return;
+    if(!document.body){ document.addEventListener('DOMContentLoaded', showGuestWipeBanner); return; }
+    guestWipeBannerShown = true;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .atsucup-guestwipe-overlay{ position:fixed; inset:0; background:rgba(5,3,10,.86); z-index:9999;
+        display:flex; align-items:center; justify-content:center; padding:20px; }
+      .atsucup-guestwipe-card{ max-width:420px; width:100%; background:#150f22; border:1.5px solid #5a2222;
+        border-radius:16px; padding:22px 20px; color:#f5efe0; font-family:'Noto Sans JP',sans-serif; }
+      .atsucup-guestwipe-card h3{ margin:0 0 10px; font-size:16px; }
+      .atsucup-guestwipe-card p{ margin:0 0 16px; font-size:13.5px; line-height:1.7; color:#d8cfe6; }
+      .atsucup-guestwipe-card .row{ display:flex; flex-direction:column; gap:8px; }
+      .atsucup-guestwipe-card button{ font-family:inherit; font-size:14px; font-weight:700; padding:11px 14px;
+        border-radius:10px; cursor:pointer; border:1.5px solid transparent; }
+      .atsucup-guestwipe-card .primary{ background:#e8b34c; color:#160f08; }
+      .atsucup-guestwipe-card .ghost{ background:transparent; border-color:#3a2f4d; color:#f5efe0; }
+    `;
+    document.head.appendChild(style);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'atsucup-guestwipe-overlay';
+    overlay.innerHTML = `
+      <div class="atsucup-guestwipe-card">
+        <h3>⚠️ 練習用データが残っています</h3>
+        <p>この端末には未ログイン時に作った練習用のユーザー登録・大会データが残っています。ログインすると、この練習用データは削除され、以後はスプレッドシート側のデータのみを扱います。</p>
+        <div class="row">
+          <button class="primary" id="atsucupGuestWipeConfirm">練習用データを削除してログインする</button>
+          <button class="ghost" id="atsucupGuestWipeCancel">ログインをやめる</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    document.getElementById('atsucupGuestWipeConfirm').addEventListener('click', ()=>{
+      clearGuestPool();
+      location.reload();
+    });
+    document.getElementById('atsucupGuestWipeCancel').addEventListener('click', ()=>{
+      if(typeof GoogleAuth !== 'undefined') GoogleAuth.signOut();
+      location.reload();
+    });
+  }
+
+  if(typeof GoogleAuth !== 'undefined'){
+    GoogleAuth.onStateChange(()=> enforceGuestSeparation());
+  }
+
   // 端末のユーザーマスタ(roster/recDefaults/archived)を GAS 経由でシート/GitHubへ反映する。
   // IDの採番はサーバ側(GAS)が行う(複数端末からの同時登録で衝突しないように)。
   async function saveUsersToData(){
+    if(isGuestMode()) throw new Error('練習モードではサーバーに保存できません。ログインしてください。');
     if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
     if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
     const users = state.roster.map(name => ({
@@ -182,6 +319,7 @@ const AtsuCup = (function(){
   // entryRows/matchRowsの参照キーには名前をそのまま乗せて送り、名前→ID解決はGAS側で行う
   // (未登録の参加者名にIDを採番する処理をサーバ側に一本化するため)。
   async function saveTournamentToData(tournamentId){
+    if(poolKindOfTournamentId(tournamentId)==='guest') throw new Error('練習用(未ログインで作成した)大会はサーバーに保存できません。');
     if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
     if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
     const t = state.tournaments.find(x=>x.id===tournamentId);
@@ -202,9 +340,15 @@ const AtsuCup = (function(){
     state.roster = data.roster || [];
     state.userRecDefaults = data.userRecDefaults || {};
     state.archivedUsers = data.archivedUsers || {};
+    // ゲストプールは新規追加のキーなので、既存の保存データには無くて当然(空のデフォルトで補う)
+    state.guestRoster = data.guestRoster || [];
+    state.guestUserRecDefaults = data.guestUserRecDefaults || {};
+    state.guestArchivedUsers = data.guestArchivedUsers || {};
+    state.guestTournaments = data.guestTournaments || [];
     if(Array.isArray(data.tournaments)){
       state.tournaments = data.tournaments;
       state.activeId = data.activeId || null;
+      state.activePool = data.activePool || 'auth';
       return;
     }
     // --- 旧形式からの移行 ---
@@ -656,7 +800,9 @@ const AtsuCup = (function(){
   }
 
   /* ---------- 大会のライフサイクル ---------- */
-  function newTournamentId(){ return 't'+Date.now()+Math.random().toString(36).slice(2,8); }
+  // プレフィックスは診断用(g=ゲスト/t=認証済み)。由来の正はpoolKindOfTournamentId()で、
+  // このプレフィックスに依存しない(サーバー側=data/tournaments.json由来のidはこの形式を保証しないため)。
+  function newTournamentId(){ return (currentPoolKind()==='guest'?'g':'t')+Date.now()+Math.random().toString(36).slice(2,8); }
 
   // アクティブな大会を終了(status='completed')にする。複数同時進行なので他の大会には影響しない。
   function endCurrentTournament(){
@@ -761,14 +907,9 @@ const AtsuCup = (function(){
     });
     return list;
   }
-  // 全大会(進行中・終了済み)を新しい順に選択肢にする
-  function videoTournamentList(){
-    return state.tournaments.slice().reverse().map(t=>({ key:t.id, title:t.title, matches:t.matches||[] }));
-  }
-
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 00:10";
+  const BUILD_DATE = "2026-07-27 01:30";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -823,7 +964,8 @@ const AtsuCup = (function(){
     propagateWinnerDownstream,
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
     setActive, activeT,
+    isGuestMode, pool, authPool, guestPool, poolKindOfTournamentId, guestPoolHasData,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
-    ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable, videoTournamentList
+    ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable
   };
 })();

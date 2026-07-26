@@ -37,10 +37,10 @@ const WalkinModal = (function(){
     opts = opts || {};
     ensureStyle();
     close();
-    const state = AtsuCup.state;
+    const P = AtsuCup.pool();
     const exclude = new Set(opts.excludeNames || []);
-    const archived = state.archivedUsers || {};
-    const candidates = (state.roster || []).filter(n => !archived[n] && !exclude.has(n));
+    const archived = P.archivedUsers || {};
+    const candidates = (P.roster || []).filter(n => !archived[n] && !exclude.has(n));
 
     const escapeHtml = AtsuCup.escapeHtml;
     overlayEl = document.createElement('div');
