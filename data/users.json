@@ -67,7 +67,7 @@
     "id": "u0009",
     "name": "A",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
     "note": ""
   },
@@ -75,7 +75,7 @@
     "id": "u0010",
     "name": "B",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
     "note": ""
   },
@@ -83,7 +83,7 @@
     "id": "u0011",
     "name": "C",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
     "note": ""
   },
@@ -91,7 +91,7 @@
     "id": "u0012",
     "name": "D",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
     "note": ""
   },
@@ -99,7 +99,7 @@
     "id": "u0013",
     "name": "E",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
     "note": ""
   },
@@ -107,7 +107,7 @@
     "id": "u0014",
     "name": "F",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
     "note": ""
   },
@@ -115,8 +115,32 @@
     "id": "u0015",
     "name": "G",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-25T13:30:06.669Z",
+    "note": ""
+  },
+  {
+    "id": "u0016",
+    "name": "おりょう",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-25T16:04:10.239Z",
+    "note": ""
+  },
+  {
+    "id": "u0017",
+    "name": "かど",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-25T16:04:10.239Z",
+    "note": ""
+  },
+  {
+    "id": "u0018",
+    "name": "きゅうこ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-25T16:04:10.239Z",
     "note": ""
   }
 ]
