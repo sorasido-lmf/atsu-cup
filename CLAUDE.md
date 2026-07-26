@@ -48,21 +48,21 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 - `matches.json` が一次データ、`entries.json` は大会単位の要約（計算軽量化のためのキャッシュ）
 - ユーザーの削除は物理削除ではなく **アーカイブ方式**（`archived: true`）。過去の対戦記録・戦績を保持するため
 
-### アプリとの接続（2026-07-26 実装）
+### アプリとの接続（2026-07-26 実装、同日中にGAS方式へ移行）
 
 `data/*.json` はアプリが実際に読み書きする本番データである。
 
-**読み込み（トークン不要）**
+**読み込み（認証不要）**
 - `atsucup-core.js` の `loadFromData()` が **同一オリジンの静的ファイル**（`fetch('data/users.json')` 等）を読む
-- GitHub API を読み込みに使わない理由: **未認証APIは60リクエスト/時**の制限があり、1ページで4ファイル取得するとすぐ枯渇するため
+- GAS/GitHub APIを読み込みに使わない理由: GASは実行クォータがあり毎回コールドスタートで遅い。GitHub APIも未認証だと60リクエスト/時の制限がある。静的ファイルなら両方とも回避できる
 - 各ページは `render()`（localStorageで即描画）→ `AtsuCup.ready.then(()=> render())`（data/取り込み後に描き直し）の2段構え。**全ページを async 化しない**ための設計
 - 取り込みに失敗しても reject せず `{ok:false}` で解決する。オフラインでも localStorage の内容で動き続ける
 
-**書き込み（トークン必須・GitHub Contents API）**
+**書き込み（Googleログイン必須・GAS経由）**
 | 対象 | トリガー | 実装 |
 |---|---|---|
-| `users.json` | ユーザー管理/大会エントリーでの登録・撮影可否変更・アーカイブ時に**即時** | `AtsuCup.saveUsersToData()` |
-| `tournaments/entries/matches.json` | 大会詳細の「💾 GitHubに保存」ボタンで**明示的に**のみ | `AtsuCup.saveTournamentToData(id)` |
+| `users.json` | ユーザー管理/大会エントリーでの登録・撮影可否変更・アーカイブ時に**即時** | `AtsuCup.saveUsersToData()` → `GasDB.saveUsers()` |
+| `tournaments/entries/matches.json` | 大会詳細の「💾 GitHubに保存」ボタンで**明示的に**のみ | `AtsuCup.saveTournamentToData(id)` → `GasDB.saveTournament()` |
 
 大会を自動保存しないのは、対戦表が勝敗入力のたびに変化しコミットが乱発・競合するため。
 
@@ -73,27 +73,76 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 
 | 項目 | 状態 |
 |---|---|
-| `data/users.json` | 実データあり（8人 + テスト由来のA〜G） |
-| `data/tournaments.json` / `entries.json` / `matches.json` | 空の `[]`。アプリの「💾 GitHubに保存」で最初の大会が入る |
+| `data/users.json` | 実データあり |
+| `data/tournaments.json` / `entries.json` / `matches.json` | 実データあり(進行中の大会含む) |
+| スプレッドシート | 正本として稼働中。GASが読み書きしGitHubへ書き出す |
 
 なお `data/SCHEMA.md` は**データではなく設計ドキュメント**のため skip-worktree を外して通常追跡している。
 実データの4つのJSONのみ skip-worktree 対象。
 
 ---
 
-## GitHub連携について
+## データ管理バックエンド: スプレッドシート + GAS（2026-07-26 導入）
 
-**書き込み専用で有効**（2026-07-25に一度全削除→2026-07-26にユーザーの決定で再導入）。
+### 経緯
 
-- `github-db.js`: Contents API ラッパー。`getFile` は読み取り（トークン任意）、`putFile` は書き込み（トークン必須）
-- `settings.html`: PAT の登録・接続確認・削除。トークンは `localStorage` の `atsucup:githubPat` に平文保存（静的サイト構成に伴う既知のトレードオフ）
-- 読み込みは API ではなく静的ファイル取得を使う（レート制限のため。前節参照）
+当初はブラウザから直接GitHub Contents APIをPATで叩く方式だったが、以下の理由でスプレッドシート＋GASへ移行した。
+
+1. **オンボーディングの重さ** — スタッフ全員にGitHubアカウントとPAT発行を要求するのは非現実的
+2. **権限の粒度が粗い** — PATはリポジトリ全体への書き込み権限で、各端末に平文で置かれる
+
+### アーキテクチャ
+
+```
+[ブラウザ]
+  ├ 読み込み: GitHub Pagesの静的 data/*.json(認証不要・即時)
+  └ 書き込み: Googleログイン → IDトークン → GAS doPost
+       GAS側: IDトークン検証(aud/exp/email_verified) → adminsシート照合 → シート更新 → GitHubへpush
+```
+
+**シートが正本、GitHubはその書き出し先という一方向。** ローカル→GitHubの自動反映は無い。
+
+### ⚠️ 唯一の防御線
+
+GASのWebアプリは「実行するユーザー: 自分」でデプロイしているため、**呼び出した人が誰であろうとオーナー権限でシートを触れる**。スプレッドシートの共有設定は一切効かない。
+
+防御しているのは `gas/Code.gs` の **`verifyIdToken_()`**（Googleの署名付きIDトークンを検証し`aud`まで確認）と **`assertAdmin_()`**（`admins`シートとの照合）の2つだけ。この2つを外すと、GAS URLを知っている全員が書き込める状態になる。
+
+**実際に攻撃を模した検証を実施済み**（2026-07-26）: トークン無し・でたらめな文字列・`aud`を正しく詐称した署名無効JWT、いずれも `FORBIDDEN` で拒否されることを確認済み。
+
+### 主要ファイル
+
+| ファイル | 役割 |
+|---|---|
+| `gas/Code.gs` | GAS本体。シート↔JSON変換・`doGet`(検証用)・`doPost`(唯一の書き込み口) |
+| `gas/README.md` | セットアップ手順・関数リファレンス・**GitHub→シート取り込みの手順(重要)** |
+| `google-auth.js` | Google Identity Servicesのラッパー。トークン取得のみ、**検証は必ずGAS側** |
+| `gas-db.js` | GAS呼び出し。`text/plain`でCORS preflightを回避。GASは常に200を返すため本文の`ok`で成否判定 |
+| `gas-config.js` | `GAS_URL` / `OAUTH_CLIENT_ID`。公開前提の値でリポジトリにコミットしてよい |
+| `gas-test.html` | Phase2検証用ページ。未認証・改ざんトークンでの拒否を実際に試せる |
+
+**GitHub PATはGASのScript Properties(サーバ側)にのみ存在し、クライアントからは一切到達できない。**
+
+### 🔴 データの向きと、必ず踏む手順（重要）
+
+「シートが正本」で動くため、**GitHub側にだけ存在するデータがある状態で書き込むと、シートの内容(空 or 古い)で上書きされて消える。**
+
+以下のタイミングでは、書き込み前に必ず `gas/Code.gs` の **`importFromGitHub()`** を実行すること（`compareWithGitHub()` で事前に差分確認できる）。
+
+- スプレッドシートへの移行時
+- 誰かがGitHub上で `data/*.json` を直接編集した後
+- 他の経路(旧PAT方式など)でGitHub側だけが更新された後
+
+`exportTables_()` には「シートが空なのにGitHubにデータがある場合は中断する」安全装置があるが、これは完全空のケースしか検知できないため過信しないこと。
 
 ### ID ↔ 名前の境界（重要）
 
 - **`data/*.json` は SCHEMA.md 完全準拠の ID キー**（`userId` 等）
 - **アプリ内部（`state.people` / `matches` など）は名前キーのまま**
-- 両者の変換は `atsucup-data.js`（`AtsuCupData`）が一手に引き受ける。`toAppTournaments()` / `fromAppTournament()`
+- 変換は2箇所で行われる:
+  - `atsucup-data.js`（`AtsuCupData`）: アプリ内部 ⇄ 行データの構造変換（ネスト⇄フラット、round番号のずれ等）
+  - `gas/Code.gs`: 名前 → ID の解決（`ensureUsers_`）。未登録の参加者名への**ID採番はサーバ側で行う**（複数端末からの同時保存で衝突しないように）
+- 送信時は `fromAppTournament(t, identityMap)` に「名前→名前」の恒等写像を渡すことで、`userId`/`player*Id` 欄に実IDの代わりに名前を乗せて送り、GAS側で名前→実IDへ解決させている（`atsucup-core.js` の `saveTournamentToData` 参照）
 - アプリ内部を ID キーに移行する案は、全消費者（`computePlacements`・`detail-view.js` 全体など）の書き換えが必要な大工事のため**見送っている**。この境界を勝手に動かさないこと
 
 変換で失われやすい情報に注意:
@@ -137,17 +186,20 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | `tournament-entry.html` | 大会ごとの参加者選出 |
 | `users.html` | ユーザーマスタ管理（新規登録・撮影可否・アーカイブ/復元） |
 | `hall.html` / `record.html` / `record-detail.html` / `results.html` / `video.html` | 戦績・優勝者・動画 |
-| `settings.html` | GitHub PAT の設定 |
+| `settings.html` | Googleログイン・接続確認 |
 | `atsucup-core.js` | 共通のstate管理・データロジック・`data/`の読み書き（全ページ共有） |
-| `atsucup-data.js` | `data/*.json`(IDキー) ↔ アプリ内部(名前キー) の変換層 |
-| `github-db.js` | GitHub Contents API ラッパー |
+| `atsucup-data.js` | `data/*.json`(IDキー) ↔ アプリ内部(名前キー) の構造変換層 |
+| `google-auth.js` / `gas-db.js` / `gas-config.js` | GAS連携（Googleログイン・API呼び出し・設定値） |
+| `gas/Code.gs` / `gas/README.md` | GASバックエンド本体とセットアップ手順 |
 | `user-register-modal.js` / `walkin-modal.js` | 共通モーダル |
 
 ---
 
 ## 未対応・今後の課題（TODO）
 
-- **管理者権限のみの表示制御が未実装**。`users.html` のアーカイブ/復元・撮影可否編集・新規登録が、アクセス制御なしに誰でも操作可能。対象範囲には「アーカイブ済みを表示」トグルも含む。**これは意図的な未対応であり、バグとして扱わないこと。** ユーザーからの明示的な依頼があった際に着手する
+- **書き込み(GitHubへの反映)には認証があるが、UI上の操作自体には制限が無い**。`users.html` のアーカイブ/復元・撮影可否編集・新規登録の**ボタン自体は誰でも押せる**（未ログインなら「この端末にのみ保存しました」という案内が出るだけで、操作は止まらない）。「アーカイブ済みを表示」トグルの閲覧制限も未実装。**これは意図的な未対応であり、バグとして扱わないこと。** ユーザーからの明示的な依頼があった際に着手する
+- GASの `role` は現状 `admin` の1種類のみ運用。`editor`（大会のみ可・ユーザーマスタ不可）等の細分化は未着手
+- スプレッドシートの手編集からアプリへの双方向同期は無い（シートは閲覧・緊急修正用。手編集後は `gas/Code.gs` の関数でGitHubへ反映が必要。`gas/README.md` 参照）
 
 ---
 

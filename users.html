@@ -53,7 +53,9 @@
 </div>
 
 <script src="tap-ripple.js"></script>
-<script src="github-db.js"></script>
+<script src="gas-config.js"></script>
+<script src="google-auth.js"></script>
+<script src="gas-db.js"></script>
 <script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
 <script src="user-register-modal.js"></script>
@@ -86,7 +88,7 @@
   // 端末側は即時に反映済み。そのうえで data/users.json(GitHub) にも書き戻す。
   // トークン未設定でもローカル操作は妨げず、案内だけ出す。
   async function syncToGitHub(){
-    if(!GitHubDB.hasToken()){ setSyncStatus('この端末にのみ保存しました(GitHubへ反映するには「設定」でトークンを登録してください)', ''); return; }
+    if(!GasDB.canWrite()){ setSyncStatus('この端末にのみ保存しました(GitHubへ反映するには「設定」でGoogleログインしてください)', ''); return; }
     setSyncStatus('GitHubへ保存中...', '');
     try{
       const n = await AtsuCup.saveUsersToData();

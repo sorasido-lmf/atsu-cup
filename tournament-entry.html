@@ -65,7 +65,9 @@
 </div>
 
 <script src="tap-ripple.js"></script>
-<script src="github-db.js"></script>
+<script src="gas-config.js"></script>
+<script src="google-auth.js"></script>
+<script src="gas-db.js"></script>
 <script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
 <script src="user-register-modal.js"></script>
@@ -189,7 +191,7 @@
         // ユーザーマスタが増えたので data/users.json(GitHub) にも書き戻す
         const box = document.getElementById('syncStatus');
         const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
-        if(!GitHubDB.hasToken()){ show('この端末にのみ登録しました(GitHubへ反映するには「設定」でトークンを登録してください)'); return; }
+        if(!GasDB.canWrite()){ show('この端末にのみ登録しました(GitHubへ反映するには「設定」でGoogleログインしてください)'); return; }
         show('GitHubへ保存中...');
         try{ const n = await AtsuCup.saveUsersToData(); show(`GitHubへ保存しました(登録者${n}人)`, '#7cffb0'); }
         catch(e){ show('GitHubへの保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a'); }

@@ -158,55 +158,37 @@ const AtsuCup = (function(){
     }
   }
 
-  // 端末のユーザーマスタ(roster/recDefaults/archived)を data/users.json へ反映する。
-  // 名前で突き合わせて既存行のidは保ち、未登録の名前だけ新規採番する。
+  // 端末のユーザーマスタ(roster/recDefaults/archived)を GAS 経由でシート/GitHubへ反映する。
+  // IDの採番はサーバ側(GAS)が行う(複数端末からの同時登録で衝突しないように)。
   async function saveUsersToData(){
-    if(typeof GitHubDB === 'undefined') throw new Error('GitHub連携モジュールが読み込まれていません。');
-    if(!GitHubDB.hasToken()) throw new Error('GitHubトークンが未設定です。「設定」画面から登録してください。');
-    const f = await GitHubDB.getFile(DATA_PATHS.users);
-    const rows = (f.data || []).slice();
-    const byName = new Map(rows.map(u=>[u.name, u]));
-    const existingIds = new Set(rows.map(u=>u.id));
-    state.roster.forEach(name=>{
-      const recDefault = state.userRecDefaults[name] !== false;
-      const archived = !!state.archivedUsers[name];
-      const ex = byName.get(name);
-      if(ex){ ex.recDefault = recDefault; ex.archived = archived; }
-      else{
-        const id = GitHubDB.genId('u', existingIds); existingIds.add(id);
-        const nu = { id, name, recDefault, archived, createdAt:new Date().toISOString(), note:"" };
-        rows.push(nu); byName.set(name, nu);
-      }
-    });
-    await GitHubDB.putFile(DATA_PATHS.users, rows, `ユーザー情報を更新(${rows.length}人)`, f.sha);
-    return rows.length;
+    if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
+    if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
+    const users = state.roster.map(name => ({
+      name,
+      recDefault: state.userRecDefaults[name] !== false,
+      archived: !!state.archivedUsers[name]
+    }));
+    const r = await GasDB.saveUsers(users);
+    return r.total;
   }
 
-  // 大会1件を data/*.json の3ファイルへ保存する(未登録の参加者名はusers.jsonへ自動追加)
+  // 大会1件を GAS 経由で保存する(シート更新 → GitHubへ書き出しまでGAS側が行う)。
+  // entryRows/matchRowsの参照キーには名前をそのまま乗せて送り、名前→ID解決はGAS側で行う
+  // (未登録の参加者名にIDを採番する処理をサーバ側に一本化するため)。
   async function saveTournamentToData(tournamentId){
+    if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
+    if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
     const t = state.tournaments.find(x=>x.id===tournamentId);
     if(!t) throw new Error('保存対象の大会が見つかりません。');
-    if(!GitHubDB.hasToken()) throw new Error('GitHubトークンが未設定です。「設定」画面から登録してください。');
 
-    // 1) users.json: 未登録の参加者を採番して追加
-    const uf = await GitHubDB.getFile(DATA_PATHS.users);
     const names = (t.people||[]).map(p=>p.name);
-    const ensured = AtsuCupData.ensureUserIds(names, uf.data||[], GitHubDB.genId);
-    if(ensured.added.length){
-      await GitHubDB.putFile(DATA_PATHS.users, ensured.users, `参加者を${ensured.added.length}人追加(${t.title})`, uf.sha);
-    }
+    // 名前をそのまま「id」として使う変換(identity map)。fromAppTournamentの出力の
+    // userId/player*Id欄に実IDではなく名前が入り、GAS側でそこから実IDへ解決する。
+    const identity = {};
+    names.forEach(n=>{ identity[n] = n; });
+    const { tournamentRow, entryRows, matchRows } = AtsuCupData.fromAppTournament(t, identity);
 
-    const { tournamentRow, entryRows, matchRows } = AtsuCupData.fromAppTournament(t, ensured.idByName);
-    const upsert = async (path, rows, keyFn, label)=>{
-      const f = await GitHubDB.getFile(path);
-      const kept = (f.data||[]).filter(r=> r.tournamentId !== t.id && r.id !== t.id);
-      await GitHubDB.putFile(path, kept.concat(rows), `${label}(${t.title})`, f.sha);
-    };
-    // 2) tournaments / entries / matches を順に差し替える
-    await upsert(DATA_PATHS.tournaments, [tournamentRow], null, '大会を保存');
-    await upsert(DATA_PATHS.entries, entryRows, null, 'エントリーを保存');
-    await upsert(DATA_PATHS.matches, matchRows, null, '対戦結果を保存');
-    return { addedUsers: ensured.added.length, entries: entryRows.length, matches: matchRows.length };
+    return GasDB.saveTournament({ tournamentRow, entryRows, matchRows, participantNames: names });
   }
 
   // localStorageのデータを新形式(tournaments配列)に取り込む。旧形式(tournamentMeta+history+直下people)は移行する。

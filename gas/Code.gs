@@ -728,6 +728,18 @@ function dumpUsersJson() {
   return json;
 }
 
+/**
+ * 手作業でシートを直接編集した後に、GitHub側へ反映させるための実行用関数。
+ * (シートを手で直しても、書き込みAPIを経由しない限りGitHub側は自動更新されないため)
+ *
+ * 事故防止のガードが働くため、対象テーブルが全部空だと中断される。
+ * その場合は先に importFromGitHub() を実行して現状を取り込むこと。
+ */
+function pushSheetChangesToGitHub() {
+  exportTables_(['tournaments', 'entries', 'matches'], '手動編集をGitHubへ反映');
+  Logger.log('GitHubへの反映が完了しました。');
+}
+
 /** 往復テスト: シート→JSON→シート→JSON で内容が変わらないことを確認する */
 function selfTestRoundTrip() {
   var results = [];

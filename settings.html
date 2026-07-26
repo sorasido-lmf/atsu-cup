@@ -7,6 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .signout-confirm{
+    margin-top:10px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
+    font-size:12.5px; color:#ffb3b3; line-height:1.7;
+  }
+  .signout-confirm .row{ margin-top:8px; }
+</style>
 </head>
 <body>
 <a class="back-link" href="index.html">‹ トップへ</a>
@@ -18,76 +25,103 @@
   </header>
 
   <section class="panel">
-    <h2><span class="num">01</span> GitHub連携</h2>
+    <h2><span class="num">01</span> Googleログイン</h2>
     <p class="hint">
-      参加者データベース(users.json等)をGitHubリポジトリと同期するためのトークンを設定します。
-      このトークンは<b>この端末のブラウザ内にのみ</b>保存され、リポジトリにはコミットされません。
-      他の人と共有している端末では設定しないでください。
+      大会結果・参加者情報の保存にはGoogleログインが必要です。ログインしていなくても、
+      これまでの記録の閲覧はできます。保存できるのは、あらかじめ許可されたアカウントのみです。
     </p>
-    <div class="field" style="margin-bottom:10px;">
-      <label>Personal Access Token</label>
-      <input type="password" id="patInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-    </div>
-    <p class="hint" style="margin-top:0;">
-      GitHubの Settings → Developer settings → Personal access tokens で発行できます。
-      対象リポジトリ(<code id="repoName"></code>)への書き込み権限(Contents: Read and write。classic tokenの場合は repo スコープ)が必要です。
-    </p>
-    <div class="row">
-      <button class="btn btn-primary" id="saveBtn">保存する</button>
-      <button class="btn btn-ghost" id="testBtn">接続確認</button>
-      <button class="btn btn-ghost" id="clearBtn">削除する</button>
+    <div id="authState" class="empty-state" style="padding:10px 12px; margin-bottom:12px;"></div>
+    <div id="signinArea"></div>
+    <div id="signedInArea" style="display:none;">
+      <div class="row">
+        <button class="btn btn-ghost" id="testBtn">接続確認</button>
+        <button class="btn btn-ghost" id="signOutBtn">ログアウト</button>
+      </div>
+      <div id="signoutConfirm"></div>
     </div>
     <div id="statusBox" style="margin-top:12px;"></div>
   </section>
 
-  <footer class="note">トークンはこの端末のブラウザ内(localStorage)にのみ保存されます。</footer>
+  <footer class="note">ログイン状態はこの端末のブラウザ内(sessionStorage)にのみ保存されます。</footer>
 </div>
 
-<script src="github-db.js"></script>
+<script src="gas-config.js"></script>
+<script src="google-auth.js"></script>
+<script src="gas-db.js"></script>
 <script>
 (function(){
   "use strict";
-  const patInput = document.getElementById("patInput");
+  const authState = document.getElementById("authState");
+  const signinArea = document.getElementById("signinArea");
+  const signedInArea = document.getElementById("signedInArea");
   const statusBox = document.getElementById("statusBox");
-  document.getElementById("repoName").textContent = `${GitHubDB.OWNER}/${GitHubDB.REPO}`;
+  const signoutConfirm = document.getElementById("signoutConfirm");
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function setStatus(msg, type){
-    statusBox.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${msg}</div>`;
+    statusBox.innerHTML = msg
+      ? `<div class="empty-state" style="padding:10px 12px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${msg}</div>`
+      : '';
   }
 
-  if(GitHubDB.hasToken()){
-    patInput.value = GitHubDB.getToken();
-    setStatus("トークンが設定されています。", "ok");
-  }else{
-    setStatus("トークンが未設定です。GitHub連携機能(参加者DBの読み書き)は使えません。", "");
+  function renderAuth(){
+    const s = GoogleAuth.getState();
+    if(s.signedIn){
+      authState.innerHTML = `✅ ログイン中: <b>${escapeHtml(s.email)}</b>`;
+      signinArea.style.display = 'none';
+      signedInArea.style.display = 'block';
+    }else{
+      authState.textContent = '未ログインです。下のボタンからログインしてください。';
+      signinArea.style.display = 'block';
+      signedInArea.style.display = 'none';
+      signoutConfirm.innerHTML = '';
+      setStatus('');
+    }
   }
-
-  document.getElementById("saveBtn").addEventListener("click", ()=>{
-    const v = patInput.value.trim();
-    if(!v){ alert("トークンを入力してください。"); return; }
-    GitHubDB.setToken(v);
-    setStatus("保存しました。「接続確認」で正しく繋がるか確認できます。", "ok");
-  });
 
   document.getElementById("testBtn").addEventListener("click", async ()=>{
     const btn = document.getElementById("testBtn");
     btn.disabled = true; btn.textContent = "確認中...";
     try{
-      const info = await GitHubDB.testConnection();
-      setStatus(`✅ 接続成功: ${info.fullName}(${info.private?'Private':'Public'})`, "ok");
+      const r = await GasDB.ping();
+      setStatus(`✅ 接続成功: ${escapeHtml(r.email)}(${escapeHtml(r.role)})`, "ok");
     }catch(e){
-      setStatus(`❌ ${e.message||e}`, "error");
+      if(e.code === 'FORBIDDEN'){
+        setStatus(`❌ ${escapeHtml(e.message)}(このアカウントには編集権限がありません。管理者に追加を依頼してください)`, "error");
+      }else{
+        setStatus(`❌ ${escapeHtml(e.message||e)}`, "error");
+      }
     }finally{
       btn.disabled = false; btn.textContent = "接続確認";
     }
   });
 
-  document.getElementById("clearBtn").addEventListener("click", ()=>{
-    if(!confirm("この端末に保存されているトークンを削除しますか？")) return;
-    GitHubDB.clearToken();
-    patInput.value = "";
-    setStatus("トークンを削除しました。", "");
+  // ネイティブconfirm()は使わず、インラインの確認バナーでログアウトを確認する
+  document.getElementById("signOutBtn").addEventListener("click", ()=>{
+    signoutConfirm.innerHTML = `
+      <div class="signout-confirm">
+        ログアウトしますか？
+        <div class="row"><button class="btn btn-primary" id="confirmSignOutBtn">ログアウトする</button><button class="btn btn-ghost" id="cancelSignOutBtn">キャンセル</button></div>
+      </div>`;
+    document.getElementById("confirmSignOutBtn").addEventListener("click", ()=>{
+      GoogleAuth.signOut();
+      setStatus('ログアウトしました。', '');
+      renderAuth();
+    });
+    document.getElementById("cancelSignOutBtn").addEventListener("click", ()=>{ signoutConfirm.innerHTML = ''; });
   });
+
+  GoogleAuth.onStateChange(renderAuth);
+
+  if(!(typeof AtsuCupGasConfig !== 'undefined' && AtsuCupGasConfig.OAUTH_CLIENT_ID)){
+    authState.innerHTML = '⚠️ gas-config.js が未設定です。';
+  }else{
+    GoogleAuth.renderButton(signinArea).catch(e=>{
+      signinArea.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:#ff6a6a;">ログインボタンの表示に失敗しました: ${e.message}</div>`;
+    });
+  }
+  renderAuth();
 })();
 </script>
 </body>

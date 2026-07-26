@@ -528,7 +528,7 @@
     const box = document.getElementById('dataSaveStatus');
     const btn = document.getElementById('saveToDataBtn');
     const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
-    if(!GitHubDB.hasToken()){ show('GitHubトークンが未設定です。「設定」画面から登録してください。', '#ff6a6a'); return; }
+    if(!GasDB.canWrite()){ show('ログインが必要です。「設定」画面からGoogleログインしてください。', '#ff6a6a'); return; }
     btn.disabled = true; btn.textContent = '保存中...';
     show('GitHubへ保存中...(users → tournaments → entries → matches の順に更新します)');
     try{
