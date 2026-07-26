@@ -21,31 +21,48 @@ const AtsuCupData = (function(){
     return finalRound[0].winner || "";
   }
 
-  // matches行(フラット)を matches[round][index] の二次元配列に組み直す
-  function buildMatchGrid(rows, nameOf){
+  // matches行(フラット)を matches[round][index] の二次元配列に組み直す。
+  //
+  // ⚠️ 枠数は「実際にエクスポートされた行の数」からではなく、参加人数(participantCount)から
+  // nextPow2で本来あるべき形を先に組み立て、そこへ実データを重ねる(buildEmptyRound1と同じ考え方)。
+  // fromAppTournamentは「両者未定・勝者なしの完全に空の枠」を書き出さない設計のため、
+  // 行数だけから枠数を逆算すると、空欄のまま保存した枠が消えて対戦表が縮んでしまう
+  // (2026-07-26に実データで確認: 参加者3人・シード枠未選択のまま保存→再読み込みで
+  // シード枠が消滅し、決勝しか無いかのような表示になっていた)。
+  function buildMatchGrid(rows, nameOf, participantCount){
     const normal = rows.filter(r=> (r.stage||'normal') === 'normal');
-    if(!normal.length) return [];
-    const maxRound = Math.max(...normal.map(r=> r.round||1));
+
+    const size = AtsuCup.nextPow2(participantCount||0);
+    if(size < 2) return [];
+    const totalRounds = Math.round(Math.log2(size));
     const grid = [];
-    for(let round=1; round<=maxRound; round++){
-      const inRound = normal.filter(r=> (r.round||1) === round);
-      if(!inRound.length){ grid.push([]); continue; }
-      const size = Math.max(...inRound.map(r=> r.matchIndex||0)) + 1;
+    for(let r=0;r<totalRounds;r++){
+      const matchCount = size / Math.pow(2, r+1);
       const cards = [];
-      for(let i=0;i<size;i++) cards.push(BLANK_CARD());
-      inRound.forEach(r=>{
-        const a = nameOf(r.player1Id), b = nameOf(r.player2Id), winner = nameOf(r.winnerId);
-        const loser = deriveLoser(a, b, winner);
-        const video = r.videoUrl || "";
-        // キーの並びはアプリ側の生成順(buildRound1 / advanceRound)に合わせる。
-        // 2回戦以降は「前ラウンドのどのカードの勝者か」の対応関係も復元する(撮影不可回避の入れ替えを保持)
-        const hasSrc = round >= 2 && r.player1SrcIndex !== undefined && r.player1SrcIndex !== null;
-        cards[r.matchIndex||0] = hasSrc
-          ? { a, b, aSrc: r.player1SrcIndex, bSrc: r.player2SrcIndex, winner, loser, video }
-          : { a, b, winner, loser, video, bye: !!r.isBye };
-      });
+      for(let i=0;i<matchCount;i++) cards.push(BLANK_CARD());
       grid.push(cards);
     }
+    // 1回戦のシード枠は常に末尾(buildEmptyRound1と同じ規則)。実データが無い枠の既定値として置く。
+    const byeCount = size - (participantCount||0);
+    for(let i=0;i<byeCount;i++){
+      const idx = grid[0].length - 1 - i;
+      if(grid[0][idx]) grid[0][idx].bye = true;
+    }
+
+    // 実データを上から重ねる
+    normal.forEach(r=>{
+      const rIdx = (r.round||1) - 1, mIdx = r.matchIndex||0;
+      if(!grid[rIdx] || !grid[rIdx][mIdx]) return; // 想定外の範囲は無視(壊れたデータ対策)
+      const a = nameOf(r.player1Id), b = nameOf(r.player2Id), winner = nameOf(r.winnerId);
+      const loser = deriveLoser(a, b, winner);
+      const video = r.videoUrl || "";
+      // キーの並びはアプリ側の生成順(buildRound1 / advanceRound)に合わせる。
+      // 2回戦以降は「前ラウンドのどのカードの勝者か」の対応関係も復元する(撮影不可回避の入れ替えを保持)
+      const hasSrc = rIdx >= 1 && r.player1SrcIndex !== undefined && r.player1SrcIndex !== null;
+      grid[rIdx][mIdx] = hasSrc
+        ? { a, b, aSrc: r.player1SrcIndex, bSrc: r.player2SrcIndex, winner, loser, video }
+        : { a, b, winner, loser, video, bye: !!r.isBye };
+    });
     return grid;
   }
 
@@ -69,7 +86,7 @@ const AtsuCupData = (function(){
     return tournaments.map(t=>{
       const myEntries = entries.filter(e=> e.tournamentId === t.id);
       const myMatches = matches.filter(m=> m.tournamentId === t.id);
-      const grid = buildMatchGrid(myMatches, nameOf);
+      const grid = buildMatchGrid(myMatches, nameOf, myEntries.length);
       return {
         id: t.id,
         title: t.title || "",

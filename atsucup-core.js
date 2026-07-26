@@ -108,13 +108,19 @@ const AtsuCup = (function(){
   /* ---------- data/*.json(GitHub側=正) の取り込み ---------- */
   const DATA_PATHS = { users:'data/users.json', tournaments:'data/tournaments.json', entries:'data/entries.json', matches:'data/matches.json' };
 
-  // リモートの大会をローカルへ取り込む。同じidはリモートで上書きし、リモートに無いローカル大会は保持する。
-  // ★オブジェクトごと差し替えず中身をassignすること(video.html等が t.matches のライブ参照に書き込むため)
+  // リモートの大会をローカルへ取り込む。ローカルに既に同じidがあれば触らず、無いものだけ追加する。
+  //
+  // ⚠️ 以前は同じidをリモートで無条件に上書きしていたが、これだと「保存ボタンを押すまでの
+  // 進行状況」がページを開くたびに直前の保存内容へ引き戻されてしまう(2026-07-26に実際の
+  // 不具合として発覚: 大会エントリーで参加者を変更しても大会詳細に戻ると消えている、
+  // リセットしても再読み込みで元に戻る、等)。ローカル優先に変更したことで、他端末での
+  // 保存内容は「ローカルにまだ無い大会」としてしか自動反映されなくなる
+  // (＝同じ大会を他端末の最新保存内容で更新したい場合は、ローカル側の該当大会を
+  // 一旦削除するなど手動の取り込み操作が必要になる)。
   function mergeRemoteTournaments(remoteList){
     (remoteList||[]).forEach(rt=>{
       const local = state.tournaments.find(t=>t.id===rt.id);
-      if(local){ Object.assign(local, rt); }
-      else { state.tournaments.push(rt); }
+      if(!local){ state.tournaments.push(rt); }
     });
   }
 

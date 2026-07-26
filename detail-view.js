@@ -139,7 +139,7 @@
         <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div></div>` : '';
     content.innerHTML = `
       <div class="row" style="margin-top:0;">
-        <button class="btn btn-gold" id="saveToDataBtn">💾 GitHubに保存</button>
+        <button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>
         <button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
       </div>
       <div id="dataSaveStatus"></div>
@@ -511,7 +511,7 @@
       <div id="advanceArea"></div>
       <div class="row" style="margin-top:12px;">
         <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
-        <button class="btn btn-gold" id="saveToDataBtn">💾 GitHubに保存</button>
+        <button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>
       </div>
       <div id="dataSaveStatus"></div>
       <div id="noticeArea"></div>
@@ -530,14 +530,14 @@
     const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
     if(!GasDB.canWrite()){ show('ログインが必要です。「設定」画面からGoogleログインしてください。', '#ff6a6a'); return; }
     btn.disabled = true; btn.textContent = '保存中...';
-    show('GitHubへ保存中...(users → tournaments → entries → matches の順に更新します)');
+    show('保存中...(参加者・大会・対戦結果をスプレッドシートへ反映します)');
     try{
       const r = await AtsuCup.saveTournamentToData(tid || (state.tournamentMeta && state.tournamentMeta.id));
       show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})`, '#7cffb0');
     }catch(e){
       show('保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a');
     }finally{
-      btn.disabled = false; btn.textContent = '💾 GitHubに保存';
+      btn.disabled = false; btn.textContent = '💾 進行状況を保存';
     }
   }
 
