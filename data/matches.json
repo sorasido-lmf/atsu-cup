@@ -96,7 +96,7 @@
     "stage": "normal",
     "matchIndex": 0,
     "player1Id": "u0001",
-    "player2Id": null,
+    "player2Id": "u0004",
     "winnerId": null,
     "isBye": false,
     "player1SrcIndex": null,
