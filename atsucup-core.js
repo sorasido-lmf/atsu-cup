@@ -12,6 +12,9 @@ const AtsuCup = (function(){
     userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値
     archivedUsers: {}, // {name: boolean} アーカイブ済みユーザー
     tournaments: [],  // [{id,title,details,posterUrl,createdAt,status,people,order,remaining,matches,winnerName,thirdPlaceMatch}]
+    // {tournamentId: JSON文字列} 「前回data/*.jsonから取り込んだ時点のその大会の内容」のスナップショット。
+    // mergeRemoteTournamentsが「この端末に未同期のローカル編集が無いか」を判定するための基準値として使う
+    remoteSnapshots: {},
     // ---- ゲストプール: 未ログイン時の練習用。この端末だけ。サーバーへは絶対に出さない ----
     guestRoster: [],
     guestUserRecDefaults: {},
@@ -180,15 +183,27 @@ const AtsuCup = (function(){
   /* ---------- data/*.json(GitHub側=正) の取り込み ---------- */
   const DATA_PATHS = { users:'data/users.json', tournaments:'data/tournaments.json', entries:'data/entries.json', matches:'data/matches.json' };
 
-  // リモートの大会をローカルへ取り込む。ローカルに既に同じidがあれば触らず、無いものだけ追加する。
+  // リモートの大会をローカルへ取り込む。
   //
   // ⚠️ 以前は同じidをリモートで無条件に上書きしていたが、これだと「保存ボタンを押すまでの
   // 進行状況」がページを開くたびに直前の保存内容へ引き戻されてしまう(2026-07-26に実際の
-  // 不具合として発覚: 大会エントリーで参加者を変更しても大会詳細に戻ると消えている、
-  // リセットしても再読み込みで元に戻る、等)。ローカル優先に変更したことで、他端末での
-  // 保存内容は「ローカルにまだ無い大会」としてしか自動反映されなくなる
-  // (＝同じ大会を他端末の最新保存内容で更新したい場合は、ローカル側の該当大会を
-  // 一旦削除するなど手動の取り込み操作が必要になる)。
+  // 不具合として発覚)。そこで一旦「ローカルに既に同じidがあれば一切触らない」方針にしたが、
+  // 今度は逆に「他端末で保存した内容がいつまで経っても反映されない」「スプレッドシートを
+  // 作り直しても古いキャッシュのまま」という不具合(2026-07-27夜に発覚)を生んでいた。
+  //
+  // ⚠️ 現方式(2026-07-27深夜): `state.remoteSnapshots[id]`に「前回data/*.jsonから取り込んだ
+  // 時点のその大会の内容」を保持しておき、**今のローカルの内容がそのスナップショットと
+  // 完全一致する(＝この端末でその後に未保存の編集をしていない)場合に限り**、新しく取得した
+  // リモートの内容を安全に採用する。逆にローカルが前回スナップショットと異なる(＝未保存の
+  // 編集がある)場合は、これまで通りローカルを保護して上書きしない。
+  // これにより「他端末の保存が反映されない」「大会を丸ごと作り直しても古いまま」の両方が
+  // 直る一方、「保存ボタンを押すまでの進行状況が消える」不具合は再発しない
+  // (＝この端末で何か編集した直後は、次に取り込んでも自分の未保存の編集を優先し続ける)。
+  //
+  // このidを一度も取り込んだことが無い(=`remoteSnapshots[id]`が無い)場合は、上記の判定基準が
+  // まだ無いため、従来通り「ローカルに守るべき進行状況が無い場合のみ上書きする」保守的な
+  // 判定にフォールバックする(このコード更新の直後の初回読み込みや、大会作成直後で
+  // まだ一度もリモートから取り込んでいない大会が誤って巻き込まれないようにするため)。
   //
   // ⚠️ ゲスト/認証済みプール分離(2026-07-27)の`clearGuestPool()`は、この「ローカル進行状況を
   // 黙って失わせない」原則の**唯一の、ユーザーが明示的にタップした場合だけの例外**。
@@ -201,16 +216,31 @@ const AtsuCup = (function(){
   }
   function mergeRemoteTournaments(remoteList){
     (remoteList||[]).forEach(rt=>{
+      const remoteSnap = JSON.stringify(rt);
       const i = state.tournaments.findIndex(t=>t.id===rt.id);
-      if(i < 0){ state.tournaments.push(rt); return; }
-      // ⚠️ ローカル優先方針の唯一の例外(2026-07-27追加): ローカル側に守るべき進行状況が
-      // 1つも無い(people/matchesが両方とも空)場合に限り、サーバー側に実データがあれば
-      // そちらで置き換える。大会作成直後の「メタデータのみ即時反映」で空のentries/matchesが
-      // サーバーに保存され、それを先にキャッシュした別端末が、後から他端末で保存された
-      // 本物の進行状況を永久に取り込めなくなる不具合(t1785130780308awwbz0で実際に発生)の
-      // 回復策。ローカルに1件でも進行状況があれば、この分岐には入らず従来通り一切上書きしない。
-      if(!hasProgress(state.tournaments[i]) && hasProgress(rt)){ state.tournaments[i] = rt; }
+      if(i < 0){ state.tournaments.push(rt); state.remoteSnapshots[rt.id] = remoteSnap; return; }
+      const lastKnownRemote = state.remoteSnapshots[rt.id];
+      const shouldTakeRemote = lastKnownRemote===undefined
+        ? (!hasProgress(state.tournaments[i]) && hasProgress(rt)) // 初回取り込み: 従来通りの保守的な判定
+        : (JSON.stringify(state.tournaments[i]) === lastKnownRemote); // この端末での未保存編集が無いか
+      if(shouldTakeRemote) state.tournaments[i] = rt;
+      state.remoteSnapshots[rt.id] = remoteSnap;
     });
+  }
+  // サーバー(data/tournaments.json)に存在しなくなった大会を、この端末のキャッシュからも取り除く。
+  // 「以前に一度でもリモートから取り込んだことがある(remoteSnapshotsに記録がある)」大会に限定する
+  // ことで、まだ一度もサーバーへ反映できていない(オフライン等で未同期の)作成直後の大会を
+  // 誤って消してしまわないようにする(remoteTournamentsが空=取得失敗時は何もしない安全弁も維持)。
+  function pruneTournamentsGoneFromServer(remoteTournaments){
+    if(!remoteTournaments || !remoteTournaments.length) return [];
+    const remoteIds = new Set(remoteTournaments.map(t=>t.id));
+    const removed = state.tournaments.filter(t=> !remoteIds.has(t.id) && state.remoteSnapshots[t.id]!==undefined);
+    if(removed.length){
+      const removedIdSet = new Set(removed.map(t=>t.id));
+      state.tournaments = state.tournaments.filter(t=>!removedIdSet.has(t.id));
+      removed.forEach(t=>{ delete state.remoteSnapshots[t.id]; });
+    }
+    return removed;
   }
 
   // users.jsonの内容を端末のマスタ(roster/recDefaults/archived)へ反映する
@@ -244,7 +274,12 @@ const AtsuCup = (function(){
         fetchJson(DATA_PATHS.matches)
       ]);
       mergeRemoteUsers(users);
-      mergeRemoteTournaments(AtsuCupData.toAppTournaments({ users, tournaments, entries, matches }));
+      const appTournaments = AtsuCupData.toAppTournaments({ users, tournaments, entries, matches });
+      mergeRemoteTournaments(appTournaments);
+      // 以前にリモートから取り込んだことがある大会が、サーバー側でid自体無くなっていれば
+      // この端末のキャッシュからも取り除く(スプレッドシートの作り直し等でidが変わった場合の回復)。
+      // 未同期の新規作成大会(remoteSnapshots未記録)は対象外なので安全
+      pruneTournamentsGoneFromServer(appTournaments);
       // ⚠️ ローカル優先マージは「未保存の進行状況を勝手に上書きしない」ためのものだが、
       // アーカイブ(削除)はこれとは別軸: サーバー側でarchived=trueになった大会は、
       // 既にこの端末にキャッシュ済みかどうかに関わらず必ず消す(でないと、他端末で削除した
@@ -281,7 +316,10 @@ const AtsuCup = (function(){
     if(remoteTournaments.length){
       const remoteIds = new Set(remoteTournaments.map(t=>t.id));
       removedTournaments = state.tournaments.filter(t=>!remoteIds.has(t.id));
-      if(removedTournaments.length) state.tournaments = state.tournaments.filter(t=>remoteIds.has(t.id));
+      if(removedTournaments.length){
+        state.tournaments = state.tournaments.filter(t=>remoteIds.has(t.id));
+        removedTournaments.forEach(t=>{ delete state.remoteSnapshots[t.id]; });
+      }
     }
 
     // --- ユーザー(2026-07-27追加、大会と同じ考え方) ---
@@ -473,6 +511,7 @@ const AtsuCup = (function(){
     if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
     const r = await GasDB.archiveTournament(tournamentId);
     state.tournaments = state.tournaments.filter(t=>t.id!==tournamentId);
+    delete state.remoteSnapshots[tournamentId];
     persist();
     return r;
   }
@@ -505,6 +544,7 @@ const AtsuCup = (function(){
     state.guestTournaments = data.guestTournaments || [];
     if(Array.isArray(data.tournaments)){
       state.tournaments = data.tournaments;
+      state.remoteSnapshots = data.remoteSnapshots || {};
       state.activeId = data.activeId || null;
       state.activePool = data.activePool || 'auth';
       return;
@@ -1109,7 +1149,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 11:00";
+  const BUILD_DATE = "2026-07-27 12:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1157,7 +1197,7 @@ const AtsuCup = (function(){
 
   return {
     get ready(){ if(!readyPromise) readyPromise = loadFromData(); return readyPromise; },
-    mergeRemoteTournaments, saveTournamentToData, saveTournamentMetaToData, saveUsersToData, archiveTournamentInData,
+    mergeRemoteTournaments, pruneTournamentsGoneFromServer, saveTournamentToData, saveTournamentMetaToData, saveUsersToData, archiveTournamentInData,
     dateInputValueOf, isoFromDateInputValue,
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
