@@ -65,62 +65,6 @@
   },
   {
     "id": "u0009",
-    "name": "A",
-    "recDefault": true,
-    "archived": true,
-    "createdAt": "2026-07-25T13:30:06.669Z",
-    "note": ""
-  },
-  {
-    "id": "u0010",
-    "name": "B",
-    "recDefault": true,
-    "archived": true,
-    "createdAt": "2026-07-25T13:30:06.669Z",
-    "note": ""
-  },
-  {
-    "id": "u0011",
-    "name": "C",
-    "recDefault": true,
-    "archived": true,
-    "createdAt": "2026-07-25T13:30:06.669Z",
-    "note": ""
-  },
-  {
-    "id": "u0012",
-    "name": "D",
-    "recDefault": true,
-    "archived": true,
-    "createdAt": "2026-07-25T13:30:06.669Z",
-    "note": ""
-  },
-  {
-    "id": "u0013",
-    "name": "E",
-    "recDefault": true,
-    "archived": true,
-    "createdAt": "2026-07-25T13:30:06.669Z",
-    "note": ""
-  },
-  {
-    "id": "u0014",
-    "name": "F",
-    "recDefault": true,
-    "archived": true,
-    "createdAt": "2026-07-25T13:30:06.669Z",
-    "note": ""
-  },
-  {
-    "id": "u0015",
-    "name": "G",
-    "recDefault": true,
-    "archived": true,
-    "createdAt": "2026-07-25T13:30:06.669Z",
-    "note": ""
-  },
-  {
-    "id": "u0016",
     "name": "おりょう",
     "recDefault": true,
     "archived": false,
@@ -128,7 +72,7 @@
     "note": ""
   },
   {
-    "id": "u0017",
+    "id": "u0010",
     "name": "かど",
     "recDefault": true,
     "archived": false,
@@ -136,7 +80,7 @@
     "note": ""
   },
   {
-    "id": "u0018",
+    "id": "u0011",
     "name": "きゅうこ",
     "recDefault": true,
     "archived": false,
@@ -144,7 +88,7 @@
     "note": ""
   },
   {
-    "id": "u0019",
+    "id": "u0012",
     "name": "みゃる",
     "recDefault": true,
     "archived": false,
@@ -152,7 +96,7 @@
     "note": ""
   },
   {
-    "id": "u0020",
+    "id": "u0013",
     "name": "煉獄",
     "recDefault": true,
     "archived": false,
@@ -160,7 +104,7 @@
     "note": ""
   },
   {
-    "id": "u0021",
+    "id": "u0014",
     "name": "矛盾",
     "recDefault": true,
     "archived": false,
@@ -168,7 +112,7 @@
     "note": ""
   },
   {
-    "id": "u0022",
+    "id": "u0015",
     "name": "スケ",
     "recDefault": true,
     "archived": false,
@@ -176,7 +120,7 @@
     "note": ""
   },
   {
-    "id": "u0023",
+    "id": "u0016",
     "name": "るいるい",
     "recDefault": true,
     "archived": false,
@@ -184,7 +128,7 @@
     "note": ""
   },
   {
-    "id": "u0024",
+    "id": "u0017",
     "name": "あきまる",
     "recDefault": true,
     "archived": false,
@@ -192,11 +136,75 @@
     "note": ""
   },
   {
-    "id": "u0025",
+    "id": "u0018",
     "name": "レオナ",
     "recDefault": true,
     "archived": false,
     "createdAt": "2026-07-27T00:45:30.840Z",
+    "note": ""
+  },
+  {
+    "id": "u0019",
+    "name": "A",
+    "recDefault": true,
+    "archived": true,
+    "createdAt": "2026-07-27T06:04:16.152Z",
+    "note": ""
+  },
+  {
+    "id": "u0020",
+    "name": "B",
+    "recDefault": true,
+    "archived": true,
+    "createdAt": "2026-07-27T06:04:16.154Z",
+    "note": ""
+  },
+  {
+    "id": "u0021",
+    "name": "C",
+    "recDefault": true,
+    "archived": true,
+    "createdAt": "2026-07-27T06:04:16.154Z",
+    "note": ""
+  },
+  {
+    "id": "u0022",
+    "name": "D",
+    "recDefault": true,
+    "archived": true,
+    "createdAt": "2026-07-27T06:04:16.154Z",
+    "note": ""
+  },
+  {
+    "id": "u0023",
+    "name": "E",
+    "recDefault": true,
+    "archived": true,
+    "createdAt": "2026-07-27T06:04:16.154Z",
+    "note": ""
+  },
+  {
+    "id": "u0024",
+    "name": "F",
+    "recDefault": true,
+    "archived": true,
+    "createdAt": "2026-07-27T06:04:16.154Z",
+    "note": ""
+  },
+  {
+    "id": "u0025",
+    "name": "G",
+    "recDefault": true,
+    "archived": true,
+    "createdAt": "2026-07-27T06:04:16.154Z",
+    "note": ""
+  },
+  {
+    "id": "u0026",
+    "name": "ダミー",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T06:04:16.154Z",
     "note": ""
   }
 ]
