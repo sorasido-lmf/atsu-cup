@@ -42,5 +42,16 @@
     "archived": false,
     "isOfficial": true,
     "isRestricted": true
+  },
+  {
+    "id": "t1785113032480gun5lh",
+    "title": "第34回あつ杯　～メタルナー/ワーム/ナーガ部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "",
+    "status": "",
+    "archived": true,
+    "isOfficial": false,
+    "isRestricted": false
   }
 ]
