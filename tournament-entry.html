@@ -66,6 +66,7 @@
 
   <div class="next-flow-box" id="nextFlowBox">
     <a class="btn btn-gold" style="width:100%;" id="toDetailLink" href="tournament-detail.html">‹ 大会詳細に戻る</a>
+    <div id="exitStatus" style="margin-top:8px;"></div>
   </div>
   </div>
 
@@ -114,6 +115,31 @@
 
   function recDefaultOf(name){ return AtsuCup.pool().userRecDefaults[name] !== false; }
 
+  // 退出時にエントリー内容をサーバーへ保存してから戻る。飛び込みエントリー・エントリー取り消し
+  // (対戦表側)は従来通り「💾 進行状況を保存」でのみ反映するため、ここではフルの
+  // saveTournamentToData(entries/matches込み)を使う。ゲスト(ローカル)大会・未ログイン・
+  // 未編集の場合は何もせずそのまま遷移する。失敗しても遷移は止めない(大会詳細側で一度だけ警告表示)
+  let exitSyncing = false;
+  async function syncAndGo(href){
+    const exitStatus = document.getElementById('exitStatus');
+    const shouldSync = entryDirty && id
+      && AtsuCup.poolKindOfTournamentId(id)==='auth'
+      && !AtsuCup.isGuestMode()
+      && typeof GasDB !== 'undefined' && GasDB.canWrite()
+      && !isBlocked();
+    if(!shouldSync || exitSyncing){ location.href = href; return; }
+    exitSyncing = true;
+    if(exitStatus) exitStatus.innerHTML = `<div class="empty-state" style="padding:9px 12px; font-size:12.5px;">💾 エントリー内容を保存しています...</div>`;
+    try{ await AtsuCup.saveTournamentToData(id); }
+    catch(e){
+      console.error('[atsucup] エントリー保存に失敗しました:', e);
+      sessionStorage.setItem('atsucup:syncError', (e && e.message) || String(e));
+    }
+    finally{ location.href = href; }
+  }
+  if(toDetailLink) toDetailLink.addEventListener('click', (ev)=>{ ev.preventDefault(); syncAndGo(toDetailLink.href); });
+  if(backLink) backLink.addEventListener('click', (ev)=>{ ev.preventDefault(); syncAndGo(backLink.href); });
+
   if(new URLSearchParams(location.search).get('flow') === 'new'){
     document.getElementById('flowBanner').innerHTML = `<div class="flow-banner">✅ 大会を作成しました。続けてこの大会に参加する人を選んでください。選び終わったら下の「次へ」から組み合わせを決められます。</div>`;
   }
@@ -132,18 +158,23 @@
   // 無条件でresetDownstream()し続けると壊れてしまうため)。途中参加は対戦表の「➕途中参加」に一本化する
   function locked(){ return !AtsuCup.bracketNotStarted(); }
 
+  // このタブでエントリー内容(参加者・撮影可否)に変更があったか。退出時にサーバー保存するか
+  // どうかの判定に使う(無編集での訪問のたびに毎回API呼び出し・GitHubコミットを増やさないため)
+  let entryDirty = false;
+
   function addToTournament(name){
     if(locked()) return;
     if(state.people.some(p=>p.name===name)) return;
     state.people.push({ name, rec: recDefaultOf(name) });
     AtsuCup.resetDownstream();
+    entryDirty = true;
     renderAll();
   }
 
   function toggleSelect(name){
     if(locked()) return;
     const idx = state.people.findIndex(p=>p.name===name);
-    if(idx>=0){ state.people.splice(idx,1); AtsuCup.resetDownstream(); renderAll(); }
+    if(idx>=0){ state.people.splice(idx,1); AtsuCup.resetDownstream(); entryDirty = true; renderAll(); }
     else{ addToTournament(name); }
   }
 
@@ -151,7 +182,13 @@
     if(isBlocked()){
       entryPanels.style.display = 'none';
       blockedBox.style.display = 'block';
-      blockedBox.innerHTML = `<div class="empty-state"><span class="big">🚫</span>この大会のエントリーは編集できません。<br><a class="btn btn-ghost" href="${detailHref}" style="margin-top:12px;">大会詳細へ戻る</a></div>`;
+      // ログイン中に一度でもトークンを持ったが期限切れになった場合は、単なる未ログインと
+      // 区別して再ログインを促す(detail-view.jsのrender()と同様、2026-07-27追加)
+      const expired = typeof GoogleAuth !== 'undefined' && GoogleAuth.sessionExpired();
+      blockedBox.innerHTML = expired
+        ? `<div class="empty-state"><span class="big">⚠️</span>ログインの有効期限が切れました。編集するには再度ログインしてください。<br><button class="btn btn-primary" id="sessionRelBtn" style="margin-top:12px;">再ログイン</button></div>`
+        : `<div class="empty-state"><span class="big">🚫</span>この大会のエントリーは編集できません。<br><a class="btn btn-ghost" href="${detailHref}" style="margin-top:12px;">大会詳細へ戻る</a></div>`;
+      if(expired) document.getElementById('sessionRelBtn').addEventListener('click', ()=>{ GoogleAuth.signIn().then(renderAll).catch(()=>{}); });
       return;
     }
     entryPanels.style.display = '';
@@ -195,7 +232,7 @@
     if(isLocked){
       availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">対戦開始後は候補一覧からの追加はできません。</div>`;
     }else if(!activeRoster.length){
-      availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">${AtsuCup.isGuestMode() ? 'まだ練習用の登録者がいません。「新規ユーザー登録」から追加してください。' : 'まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。'}</div>`;
+      availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">${AtsuCup.isGuestMode() ? 'まだこの端末に登録者がいません。「新規ユーザー登録」から追加してください。' : 'まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。'}</div>`;
     }else if(!unselected.length){
       availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">登録済みの人は全員選択中です。</div>`;
     }else{
@@ -221,7 +258,7 @@
       el.addEventListener('click', (ev)=>{
         ev.stopPropagation();
         const person = state.people.find(p=>p.name===el.dataset.cam);
-        if(person){ person.rec = !person.rec; AtsuCup.persist(); renderAll(); }
+        if(person){ person.rec = !person.rec; entryDirty = true; AtsuCup.persist(); renderAll(); }
       });
     });
   }

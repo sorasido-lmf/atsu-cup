@@ -139,20 +139,22 @@ const AtsuCupData = (function(){
     return n;
   }
 
-  // アプリの大会1件を、data/*.json の3テーブル分の行に分解する
-  function fromAppTournament(t, idByName){
-    const idOf = (name)=> (name && idByName[name]) ? idByName[name] : null;
-
-    // archivedは含めない(通常保存では触らない専用フィールド。GAS側のactionSaveTournament_が
-    // 既存行の値をそのまま引き継ぐ。archiveTournamentアクションのみがここを変更する)。
-    //
-    // ⚠️ Googleスプレッドシートは1セル50,000文字が上限。ポスター画像をdata URL(base64)の
-    // まま直接セルへ保存すると、大きめの写真だとこの上限を超え、tournaments行の書き込み
-    // そのものが失敗して大会情報(heldAt/status/archived等)ごと空欄化していた(2026-07-27発覚)。
-    // → シートには保存せず、data URLのままローカルに残っている(＝まだアップロード未済の)
-    //   画像だけを別送りし、GAS側でGitHubへ画像ファイルとして保存、そのURLだけをシートに
-    //   書き込む(URLなら短いので上限にかからない)。既にアップロード済み(http(s)://の
-    //   URLになっている)ものはそのまま渡すだけで再アップロードしない。
+  // 大会1件から、data/tournaments.json用の行(tournamentRow)だけを組み立てる。
+  // saveTournamentToData(entries/matches込みのフル保存)とsaveTournamentMetaToData
+  // (大会情報のみの保存)の両方から共通で使う(行の形は完全に同じにするため)。
+  //
+  // archivedは含めない(通常保存では触らない専用フィールド。GAS側のactionSaveTournament_/
+  // actionUpdateTournamentMeta_が既存行の値をそのまま引き継ぐ。archiveTournamentアクション
+  // のみがここを変更する)。
+  //
+  // ⚠️ Googleスプレッドシートは1セル50,000文字が上限。ポスター画像をdata URL(base64)の
+  // まま直接セルへ保存すると、大きめの写真だとこの上限を超え、tournaments行の書き込み
+  // そのものが失敗して大会情報(heldAt/status/archived等)ごと空欄化していた(2026-07-27発覚)。
+  // → シートには保存せず、data URLのままローカルに残っている(＝まだアップロード未済の)
+  //   画像だけを別送りし、GAS側でGitHubへ画像ファイルとして保存、そのURLだけをシートに
+  //   書き込む(URLなら短いので上限にかからない)。既にアップロード済み(http(s)://の
+  //   URLになっている)ものはそのまま渡すだけで再アップロードしない。
+  function tournamentRowOf(t){
     const isLocalDataUrl = !!(t.posterUrl && t.posterUrl.indexOf('data:') === 0);
     const tournamentRow = {
       id: t.id,
@@ -165,6 +167,14 @@ const AtsuCupData = (function(){
       isRestricted: !!t.isRestricted
     };
     const posterImageUpload = isLocalDataUrl ? t.posterUrl : null;
+    return { tournamentRow, posterImageUpload };
+  }
+
+  // アプリの大会1件を、data/*.json の3テーブル分の行に分解する
+  function fromAppTournament(t, idByName){
+    const idOf = (name)=> (name && idByName[name]) ? idByName[name] : null;
+
+    const { tournamentRow, posterImageUpload } = tournamentRowOf(t);
 
     // placementは既存の順位計算をそのまま再利用する(history形式のentryを渡す)
     const placements = AtsuCup.computePlacements({
@@ -246,5 +256,5 @@ const AtsuCupData = (function(){
     return { roster, userRecDefaults, archivedUsers };
   }
 
-  return { toAppTournaments, fromAppTournament, ensureUserIds, toAppRoster, deriveWinnerName, countWins };
+  return { toAppTournaments, fromAppTournament, tournamentRowOf, ensureUserIds, toAppRoster, deriveWinnerName, countWins };
 })();

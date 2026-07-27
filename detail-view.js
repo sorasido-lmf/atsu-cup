@@ -38,10 +38,13 @@
   function isLive(){ const t=AtsuCup.activeT(); return !!(t && t.status==='ongoing'); }
   function findHistory(){ return state.history.find(h=>h.id===id); }
   function recDefaultOf(name){ return AtsuCup.pool().userRecDefaults[name] !== false; }
-  // 1回戦のどこか(a/b)に空き枠が残っているか(=まだ全枠埋まっていない)
+  // 1回戦のどこか(a/b)に空き枠が残っているか(=まだ全枠埋まっていない)。
+  // ⚠️ シード枠(bye:true)は保持者(a)の有無を問わず対象外にする(2026-07-27変更)。
+  // 保持者なしの空シードを恒久的に許容する仕様のため、通常枠(bye:false)のa/bが
+  // 埋まっていない場合のみ「まだ埋まっていない」とみなす。
   function round1HasEmpty(){
     if(!state.matches.length) return false;
-    return state.matches[0].some(m=> m.a===null || (!m.bye && m.b===null));
+    return state.matches[0].some(m=> !m.bye && (m.a===null || m.b===null));
   }
   // ログイン中に(ログインで削除されるはずの)練習用大会をURL直指定で開こうとしていないか。
   // 逆方向(非ログイン中にDB大会を開く)はブロックせず、読み取り専用(readOnly)として閲覧を許可する
@@ -77,10 +80,26 @@
       if(decidable) renderMatchup();
       bracketSection.style.display = hasTree ? 'block' : 'none';
       if(hasTree) renderBracket();
-      // 参加者0で組み合わせも無いときは、エントリー誘導だけ出す(readOnly中は誘導も出さない)
-      if(!decidable && !hasTree && !readOnly){
+      // 参加者0で組み合わせも無いときは、何かしら表示する(readOnly中に画面が丸ごと空白に
+      // なるバグの修正、2026-07-27)。ログイン中はエントリー誘導、readOnly中は閲覧のみの
+      // 空き状態を表示する(以前はreadOnly中は何も表示されなかった)
+      if(!decidable && !hasTree){
         matchupSection.style.display = 'block';
-        renderMatchup();
+        if(readOnly){
+          matchupSection.innerHTML = `<div class="empty-state"><span class="big">🙋</span>この大会にはまだエントリーがありません。(閲覧のみ)</div>`;
+        }else{
+          renderMatchup();
+        }
+      }
+      // ログイン中に一度でもトークンを持ったが期限切れになった場合は、
+      // 単なる未ログインと区別して再ログインを促すバナーを出す(2026-07-27追加)
+      if(readOnly && typeof GoogleAuth !== 'undefined' && GoogleAuth.sessionExpired()){
+        const banner = document.createElement('div');
+        banner.className = 'confirm-banner';
+        banner.style.marginBottom = '12px';
+        banner.innerHTML = `⚠️ ログインの有効期限が切れました。編集するには再度ログインしてください。<div class="row"><button class="btn btn-primary" id="sessionRelBtn">再ログイン</button></div>`;
+        content.insertBefore(banner, content.firstChild);
+        document.getElementById('sessionRelBtn').addEventListener('click', ()=>{ GoogleAuth.signIn().then(render).catch(()=>{}); });
       }
       return;
     }
@@ -174,7 +193,7 @@
         // 従来通り「進行状況を保存」ボタンでのみ)。失敗してもこの端末には保存済みなので編集自体は継続する
         if(!isGuestTournament()){
           try{
-            const r = await AtsuCup.saveTournamentToData(meta.id);
+            const r = await AtsuCup.saveTournamentMetaToData(meta.id);
             if(r.posterUploadError) metaSyncError = 'ポスター画像のアップロードに失敗しました('+r.posterUploadError+')。それ以外(大会名・詳細・開催日等)は反映済みです。';
           }
           catch(e){ metaSyncError = (e && e.message) || String(e); }
@@ -364,6 +383,24 @@
     slotPickerEl.addEventListener('click', (ev)=>{ if(ev.target===slotPickerEl) closeSlotPicker(); });
   }
   function closeSlotPicker(){ if(slotPickerEl) slotPickerEl.style.display='none'; }
+  // シードへの変更確認(既に片側に人がいる場合)。その人を自動的に不戦勝の保持者にする
+  function showSeedConvertConfirm(m, holderName){
+    slotPickerEl.innerHTML = `
+      <div class="slotpick-sheet">
+        <h3>🎫 シード(不戦勝)にする</h3>
+        <p class="hint" style="margin-top:0;">「${escapeHtml(holderName)}」を不戦勝(シード)にして、この対戦枠を1つ減らします。よろしいですか？</p>
+        <div class="slotpick-actions">
+          <button class="btn btn-gold" id="seedConvertYes">シードにする</button>
+          <button class="btn btn-ghost" id="seedConvertNo">キャンセル</button>
+        </div>
+      </div>`;
+    document.getElementById('seedConvertYes').addEventListener('click', ()=>{
+      convertCardToSeed(m, holderName);
+      closeSlotPicker();
+      renderTree(); renderExtras();
+    });
+    document.getElementById('seedConvertNo').addEventListener('click', closeSlotPicker);
+  }
   function openSlotPicker(m, side){
     ensureSlotPickerEl();
     const match = state.matches[0][m];
@@ -372,12 +409,20 @@
     const restricted = candidatesFor(m, side);
     const isRestricted = restricted.length !== allUnplaced.length;
     const place = (name)=>{
-      if(match.bye){ match.a = name; match.winner = name; }
+      if(match.bye){
+        match.a = name; match.winner = name;
+        if(state.matches[1]) AtsuCup.propagateWinnerDownstream(0, m, name);
+      }
       else { match[side] = name; }
       AtsuCup.persist();
       closeSlotPicker();
       renderTree(); renderExtras();
     };
+    // シードへの変更: 通常枠(!match.bye)でのみ表示。片側に既に人がいればその人を保持者にする
+    // 確認を出し、両側とも空(シード統合で余った枠など)なら確認なしで即座に空シードにする
+    const otherSide = side==='a' ? 'b' : 'a';
+    const otherName = match[otherSide];
+    const canConvertToSeed = !match.bye;
     slotPickerEl.innerHTML = `
       <div class="slotpick-sheet">
         <h3>🙋 エントリー者を選ぶ</h3>
@@ -388,12 +433,19 @@
           </div>` : `<div class="empty-state" style="padding:12px 4px;">選べる人がいません。</div>`}
         <div class="slotpick-actions">
           <button class="btn btn-gold" id="slotRouletteBtn" ${restricted.length?'':'disabled'}>🎲 ルーレットで決める</button>
+          ${canConvertToSeed ? `<button class="btn btn-ghost" id="slotToSeedBtn">🎫 この枠をシード(不戦勝)にする</button>` : ''}
           <button class="btn btn-ghost" id="slotPickerCloseBtn">閉じる</button>
         </div>
       </div>`;
     slotPickerEl.style.display='flex';
     slotPickerEl.querySelectorAll('[data-pick]').forEach(btn=> btn.addEventListener('click', ()=> place(btn.dataset.pick)));
     slotPickerEl.querySelector('#slotPickerCloseBtn').addEventListener('click', closeSlotPicker);
+    if(canConvertToSeed){
+      slotPickerEl.querySelector('#slotToSeedBtn').addEventListener('click', ()=>{
+        if(otherName !== null){ showSeedConvertConfirm(m, otherName); }
+        else { convertCardToSeed(m, null); closeSlotPicker(); renderTree(); renderExtras(); }
+      });
+    }
     slotPickerEl.querySelector('#slotRouletteBtn').addEventListener('click', ()=>{
       openRouletteFor(restricted, (picked)=>{ place(picked); }, !!match.bye);
     });
@@ -624,7 +676,7 @@
     const hint = readOnly
       ? '対戦表(閲覧のみ)'
       : round1HasEmpty()
-        ? '空いている枠をタップして、対戦相手を選んでください。ドラッグ&ドロップで枠の移動・入れ替え・取り消しもできます。'
+        ? '空いている枠をタップして、対戦相手を選んでください。ドラッグ&ドロップで枠の移動・入れ替え・取り消し、シード枠同士を重ねると1回戦の対戦にできます。'
         : '⚔️で勝敗入力・シード枠の➕で途中参加・ドラッグ&ドロップで枠の移動/入れ替え';
     bracketSection.innerHTML = `
       <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
@@ -648,7 +700,7 @@
   // ゲスト(練習用)大会はサーバーに保存できないため、ボタンの代わりに案内文を出す
   function saveButtonHtml(){
     return AtsuCup.isGuestMode()
-      ? '<p class="hint" style="margin:0; color:var(--muted);">練習用の大会のため、サーバーへの保存はできません。</p>'
+      ? '<p class="hint" style="margin:0; color:var(--muted);">ローカル大会のため、サーバーへの保存はできません。</p>'
       : '<button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>';
   }
   function wireSaveButton(tid){
@@ -701,7 +753,11 @@
   function onCardDndPointerDown(ev){
     const el=ev.currentTarget;
     const m=+el.dataset.cardm;
-    ev.preventDefault();
+    // ⚠️ ここでpreventDefault()しない: この要素は「タップで選ぶ」枠のclickリスナーとも同居しており、
+    // pointerdownでpreventDefault()するとタッチ端末では以降のclickイベント一式が抑制され、
+    // タップでピッカーが開かなくなる不具合になっていた(2026-07-27発覚)。スクロール抑制は
+    // touch-action:none(CSS)で足りているため、実際にドラッグが確定した瞬間(onDndPointerMove)に
+    // 必要な分だけpreventDefault()する
     try{ el.setPointerCapture(ev.pointerId); }catch(e){}
     dndState={ mode:'card', pointerId:ev.pointerId, srcR:0, srcM:m, srcSide:null, name:null, startX:ev.clientX, startY:ev.clientY, dragging:false, el, hoverTarget:null, hoverIsUnassign:false };
     el.addEventListener('pointermove', onDndPointerMove);
@@ -724,7 +780,7 @@
     const r=+el.dataset.r, m=+el.dataset.m, side=el.dataset.side;
     const match=state.matches[r][m]; const name = side==='a'?match.a:match.b;
     if(!name) return;
-    ev.preventDefault();
+    // ⚠️ 同上の理由でpreventDefault()しない(onCardDndPointerDownのコメント参照)
     try{ el.setPointerCapture(ev.pointerId); }catch(e){}
     dndState={ pointerId:ev.pointerId, srcR:r, srcM:m, srcSide:side, name, startX:ev.clientX, startY:ev.clientY, dragging:false, el, hoverTarget:null, hoverIsUnassign:false };
     el.addEventListener('pointermove', onDndPointerMove);
@@ -744,6 +800,9 @@
     if(!dndState.dragging){
       if(Math.hypot(dx,dy) < 6) return;
       dndState.dragging = true;
+      // ドラッグが確定した瞬間だけpreventDefault()する(SVGの<g>でtouch-action:noneが
+      // 効かないブラウザがあった場合の保険。通常はCSSのtouch-action:noneでスクロール抑制済み)
+      if(ev.cancelable) ev.preventDefault();
       startDndVisuals();
     }
     dndGhostEl.style.left=ev.clientX+'px'; dndGhostEl.style.top=(ev.clientY-40)+'px';
@@ -860,6 +919,17 @@
     const src=round0[srcM], tgt=round0[tgtM];
     round0[tgtM] = { a:tgt.a, b:src.a, winner:null, loser:null, video:'', bye:false };
     round0[srcM] = { a:null, b:null, winner:null, loser:null, video:'', bye:false };
+  }
+  // 「タップで選ぶ」の通常枠を、シード(不戦勝)枠に変更する。holderNameがあれば自動的に
+  // その人を保持者(自動勝利)にする、nullなら保持者なしの空シードにする(2026-07-27追加。
+  // 保持者なしの空シードを恒久的に許容する仕様のため、round1HasEmpty()もシード枠は
+  // 保持者の有無を問わず対象外になっている)。飛び込み利用で対戦相手が見つからず枠が
+  // 空いたまま先へ進めない、というケースに対応するための機能
+  function convertCardToSeed(m, holderName){
+    const round0 = state.matches[0];
+    round0[m] = { a: holderName, b: null, winner: holderName, loser: null, video: '', bye: true };
+    if(holderName && state.matches[1]) AtsuCup.propagateWinnerDownstream(0, m, holderName);
+    AtsuCup.persist();
   }
   function commitDnd(){
     if(dndState.mode==='card'){
@@ -1015,6 +1085,10 @@
     if(forced.length){ noticeHtml+=`<div class="warn-box">⚠️ 撮影OKの人が足りず、以下は撮影不可同士の対戦になっています:<br>`+forced.map(f=>`・${AtsuCup.roundLabel(state.matches[f.r].length)}: ${escapeHtml(f.a)} vs ${escapeHtml(f.b)}`).join('<br>')+`</div>`; }
     const swapNotes=[]; state.matches.forEach((round,r)=>{ swappedMatchIndices(r).forEach(i=>{ swapNotes.push(`・${AtsuCup.roundLabel(round.length)}: ${escapeHtml(round[i].a)} vs ${escapeHtml(round[i].b)}`); }); });
     if(swapNotes.length){ noticeHtml+=`<div class="swap-note">🔀 撮影不可の人が重ならないよう、以下の組み合わせを入れ替えました:<br>${swapNotes.join('<br>')}</div>`; }
+    // 枠に入っていないエントリー者がいても進行はブロックしない仕様(2026-07-27)。
+    // バグではなく意図した状態であることが分かるよう、情報として表示するのみ
+    const unplacedCount = unplacedEntrants().length;
+    if(unplacedCount>0){ noticeHtml+=`<p class="hint" style="margin:6px 0 0;">ℹ️ 枠に入っていないエントリー者: ${unplacedCount}人</p>`; }
     document.getElementById('noticeArea').innerHTML=noticeHtml;
 
     const thirdArea=document.getElementById('thirdPlaceArea');

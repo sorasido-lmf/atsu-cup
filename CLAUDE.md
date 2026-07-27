@@ -62,8 +62,8 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | 対象 | トリガー | 実装 |
 |---|---|---|
 | `users.json` | ユーザー管理/大会エントリーでの登録・撮影可否変更・アーカイブ時に**即時** | `AtsuCup.saveUsersToData()` → `GasDB.saveUsers()` |
-| `tournaments.json`（大会情報のみ。entries/matchesは含まない） | 大会の**作成時**・大会詳細の「編集する」保存時に**即時**（2026-07-27追加。以前は参加者エントリー前の大会が他端末から見えないバグがあった） | `tournament-create.html`/`detail-view.js`の`renderEditForm()` → `AtsuCup.saveTournamentToData(id)` |
-| `tournaments/entries/matches.json`（参加者・対戦結果を含む完全な保存） | 大会詳細の「💾 GitHubに保存」ボタンで**明示的に**のみ | `AtsuCup.saveTournamentToData(id)` → `GasDB.saveTournament()` |
+| `tournaments.json`（大会情報のみ。entries/matchesは**一切触れない**） | 大会の**作成時**・大会詳細の「編集する」保存時に**即時** | `tournament-create.html`/`detail-view.js`の`renderEditForm()` → `AtsuCup.saveTournamentMetaToData(id)` → `GasDB.updateTournamentMeta()` → GASの`actionUpdateTournamentMeta_` |
+| `tournaments/entries/matches.json`（参加者・対戦結果を含む完全な保存＝既存entries/matches行を丸ごと置き換え） | 大会詳細の「💾 GitHubに保存」ボタン、および大会エントリー画面から退出する時（変更があった場合のみ）に反映 | `AtsuCup.saveTournamentToData(id)` → `GasDB.saveTournament()` → GASの`actionSaveTournament_` |
 | ポスター画像（`posters/<id>.jpg`） | 大会の作成・情報編集・「💾 GitHubに保存」のいずれかで、ローカルにdata URL（未アップロード）のポスターがある場合 | `atsucup-data.js`の`fromAppTournament()`が`posterImageUpload`として分離送信 → `gas/Code.gs`の`actionSaveTournament_()`が`pushBinaryToGitHub_()`でファイルとしてアップロードし、そのURLを`tournamentRow.posterImage`に書き込む（2026-07-27変更。以前はdata URLをスプレッドシートのセルへ直接保存しており、1セル50,000文字の上限を超えると大会行ごと空欄化する不具合があった） |
 
 ### 反映タイミングの一覧（2026-07-26 整理・重要）
@@ -75,12 +75,17 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | ユーザーの登録・撮影可否デフォルト・アーカイブ/復元 | `users.html`での各操作 | **操作の都度、即時** | `users.html`の各ハンドラ末尾で`syncToGitHub()` |
 | ユーザーの新規登録（大会エントリー画面経由） | `tournament-entry.html`の「新規ユーザー登録」 | **登録の都度、即時** | `tournament-entry.html`の`onRegistered`コールバック |
 | 大会限定の撮影可否上書き（`person.rec`） | `tournament-entry.html`の📹/🚫トグル | **反映されるのは大会保存時のみ**（`entries.json`の`recAtEntry`列）。**ここ単体でのGitHub反映は無い** | `tournament-entry.html`、`fromAppTournament`の`recAtEntry`算出 |
-| 大会の作成・タイトル/詳細/開催日/公式大会・制限杯フラグ/ポスター画像の編集 | `tournament-create.html`での作成、大会詳細の「編集する」→「更新する」 | **操作の都度、即時**（2026-07-27追加）。失敗してもローカルの保存は維持し、インライン警告のみ表示 | `tournament-create.html`、`detail-view.js`の`renderEditForm()` |
+| 大会の作成・タイトル/詳細/開催日/公式大会・制限杯フラグ/ポスター画像の編集 | `tournament-create.html`での作成、大会詳細の「編集する」→「更新する」 | **操作の都度、即時**。entries/matchesには一切触れない専用の保存経路(下記コラム参照)。失敗してもローカルの保存は維持し、インライン警告のみ表示 | `tournament-create.html`、`detail-view.js`の`renderEditForm()` → `AtsuCup.saveTournamentMetaToData()` |
 | 参加者の選出・組み合わせ・勝敗入力・ラウンド進行など、大会の進行に関する変更 | 大会詳細画面での各種操作 | **反映されない。「💾 GitHubに保存」ボタンを押した時のみ** | `detail-view.js`の`saveTournamentToGitHub()` |
+| 大会エントリー画面での参加者の選出・撮影可否変更 | `tournament-entry.html`での各種操作 | **反映されない。画面から退出(「‹ 戻る」「大会詳細に戻る」)する時に変更があれば自動保存**（2026-07-27追加。以前はエントリー画面だけでは一切サーバーへ反映されず、対戦表ページで別途保存ボタンを押す必要があった） | `tournament-entry.html`の`syncAndGo()` → `AtsuCup.saveTournamentToData()`(フル保存) |
 | スプレッドシートの手編集 | 人がシートを直接編集 | **反映されない。`gas/Code.gs`の`pushSheetChangesToGitHub()`をGASエディタから手動実行するまでGitHubへは伝わらない** | `gas/README.md` |
 | GitHub上の`data/*.json` → 開発者のローカル | 上記いずれかでGitHubが更新された後 | **反映されない。`git update-index --no-skip-worktree`→`git checkout data`→`--skip-worktree`の手動取り込みが必要** | 前節「データ管理方針」 |
 
 大会データが「保存ボタンを押すまで一切外に出ない」設計は意図的（対戦表は入力の都度変化するため、自動保存だとコミットが乱発・競合する）。ユーザーには「保存ボタンを押し忘れると反映されない」ことを案内すること。
+
+**⚠️ メタ保存とフル保存を分離した理由(2026-07-27発覚・修正、重大)**: 大会の作成/情報編集時の「即時反映」機能を最初に実装した際、実際には`AtsuCup.saveTournamentToData()`(entries/matches込みの**フル**保存)をそのまま呼んでいた。これにより、ある端末でタイトルを編集しただけで、**他端末が既に保存していた対戦結果がその端末の(空または古い)entries/matchesで上書きされて消える**という実害のあるバグが起きていた。修正として、GASに`actionUpdateTournamentMeta_`(tournamentsシートの該当行のみ読み書きし、entries/matchesシートには一切触れない)を新設し、`AtsuCup.saveTournamentMetaToData()`という別関数から呼ぶようにした。**大会情報の編集・作成時は必ず`saveTournamentMetaToData()`を使い、entries/matchesを反映したい場合(進行状況保存・エントリー画面退出時)のみ`saveTournamentToData()`(フル)を使うこと。取り違えると同じバグが再発する。**
+
+**⚠️ ローカルキャッシュが「空のまま」固まる問題への対処(2026-07-27追加)**: 上記のバグにより、既に他端末で「空のentries/matches」を持つ大会をキャッシュしてしまった端末は、`mergeRemoteTournaments()`の「ローカルに同idがあれば触らない」方針により、後から他端末で本物の進行状況が保存されても永久にそれを取り込めなかった。`mergeRemoteTournaments()`に、**ローカル側にpeople/matchesが両方とも空(＝守るべき進行状況が無い)場合に限り、リモートに実データがあればそちらで上書きする**という唯一の例外(`hasProgress()`判定)を追加し、この状態からの回復を可能にした。ローカルに1件でも進行状況があれば、この例外には該当せず従来通り一切上書きされない。
 
 ### 保存前の大会結果の所在とリスク（2026-07-26 整理）
 
@@ -131,7 +136,9 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 
 これに対応するため、`reconcileAuthPoolWithServer()`を追加し、**Googleログインした瞬間(`GoogleAuth.onStateChange`が`signedIn:true`で発火した時)にだけ**、`state.tournaments`のうち`data/tournaments.json`に存在しないidを問答無用で削除するようにした。通常のページ読み込み(`AtsuCup.ready`)ではこの処理をしない。理由: 大会作成直後などまだサーバーへ一度も保存できていない大会を、ログイン中の通常利用の裏でうっかり消してしまわないようにするため。ログインの瞬間に限定すれば、その端末で今まさに作りかけの未保存大会が巻き込まれることはまず無い(タイミング的に、ログイン直後にはまだ何も作られていない)。削除が発生した場合は非ブロッキングのトースト通知(`showAuthResyncNotice()`)で件数を知らせる(ゲストプールの確認バナーと違い「元に戻す」選択肢は無い簡易版)。
 
-**ゲストプールのクリア(`enforceGuestSeparation`/`clearGuestPool`)とは別物**であることに注意: あちらは未ログイン時に作った練習用データを消す(常に発生、非ブロッキング確認バナー付き)。こちらはDB(認証)大会のうちサーバーから消えたものだけを消す(該当が無ければ何も起きない)。両方とも同じ`GoogleAuth.onStateChange`フックから呼ばれるが、対象プールも発火条件も異なる。
+**`reconcileAuthPoolWithServer()`はユーザー(ロースター)にも同じ考え方を適用する(2026-07-27追加)**: `mergeRemoteUsers()`もロースター名を追加するだけで、`data/users.json`から行ごと削除された(archived=trueではなく物理削除された)名前は永久に`state.roster`/`state.archivedUsers`に残り続けてしまう(users.htmlの「アーカイブ済み」一覧にゴミが溜まる原因)。同じ関数内で`data/users.json`も取得し、リモートに存在しない名前を`state.roster`/`state.userRecDefaults`/`state.archivedUsers`から除去する。**安全弁として、取得結果(大会・ユーザーどちらも)が空の場合は何も削除しない**(取得失敗や空データでの誤爆を防ぐ)。過去の大会の`t.people`は名前を独立した文字列として持つだけでロースターへの生きた参照ではないため、ロースターから名前を消しても過去の大会記録には一切影響しない。
+
+**ゲストプールのクリア(`enforceGuestSeparation`/`clearGuestPool`)とは別物**であることに注意: あちらは未ログイン時に作ったローカルデータを消す(常に発生、非ブロッキング確認バナー付き)。こちらはDB(認証)大会・ユーザーのうちサーバーから消えたものだけを消す(該当が無ければ何も起きない)。両方とも同じ`GoogleAuth.onStateChange`フックから呼ばれるが、対象プールも発火条件も異なる。
 
 ### 「公式大会」「制限杯」フラグ（2026-07-27 導入）
 
@@ -140,6 +147,28 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 ### 開催日の編集（2026-07-27 導入）
 
 大会の「開催日」は、以前はアプリに編集UIが無く、大会作成時刻がそのまま`heldAt`(DB)/`createdAt`(アプリ内部)に入っていた。作成/編集フォームに日付入力を追加し、実際に指定・変更できるようにした。新しいDB列は追加していない(既存の`heldAt`列をそのまま使う)。大会一覧の並び順もこの値(新しい順)を基準にする。
+
+### シード枠(bye)の位置移動・変更まわりの仕様（2026-07-27整理）
+
+対戦表(`detail-view.js`)の1回戦シード枠(`bye:true`)は、通常のD&D(名前ボックスの入れ替え)とは別に、以下の「枠自体」を操作する機能がある(いずれも`state.matches.length===1`、つまり2回戦がまだ組まれていない間だけ有効):
+
+- **枠自体の位置移動(`swapWholeCards`)**: 未定義の「タップで選ぶ」枠・保持者未定/既定のシード枠を、ドラッグ&ドロップで盤面上の位置ごと入れ替えられる。
+- **シード同士の統合(`mergeSeedsIntoMatch`)**: シード(保持者あり)同士をドラッグで重ねると、片方に両者の本物の対戦(`bye:false`、決着待ち)を作り、もう片方は完全な空き枠(タップで選べる通常枠)になる。**これがシード同士が1回戦で当たる状況の正式な処理**。
+- **「シードに変更」(`convertCardToSeed`)**: 「タップで選ぶ」枠のピッカーに追加したボタン。既に片側に人がいれば確認の上その人を自動的に不戦勝の保持者にする、両側とも空(シード統合で余った枠など)なら確認なしで即座に**保持者なしの空シード**にする。飛び込み利用で対戦相手が見つからず枠が空いたまま先に進めない、というケースに対応する。
+
+**⚠️ `round1HasEmpty()`の仕様変更(2026-07-27)**: 従来はシード枠も保持者(a)が未定だと「まだ埋まっていない」扱いで進行(▶次のラウンドへ進む等)をブロックしていたが、**保持者なしの空シードを恒久的に許容する方針に変更**し、シード枠は保持者の有無を問わずこのチェックの対象外にした(`detail-view.js`の`round1HasEmpty()`)。通常枠(`bye:false`)のa/bが埋まっていない場合のみ引き続きブロックする。これにより「エントリーにいるが枠にはまっていない人」がいる状態も恒久的に許容される(`unplacedEntrants()`は元々そのような人数を強制的に0にする仕組みを持たない、純粋な導出リスト)。対戦表に「ℹ️ 枠に入っていないエントリー者: N人」という情報表示を出し、意図した状態であることが分かるようにしている。
+
+### 大会エントリー画面のタップ枠がタッチ端末で開かなかった不具合（2026-07-27発覚・修正）
+
+シード枠自体のD&D機能を実装した際、「タップで選ぶ」枠(`slotTapBoxSvg`)に`tree-card-drag`クラスを追加したことで、同じ要素に「タップで開くclickリスナー」と「ドラッグ開始のpointerdownリスナー」が同居してしまった。`pointerdown`で無条件に`ev.preventDefault()`していたため、Pointer Events仕様上タッチ端末では以降のclickイベント一式が抑制され、タップでピッカーが開かなくなっていた(マウスでは影響しない)。`onCardDndPointerDown`/`onDndPointerDown`からは`preventDefault()`を削除し、CSSの`touch-action:none`(既存)にスクロール抑制を任せ、実際にドラッグが確定した瞬間(`onDndPointerMove`)だけ保険として`preventDefault()`するよう修正した。
+
+### Googleログインのセッション切れ時のUX（2026-07-27追加）
+
+GoogleのIDトークンは有効期限が約1時間で固定(Google側の仕様、アプリからは延長不可)。以前は期限切れになると`isGuestMode()`が無音でtrueになり、DB大会の閲覧が突然「読み取り専用」表示に切り替わるだけでなく、大会詳細画面ではエントリー関連UIが丸ごと空白になっていた(フォールバック表示の条件が`!readOnly`を要求していたため)。
+
+- `detail-view.js`の`render()`のフォールバックを、`readOnly`でも何かしら(閲覧のみの空き状態)表示するよう修正(空白になるバグ自体の根本修正)
+- `google-auth.js`に`sessionStorage`マーカー`atsucup:hadSession`を追加(トークンを一度でも持ったら立てる、`signOut()`でのみクリア、期限切れでは消さない)。`GoogleAuth.sessionExpired()`で「未ログイン」と「ログインしていたが期限切れ」を区別し、後者の場合は`detail-view.js`/`tournament-entry.html`の読み取り専用表示に再ログインを促すバナーを追加で出す
+- ベストエフォートの自動延長として、トークンの`exp`の5分前を目安に`google.accounts.id.prompt({auto_select:true})`による無音の再認証を一度だけ試みる(`scheduleRenewal`/`attemptSilentRenewal`)。成功すれば気づかれずに継続、失敗しても何もしない(上記のバナーが保険)。**IDトークン自体の寿命は延長できないため、これはあくまで気づかれる前に再認証を試みる対症療法**であることに注意
 
 ### 現状（2026-07-26時点）
 

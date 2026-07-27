@@ -77,7 +77,7 @@
     }else{
       const g = AtsuCup.guestPool();
       const guestNote = (g.roster.length || g.tournaments.length)
-        ? `<br><span style="color:var(--muted);">練習用データ: 参加者${g.roster.length}人・大会${g.tournaments.length}件(ログインすると削除されます)</span>`
+        ? `<br><span style="color:var(--muted);">ローカルデータ: 参加者${g.roster.length}人・大会${g.tournaments.length}件(ログインすると削除されます)</span>`
         : '';
       authState.innerHTML = '未ログインです。下のボタンからログインしてください。' + guestNote;
       signinArea.style.display = 'block';

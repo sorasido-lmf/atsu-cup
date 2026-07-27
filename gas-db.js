@@ -84,10 +84,18 @@ const GasDB = (function(){
     return call('saveTournament', Object.assign({ keyedBy: 'name' }, bundle));
   }
 
+  /**
+   * 大会の基本情報(タイトル・詳細・開催日・ポスター・フラグ)だけを更新する。
+   * entries/matchesには一切触れない(参加者名を含まないため keyedBy は不要)。
+   */
+  async function updateTournamentMeta(bundle){
+    return call('updateTournamentMeta', bundle);
+  }
+
   /** 大会をアーカイブする(行削除ではなくarchivedフラグを立てるだけ)。 */
   async function archiveTournament(tournamentId){
     return call('archiveTournament', { tournamentId });
   }
 
-  return { canWrite, currentEmail, call, ping, saveUsers, saveTournament, archiveTournament };
+  return { canWrite, currentEmail, call, ping, saveUsers, saveTournament, updateTournamentMeta, archiveTournament };
 })();

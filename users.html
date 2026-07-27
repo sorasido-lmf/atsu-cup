@@ -130,7 +130,7 @@
 
   function renderAll(){
     const P = AtsuCup.pool();
-    if(panelHeading) panelHeading.textContent = AtsuCup.isGuestMode() ? '登録済みユーザー(練習用・この端末のみ)' : '登録済みユーザー';
+    if(panelHeading) panelHeading.textContent = AtsuCup.isGuestMode() ? '登録済みユーザー(ローカル・この端末のみ)' : '登録済みユーザー';
     const activeNames = P.roster.filter(n=>!isArchived(P, n));
     const archivedNames = P.roster.filter(n=>isArchived(P, n));
 

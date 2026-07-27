@@ -488,34 +488,7 @@ function actionSaveTournament_(payload) {
   var newRow = payload.tournamentRow;
   newRow.archived = oldRow ? oldRow.archived : false;
 
-  // ⚠️ スプレッドシートは1セル50,000文字が上限。ポスター画像をdata URL(base64)のまま
-  // セルへ直接保存すると、大きめの写真だとこの上限を超え、tournaments行の書き込みそのものが
-  // 失敗して大会情報(heldAt/status/archived等)ごと空欄化してしまう不具合になっていた
-  // (2026-07-27発覚)。まだアップロードされていない(data URLのままの)画像は、GitHubへ
-  // 別ファイルとしてpushし、そのURLだけをシートに書く(URLなら十分短い)。
-  var posterUploadedUrl = null, posterUploadError = null;
-  if (payload.posterImageUpload) {
-    try {
-      var m = String(payload.posterImageUpload).match(/^data:[^;]+;base64,(.+)$/);
-      if (!m) throw new Error('画像データの形式が不正です。');
-      var base64Content = m[1];
-      // resizeImageToDataUrl(900px/quality0.75)の出力なら通常十分収まる余裕を持った上限
-      if (base64Content.length > 4000000) throw new Error('画像が大きすぎます。');
-      var posterPath = 'posters/' + tid + '.jpg';
-      pushBinaryToGitHub_(posterPath, base64Content, 'ポスター画像を更新: ' + (newRow.title || tid));
-      posterUploadedUrl = 'https://raw.githubusercontent.com/' + prop_('GITHUB_OWNER') + '/' + prop_('GITHUB_REPO') + '/' + prop_('GITHUB_BRANCH', 'main') + '/' + posterPath;
-      newRow.posterImage = posterUploadedUrl;
-    } catch (e) {
-      // 画像アップロードだけ失敗しても、大会情報の保存は止めない(直前の値を維持する)
-      posterUploadError = String((e && e.message) || e);
-      newRow.posterImage = oldRow ? oldRow.posterImage : null;
-    }
-  }
-  // 古いキャッシュ済みクライアントが直接data URLを送ってきた場合の最後の安全策
-  // (通常のクライアントはposterImageUploadを使うため、ここに来るのは想定外ケースのみ)
-  if (newRow.posterImage && String(newRow.posterImage).length > 45000) {
-    newRow.posterImage = oldRow ? oldRow.posterImage : null;
-  }
+  var poster = resolvePosterImage_(newRow, oldRow, payload.posterImageUpload, tid);
 
   var tournaments = existingTournaments.filter(function (t) { return t.id !== tid; });
   tournaments.push(newRow);
@@ -538,8 +511,80 @@ function actionSaveTournament_(payload) {
     matches: matchRows.length,
     addedUsers: ensured.added.length
   };
-  if (posterUploadedUrl) result.posterUrl = posterUploadedUrl;
-  if (posterUploadError) result.posterUploadError = posterUploadError;
+  if (poster.url) result.posterUrl = poster.url;
+  if (poster.error) result.posterUploadError = poster.error;
+  return result;
+}
+
+/**
+ * ポスター画像の解決処理(actionSaveTournament_ / actionUpdateTournamentMeta_ 共通)。
+ *
+ * ⚠️ スプレッドシートは1セル50,000文字が上限。ポスター画像をdata URL(base64)のまま
+ * セルへ直接保存すると、大きめの写真だとこの上限を超え、tournaments行の書き込みそのものが
+ * 失敗して大会情報(heldAt/status/archived等)ごと空欄化してしまう不具合になっていた
+ * (2026-07-27発覚)。まだアップロードされていない(data URLのままの)画像は、GitHubへ
+ * 別ファイルとしてpushし、そのURLだけをシートに書く(URLなら十分短い)。
+ *
+ * newRow.posterImage を直接書き換える(呼び出し側はそのまま使う)。戻り値は
+ * { url: <アップロードしたURL|null>, error: <失敗理由|null> }。
+ */
+function resolvePosterImage_(newRow, oldRow, posterImageUpload, tid) {
+  var posterUploadedUrl = null, posterUploadError = null;
+  if (posterImageUpload) {
+    try {
+      var m = String(posterImageUpload).match(/^data:[^;]+;base64,(.+)$/);
+      if (!m) throw new Error('画像データの形式が不正です。');
+      var base64Content = m[1];
+      // resizeImageToDataUrl(900px/quality0.75)の出力なら通常十分収まる余裕を持った上限
+      if (base64Content.length > 4000000) throw new Error('画像が大きすぎます。');
+      var posterPath = 'posters/' + tid + '.jpg';
+      pushBinaryToGitHub_(posterPath, base64Content, 'ポスター画像を更新: ' + (newRow.title || tid));
+      posterUploadedUrl = 'https://raw.githubusercontent.com/' + prop_('GITHUB_OWNER') + '/' + prop_('GITHUB_REPO') + '/' + prop_('GITHUB_BRANCH', 'main') + '/' + posterPath;
+      newRow.posterImage = posterUploadedUrl;
+    } catch (e) {
+      // 画像アップロードだけ失敗しても、大会情報の保存は止めない(直前の値を維持する)
+      posterUploadError = String((e && e.message) || e);
+      newRow.posterImage = oldRow ? oldRow.posterImage : null;
+    }
+  }
+  // 古いキャッシュ済みクライアントが直接data URLを送ってきた場合の最後の安全策
+  // (通常のクライアントはposterImageUploadを使うため、ここに来るのは想定外ケースのみ)
+  if (newRow.posterImage && String(newRow.posterImage).length > 45000) {
+    newRow.posterImage = oldRow ? oldRow.posterImage : null;
+  }
+  return { url: posterUploadedUrl, error: posterUploadError };
+}
+
+/**
+ * action: updateTournamentMeta
+ * payload = { tournamentRow, posterImageUpload }
+ *
+ * 大会の基本情報(タイトル・詳細・開催日・ポスター・公式/制限フラグ)だけを更新する。
+ * entries/matchesシートには一切触れない(actionSaveTournament_と違い、参加者・対戦結果は
+ * 保持したまま大会情報だけ更新したい場合に使う。呼び出し側はtournament-create.html(作成時)と
+ * detail-view.jsの大会情報編集フォームのみ。entries/matchesを反映したい場合は
+ * 必ずactionSaveTournament_を使うこと)。
+ */
+function actionUpdateTournamentMeta_(payload) {
+  if (!payload || !payload.tournamentRow) throw new Error('保存する大会データがありません。');
+  var tid = payload.tournamentRow.id;
+  if (!tid) throw new Error('大会IDがありません。');
+
+  var tournaments = readSheet_('tournaments');
+  var oldRow = tournaments.filter(function (t) { return t.id === tid; })[0];
+  var newRow = payload.tournamentRow;
+  newRow.archived = oldRow ? oldRow.archived : false;
+
+  var poster = resolvePosterImage_(newRow, oldRow, payload.posterImageUpload, tid);
+
+  var rest = tournaments.filter(function (t) { return t.id !== tid; });
+  rest.push(newRow);
+  writeSheet_('tournaments', rest);
+  exportTables_(['tournaments'], '大会情報を更新: ' + (newRow.title || tid));
+
+  var result = { tournamentId: tid, metaOnly: true };
+  if (poster.url) result.posterUrl = poster.url;
+  if (poster.error) result.posterUploadError = poster.error;
   return result;
 }
 
@@ -591,8 +636,9 @@ function doPost(e) {
     try {
       var result;
       if (action === 'saveUsers')                result = actionSaveUsers_(body.payload);
-      else if (action === 'saveTournament')      result = actionSaveTournament_(body.payload);
-      else if (action === 'archiveTournament')   result = actionArchiveTournament_(body.payload);
+      else if (action === 'saveTournament')       result = actionSaveTournament_(body.payload);
+      else if (action === 'updateTournamentMeta') result = actionUpdateTournamentMeta_(body.payload);
+      else if (action === 'archiveTournament')    result = actionArchiveTournament_(body.payload);
       else throw new Error('不明なaction: ' + action);
 
       writeAudit_(email, action, (body.payload && (

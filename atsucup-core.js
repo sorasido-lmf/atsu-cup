@@ -195,10 +195,21 @@ const AtsuCup = (function(){
   // ログインした瞬間にゲストプールだけを削除する(認証プールには一切触れない)、かつ
   // 削除前に非ダイスミスの確認バナーでユーザーの明示操作を必須にしている。詳細は
   // enforceGuestSeparation()/clearGuestPool()を参照。
+  // 大会に「守るべき進行状況」が有るかどうか(参加者・対戦が1件でもあれば有り)
+  function hasProgress(t){
+    return !!((t && t.people && t.people.length) || (t && t.matches && t.matches.length));
+  }
   function mergeRemoteTournaments(remoteList){
     (remoteList||[]).forEach(rt=>{
-      const local = state.tournaments.find(t=>t.id===rt.id);
-      if(!local){ state.tournaments.push(rt); }
+      const i = state.tournaments.findIndex(t=>t.id===rt.id);
+      if(i < 0){ state.tournaments.push(rt); return; }
+      // ⚠️ ローカル優先方針の唯一の例外(2026-07-27追加): ローカル側に守るべき進行状況が
+      // 1つも無い(people/matchesが両方とも空)場合に限り、サーバー側に実データがあれば
+      // そちらで置き換える。大会作成直後の「メタデータのみ即時反映」で空のentries/matchesが
+      // サーバーに保存され、それを先にキャッシュした別端末が、後から他端末で保存された
+      // 本物の進行状況を永久に取り込めなくなる不具合(t1785130780308awwbz0で実際に発生)の
+      // 回復策。ローカルに1件でも進行状況があれば、この分岐には入らず従来通り一切上書きしない。
+      if(!hasProgress(state.tournaments[i]) && hasProgress(rt)){ state.tournaments[i] = rt; }
     });
   }
 
@@ -257,19 +268,43 @@ const AtsuCup = (function(){
   // 作りかけの未保存大会が巻き込まれることはまず無い。
   async function reconcileAuthPoolWithServer(){
     if(typeof AtsuCupData === 'undefined') return;
-    let remoteTournaments;
-    try{ remoteTournaments = await fetchJson(DATA_PATHS.tournaments); }
-    catch(e){ console.warn('[atsucup] ログイン時のサーバー整合チェックに失敗しました:', e); return; }
-    const remoteIds = new Set(remoteTournaments.map(t=>t.id));
-    const removed = state.tournaments.filter(t=>!remoteIds.has(t.id));
-    if(!removed.length) return;
-    state.tournaments = state.tournaments.filter(t=>remoteIds.has(t.id));
+    let remoteTournaments, remoteUsers;
+    try{
+      [remoteTournaments, remoteUsers] = await Promise.all([
+        fetchJson(DATA_PATHS.tournaments), fetchJson(DATA_PATHS.users)
+      ]);
+    }catch(e){ console.warn('[atsucup] ログイン時のサーバー整合チェックに失敗しました:', e); return; }
+
+    // --- 大会 ---
+    // 安全弁: 取得結果が空(取得失敗・空データ等)の場合は何も消さない
+    let removedTournaments = [];
+    if(remoteTournaments.length){
+      const remoteIds = new Set(remoteTournaments.map(t=>t.id));
+      removedTournaments = state.tournaments.filter(t=>!remoteIds.has(t.id));
+      if(removedTournaments.length) state.tournaments = state.tournaments.filter(t=>remoteIds.has(t.id));
+    }
+
+    // --- ユーザー(2026-07-27追加、大会と同じ考え方) ---
+    // シートから行ごと削除された(archived=trueではなく、行自体が無い)ユーザーは
+    // mergeRemoteUsers()では追加のみで削除されないため、ここで消す。
+    // 安全弁: remoteUsersが空の場合はロースター全消去という重大な誤爆を防ぐため何もしない
+    let removedUsers = [];
+    if(remoteUsers.length){
+      const remoteNames = new Set(remoteUsers.map(u=>u && u.name).filter(Boolean));
+      removedUsers = state.roster.filter(n=>!remoteNames.has(n));
+      if(removedUsers.length){
+        state.roster = state.roster.filter(n=>remoteNames.has(n));
+        removedUsers.forEach(n=>{ delete state.userRecDefaults[n]; delete state.archivedUsers[n]; });
+      }
+    }
+
+    if(!removedTournaments.length && !removedUsers.length) return;
     persist();
-    showAuthResyncNotice(removed);
+    showAuthResyncNotice({ tournaments: removedTournaments, users: removedUsers });
   }
 
   let authResyncNoticeShown = false;
-  // サーバーから既に消えていた大会をこの端末からも取り除いた旨を知らせる、閉じるだけの
+  // サーバーから既に消えていた大会・ユーザーをこの端末からも取り除いた旨を知らせる、閉じるだけの
   // 非ブロッキングな通知(ゲストプールの確認バナーと違い「元に戻す」選択肢が無いための簡易版)。
   function showAuthResyncNotice(removed){
     if(typeof document === 'undefined') return;
@@ -289,11 +324,13 @@ const AtsuCup = (function(){
     `;
     document.head.appendChild(style);
 
+    let lines = '';
+    if(removed.tournaments && removed.tournaments.length) lines += `<p>🔄 サーバー側で既に削除されていた大会(${removed.tournaments.length}件)を、この端末のキャッシュからも取り除きました。</p>`;
+    if(removed.users && removed.users.length) lines += `<p>🔄 サーバー側で既に削除されていたユーザー(${removed.users.length}件)を、この端末の登録リストからも取り除きました。</p>`;
+
     const box = document.createElement('div');
     box.className = 'atsucup-resync-toast';
-    box.innerHTML = `
-      <p>🔄 サーバー側で既に削除されていた大会(${removed.length}件)を、この端末のキャッシュからも取り除きました。</p>
-      <button id="atsucupResyncCloseBtn">閉じる</button>`;
+    box.innerHTML = `${lines}<button id="atsucupResyncCloseBtn">閉じる</button>`;
     document.body.appendChild(box);
     document.getElementById('atsucupResyncCloseBtn').addEventListener('click', ()=> box.remove());
   }
@@ -345,10 +382,10 @@ const AtsuCup = (function(){
     overlay.className = 'atsucup-guestwipe-overlay';
     overlay.innerHTML = `
       <div class="atsucup-guestwipe-card">
-        <h3>⚠️ 練習用データが残っています</h3>
-        <p>この端末には未ログイン時に作った練習用のユーザー登録・大会データが残っています。ログインすると、この練習用データは削除され、以後はスプレッドシート側のデータのみを扱います。</p>
+        <h3>⚠️ ローカルデータが残っています</h3>
+        <p>この端末には未ログイン時に作ったローカルのユーザー登録・大会データが残っています。ログインすると、このローカルデータは削除され、以後はスプレッドシート側のデータのみを扱います。</p>
         <div class="row">
-          <button class="primary" id="atsucupGuestWipeConfirm">練習用データを削除してログインする</button>
+          <button class="primary" id="atsucupGuestWipeConfirm">ローカルデータを削除してログインする</button>
           <button class="ghost" id="atsucupGuestWipeCancel">ログインをやめる</button>
         </div>
       </div>`;
@@ -390,7 +427,7 @@ const AtsuCup = (function(){
   // entryRows/matchRowsの参照キーには名前をそのまま乗せて送り、名前→ID解決はGAS側で行う
   // (未登録の参加者名にIDを採番する処理をサーバ側に一本化するため)。
   async function saveTournamentToData(tournamentId){
-    if(poolKindOfTournamentId(tournamentId)==='guest') throw new Error('練習用(未ログインで作成した)大会はサーバーに保存できません。');
+    if(poolKindOfTournamentId(tournamentId)==='guest') throw new Error('ローカル(未ログインで作成した)大会はサーバーに保存できません。');
     if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
     if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
     const t = state.tournaments.find(x=>x.id===tournamentId);
@@ -411,11 +448,27 @@ const AtsuCup = (function(){
     return result;
   }
 
+  // 大会の基本情報(タイトル・詳細・開催日・ポスター・フラグ)だけをサーバーへ反映する。
+  // ⚠️ entries/matchesには一切触れない。参加者・対戦結果を反映したい場合は必ず
+  // saveTournamentToData(フル保存)を使うこと(大会作成時・情報編集時の「即時反映」専用)。
+  async function saveTournamentMetaToData(tournamentId){
+    if(poolKindOfTournamentId(tournamentId)==='guest') throw new Error('ローカル(未ログインで作成した)大会はサーバーに保存できません。');
+    if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
+    if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
+    const t = state.tournaments.find(x=>x.id===tournamentId);
+    if(!t) throw new Error('保存対象の大会が見つかりません。');
+
+    const { tournamentRow, posterImageUpload } = AtsuCupData.tournamentRowOf(t);
+    const result = await GasDB.updateTournamentMeta({ tournamentRow, posterImageUpload });
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    return result;
+  }
+
   // 大会をアーカイブする(行削除ではなくサーバー側でarchived=trueを立てる)。
   // 成功したらローカルのstate.tournamentsからも取り除く(次回data/*.json再取得時も
   // toAppTournamentsがarchived済みを除外するので、二重にガードされる)。
   async function archiveTournamentInData(tournamentId){
-    if(poolKindOfTournamentId(tournamentId)!=='auth') throw new Error('練習用(ローカル)の大会はこの方法では削除できません。');
+    if(poolKindOfTournamentId(tournamentId)!=='auth') throw new Error('ローカル大会はこの方法では削除できません。');
     if(typeof GasDB === 'undefined') throw new Error('GAS連携モジュールが読み込まれていません。');
     if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
     const r = await GasDB.archiveTournament(tournamentId);
@@ -1025,7 +1078,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 08:45";
+  const BUILD_DATE = "2026-07-27 10:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1073,7 +1126,7 @@ const AtsuCup = (function(){
 
   return {
     get ready(){ if(!readyPromise) readyPromise = loadFromData(); return readyPromise; },
-    mergeRemoteTournaments, saveTournamentToData, saveUsersToData, archiveTournamentInData,
+    mergeRemoteTournaments, saveTournamentToData, saveTournamentMetaToData, saveUsersToData, archiveTournamentInData,
     dateInputValueOf, isoFromDateInputValue,
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,

@@ -103,7 +103,7 @@
         // 大会一覧を見た際にも存在が見えるように)。失敗してもこの端末には保存済みなので作成自体は進める
         if(!AtsuCup.isGuestMode()){
           try{
-            const r = await AtsuCup.saveTournamentToData(id);
+            const r = await AtsuCup.saveTournamentMetaToData(id);
             if(r.posterUploadError) sessionStorage.setItem('atsucup:syncError', 'ポスター画像のアップロードに失敗しました('+r.posterUploadError+')。それ以外(大会名・詳細・開催日等)は反映済みです。');
           }
           catch(e){
@@ -122,7 +122,7 @@
 
   if(AtsuCup.isGuestMode()){
     confirmBox.innerHTML = `<div class="confirm-banner" style="border-color:var(--ember2); margin-bottom:16px;">
-      未ログインです。ここで作る大会は<b>練習用</b>としてこの端末にのみ保存され、歴代優勝者・戦績には反映されません。ログインすると削除されます。
+      未ログインです。ここで作る大会は<b>ローカル</b>としてこの端末にのみ保存され、歴代優勝者・戦績には反映されません。ログインすると削除されます。
     </div>`;
   }
 
