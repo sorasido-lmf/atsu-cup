@@ -134,5 +134,13 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0001",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
   }
 ]
