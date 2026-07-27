@@ -134,20 +134,22 @@
         <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;">${escapeHtml(meta.details||'')}</textarea></div>
         <div class="field" style="margin-bottom:8px;"><label>開催日</label><input type="date" id="tfHeldDate" value="${AtsuCup.dateInputValueOf(meta.createdAt)}"></div>
         <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
-        <div class="field" style="margin-bottom:8px;">
+        ${isGuestTournament() ? '' : `<div class="field" style="margin-bottom:8px;">
           <button type="button" class="flag-toggle-btn official ${editOfficial?'on':'off'}" id="tfOfficial">🏅 公式大会</button>
           <button type="button" class="flag-toggle-btn restricted ${editRestricted?'on':'off'}" id="tfRestricted">🔒 制限杯</button>
-        </div>
+        </div>`}
         <div class="row"><button class="btn btn-primary" id="tfSave">更新する</button><button class="btn btn-ghost" id="tfCancel">キャンセル</button></div>
       </div>`;
     document.getElementById('tfCancel').addEventListener('click', ()=>{ mode='view'; render(); });
-    // トグルは他の入力欄を巻き込まないよう、ボタン自身のクラスだけ直接切り替える
-    document.getElementById('tfOfficial').addEventListener('click', (ev)=>{
-      editOfficial=!editOfficial; ev.currentTarget.classList.toggle('on', editOfficial); ev.currentTarget.classList.toggle('off', !editOfficial);
-    });
-    document.getElementById('tfRestricted').addEventListener('click', (ev)=>{
-      editRestricted=!editRestricted; ev.currentTarget.classList.toggle('on', editRestricted); ev.currentTarget.classList.toggle('off', !editRestricted);
-    });
+    // トグルは他の入力欄を巻き込まないよう、ボタン自身のクラスだけ直接切り替える(ローカル大会では非表示のため無い)
+    if(!isGuestTournament()){
+      document.getElementById('tfOfficial').addEventListener('click', (ev)=>{
+        editOfficial=!editOfficial; ev.currentTarget.classList.toggle('on', editOfficial); ev.currentTarget.classList.toggle('off', !editOfficial);
+      });
+      document.getElementById('tfRestricted').addEventListener('click', (ev)=>{
+        editRestricted=!editRestricted; ev.currentTarget.classList.toggle('on', editRestricted); ev.currentTarget.classList.toggle('off', !editRestricted);
+      });
+    }
     document.getElementById('tfSave').addEventListener('click', async ()=>{
       const title = document.getElementById('tfTitle').value.trim();
       const details = document.getElementById('tfDetails').value.trim();
