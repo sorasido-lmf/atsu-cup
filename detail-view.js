@@ -627,20 +627,28 @@
     return rect+label+addIcon;
   }
   // 1回戦の空き枠: タップでエントリー者ピッカーを開く。D&Dのドロップ先にもなる。readOnly中は非インタラクティブな「未定」表示のみ。
-  // 枠自体(この枠がどの位置にあるか)の位置移動のドラッグ元にもなる(名前ドラッグとはpointerdown対象が別なので衝突しない)
-  function slotTapBoxSvg(m,side,centerY,label){
+  // 枠自体(この枠がどの位置にあるか)の位置移動のドラッグ元にもなる(名前ドラッグとはpointerdown対象が別なので衝突しない)。
+  // dim=trueは「シード枠の保持者(a)未定側」。b側(byePlaceholderSvg)と同じ控えめな見た目に揃えるためのもので、
+  // タップ自体は生きているので後から保持者を選ぶこともできる
+  function slotTapBoxSvg(m,side,centerY,label,dim){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
     if(readOnly){
       return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
-        +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">未定</text>`;
+        +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">${dim?'シード':'未定'}</text>`;
     }
     treeSlotRects[`0_${m}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     const canMoveCard = state.matches.length===1;
     const cls = canMoveCard ? 'tree-slot tree-slot-tap tree-card-drag' : 'tree-slot tree-slot-tap';
     const cardAttr = canMoveCard ? ` data-cardm="${m}"` : '';
+    const rectAttr = dim
+      ? 'fill="#0a0810" stroke="#2a2338"'
+      : 'fill="#0d0a14" stroke="#5a4a2a"';
+    const textSvg = dim
+      ? `<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">${escapeHtml(label)}</text>`
+      : `<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#e8b34c">${escapeHtml(label)}</text>`;
     return `<g class="${cls}" data-r="0" data-m="${m}" data-side="${side}"${cardAttr}>`
-      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#5a4a2a" stroke-width="1.5" stroke-dasharray="3 3"/>`
-      +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#e8b34c">${escapeHtml(label)}</text>`
+      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" ${rectAttr} stroke-width="1.5" stroke-dasharray="3 3"/>`
+      +textSvg
       +`</g>`;
   }
   // 2回戦以降で、まだ勝ち上がりが決まっていない未確定枠。D&Dのドロップ先にもなる。
@@ -693,6 +701,10 @@
               else { boxesSvg+=byePlaceholderSvg(i,y); }
               return;
             }
+            // シード枠の保持者(a)未定側は、b側と同じ控えめな「シード」表示に揃える。
+            // 「タップで選ぶ」のままだと、同じカードなのに上下で見た目がちぐはぐになり、
+            // 使っていない枠なのに操作を促しているように見えてしまう(タップ自体は生きている)
+            if(r===0 && m && m.bye){ boxesSvg+=slotTapBoxSvg(i, side, y, 'シード', true); return; }
             if(r===0){ boxesSvg+=slotTapBoxSvg(i, side, y, 'タップで選ぶ'); return; } // 1回戦の空き枠は常にタップ可能
             // 不戦勝で決着済みのカードの空いている側は、1回戦のシード枠と同じ破線ボックスで描く
             boxesSvg+=pendingBoxSvg(r,i,side,y, !!(m && m.bye && m.winner)); return;
