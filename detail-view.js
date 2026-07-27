@@ -517,15 +517,18 @@
     return rect+label+addIcon;
   }
   // シード保持者(a)がまだ決まっていない間のb側。➕から保持者を直接飛び入り登録できる(その場合は自動勝利で確定)。
-  // readOnly中は➕を出さない
+  // readOnly中は➕を出さない。占有者がいないため、他の未定枠と同様に枠自体の位置移動のドラッグ元にもなる
   function byePlaceholderSvg(i, centerY){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
     const addIcon = readOnly ? '' : `<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
-    return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5" stroke-dasharray="3 3"/>`
-      +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`
-      +addIcon;
+    const rect=`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+    const label=`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`;
+    const canMoveCard = !readOnly && state.matches.length===1;
+    if(canMoveCard) return `<g class="tree-slot tree-card-drag" data-cardm="${i}">${rect}${label}</g>${addIcon}`;
+    return rect+label+addIcon;
   }
-  // 1回戦の空き枠: タップでエントリー者ピッカーを開く。D&Dのドロップ先にもなる。readOnly中は非インタラクティブな「未定」表示のみ
+  // 1回戦の空き枠: タップでエントリー者ピッカーを開く。D&Dのドロップ先にもなる。readOnly中は非インタラクティブな「未定」表示のみ。
+  // 枠自体(この枠がどの位置にあるか)の位置移動のドラッグ元にもなる(名前ドラッグとはpointerdown対象が別なので衝突しない)
   function slotTapBoxSvg(m,side,centerY,label){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
     if(readOnly){
@@ -533,7 +536,10 @@
         +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">未定</text>`;
     }
     treeSlotRects[`0_${m}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
-    return `<g class="tree-slot tree-slot-tap" data-r="0" data-m="${m}" data-side="${side}">`
+    const canMoveCard = state.matches.length===1;
+    const cls = canMoveCard ? 'tree-slot tree-slot-tap tree-card-drag' : 'tree-slot tree-slot-tap';
+    const cardAttr = canMoveCard ? ` data-cardm="${m}"` : '';
+    return `<g class="${cls}" data-r="0" data-m="${m}" data-side="${side}"${cardAttr}>`
       +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#5a4a2a" stroke-width="1.5" stroke-dasharray="3 3"/>`
       +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#e8b34c">${escapeHtml(label)}</text>`
       +`</g>`;

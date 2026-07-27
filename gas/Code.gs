@@ -114,8 +114,12 @@ function cellToValue_(v, type) {
 
 // JSONの値 → セル値
 function valueToCell_(v, type) {
-  if (v === null || v === undefined) return '';
+  // bool型は「値が無い(null/undefined)」も含めて必ずtrue/falseに確定させる。
+  // 従来はnull/undefinedを先に空文字へ倒していたため、送信payloadに該当キーが
+  // 無いだけでbool列が空欄(見た目上null)になり、archived/isOfficial/isRestrictedが
+  // 空欄になる不具合の一因になっていた(2026-07-27発覚)。
   if (type === 'bool') return v === true;
+  if (v === null || v === undefined) return '';
   return v;
 }
 
