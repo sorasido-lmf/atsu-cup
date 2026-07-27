@@ -190,5 +190,13 @@
     "archived": false,
     "createdAt": "2026-07-27T00:44:52.598Z",
     "note": ""
+  },
+  {
+    "id": "u0025",
+    "name": "レオナ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T00:45:30.840Z",
+    "note": ""
   }
 ]
