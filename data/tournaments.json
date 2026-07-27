@@ -6,7 +6,7 @@
     "posterImage": null,
     "heldAt": "2026-07-25T13:30:25.032Z",
     "status": "completed",
-    "archived": false,
+    "archived": true,
     "isOfficial": false,
     "isRestricted": false
   },
