@@ -68,7 +68,10 @@ const AtsuCup = (function(){
       id: meta.id, title: meta.title||"", details: meta.details||"", posterUrl: meta.posterUrl||null,
       createdAt: meta.createdAt || new Date().toISOString(), status: 'ongoing',
       isOfficial: !!meta.isOfficial, isRestricted: !!meta.isRestricted,
-      people: [], order: [], remaining: [], matches: [], winnerName: "", thirdPlaceMatch: null
+      people: [], order: [], remaining: [], matches: [], winnerName: "", thirdPlaceMatch: null,
+      // 作成直後はまだサーバーへ一度も反映できていない(=falseの間はpruneTournamentsGoneFromServerの対象外にする)。
+      // 保存成功時・リモートからの取り込み時にtrueへ切り替える
+      everSyncedToServer: false
     };
   }
 
@@ -218,23 +221,31 @@ const AtsuCup = (function(){
     (remoteList||[]).forEach(rt=>{
       const remoteSnap = JSON.stringify(rt);
       const i = state.tournaments.findIndex(t=>t.id===rt.id);
-      if(i < 0){ state.tournaments.push(rt); state.remoteSnapshots[rt.id] = remoteSnap; return; }
+      if(i < 0){ state.tournaments.push({...rt, everSyncedToServer:true}); state.remoteSnapshots[rt.id] = remoteSnap; return; }
       const lastKnownRemote = state.remoteSnapshots[rt.id];
       const shouldTakeRemote = lastKnownRemote===undefined
         ? (!hasProgress(state.tournaments[i]) && hasProgress(rt)) // 初回取り込み: 従来通りの保守的な判定
         : (JSON.stringify(state.tournaments[i]) === lastKnownRemote); // この端末での未保存編集が無いか
-      if(shouldTakeRemote) state.tournaments[i] = rt;
+      if(shouldTakeRemote) state.tournaments[i] = {...rt, everSyncedToServer:true};
+      // ローカルを保護する場合も、このidが実際にサーバーに存在することは確定した事実なので記録しておく
+      // (pruneTournamentsGoneFromServerが「未同期の新規作成大会」と正しく区別できるようにするため)
+      else { state.tournaments[i].everSyncedToServer = true; }
       state.remoteSnapshots[rt.id] = remoteSnap;
     });
   }
   // サーバー(data/tournaments.json)に存在しなくなった大会を、この端末のキャッシュからも取り除く。
-  // 「以前に一度でもリモートから取り込んだことがある(remoteSnapshotsに記録がある)」大会に限定する
-  // ことで、まだ一度もサーバーへ反映できていない(オフライン等で未同期の)作成直後の大会を
-  // 誤って消してしまわないようにする(remoteTournamentsが空=取得失敗時は何もしない安全弁も維持)。
+  // 「以前にサーバーへ実際に反映されたことがある(everSyncedToServer===true)」大会に限定することで、
+  // まだ一度もサーバーへ反映できていない(オフライン等で未同期の)作成直後の大会を誤って消してしまわない
+  // ようにする(remoteTournamentsが空=取得失敗時は何もしない安全弁も維持)。
+  // ※以前は`remoteSnapshots`の有無で判定していたが、これは「このコードに更新された後、リモートに
+  // まだ存在するうちに一度でも取り込んだこと」が前提になり、既にサーバー側で削除済みの大会は
+  // 一度もその条件を満たせず永久にプルーニングされない不具合があった(2026-07-27深夜に発覚・修正)。
+  // `everSyncedToServer`はmigrate()で「この機能追加より前からキャッシュされている大会は既定でtrue」
+  // として補完するため、既存キャッシュの孤立大会もこの修正で正しく消えるようになる。
   function pruneTournamentsGoneFromServer(remoteTournaments){
     if(!remoteTournaments || !remoteTournaments.length) return [];
     const remoteIds = new Set(remoteTournaments.map(t=>t.id));
-    const removed = state.tournaments.filter(t=> !remoteIds.has(t.id) && state.remoteSnapshots[t.id]!==undefined);
+    const removed = state.tournaments.filter(t=> !remoteIds.has(t.id) && t.everSyncedToServer===true);
     if(removed.length){
       const removedIdSet = new Set(removed.map(t=>t.id));
       state.tournaments = state.tournaments.filter(t=>!removedIdSet.has(t.id));
@@ -482,7 +493,11 @@ const AtsuCup = (function(){
     // ポスター画像をGitHubへアップロードした場合、サーバーから返ってきた最終URLを
     // ローカルの保持データにも反映する(巨大なdata URLをlocalStorageに残さない・
     // 次回以降の保存で毎回再アップロードしないようにするため)
-    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; }
+    // 保存に成功した=このidは実際にサーバーに存在する、という事実が確定するので記録する
+    // (次のリモート取り込みを待たずに、pruneTournamentsGoneFromServerの保護対象から外れる)
+    t.everSyncedToServer = true;
+    persist();
     return result;
   }
 
@@ -498,7 +513,10 @@ const AtsuCup = (function(){
 
     const { tournamentRow, posterImageUpload } = AtsuCupData.tournamentRowOf(t);
     const result = await GasDB.updateTournamentMeta({ tournamentRow, posterImageUpload });
-    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; }
+    // 保存に成功した=このidは実際にサーバーに存在する、という事実が確定するので記録する
+    t.everSyncedToServer = true;
+    persist();
     return result;
   }
 
@@ -543,7 +561,11 @@ const AtsuCup = (function(){
     state.guestArchivedUsers = data.guestArchivedUsers || {};
     state.guestTournaments = data.guestTournaments || [];
     if(Array.isArray(data.tournaments)){
-      state.tournaments = data.tournaments;
+      // everSyncedToServer導入(2026-07-27深夜)より前にキャッシュされた大会にはこのフィールドが
+      // 無いため、既定でtrue(=既にサーバーへ反映済みの実データのはず)を補う。これにより、
+      // 導入前から残っていた「サーバー側では既に削除済みの孤立キャッシュ」もpruneTournamentsGoneFromServer
+      // の対象として正しく扱われるようになる
+      state.tournaments = data.tournaments.map(t=> t.everSyncedToServer===undefined ? {...t, everSyncedToServer:true} : t);
       state.remoteSnapshots = data.remoteSnapshots || {};
       state.activeId = data.activeId || null;
       state.activePool = data.activePool || 'auth';
@@ -1149,7 +1171,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 12:00";
+  const BUILD_DATE = "2026-07-27 13:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
