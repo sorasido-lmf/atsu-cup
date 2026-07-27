@@ -234,6 +234,12 @@ const AtsuCup = (function(){
       ]);
       mergeRemoteUsers(users);
       mergeRemoteTournaments(AtsuCupData.toAppTournaments({ users, tournaments, entries, matches }));
+      // ⚠️ ローカル優先マージは「未保存の進行状況を勝手に上書きしない」ためのものだが、
+      // アーカイブ(削除)はこれとは別軸: サーバー側でarchived=trueになった大会は、
+      // 既にこの端末にキャッシュ済みかどうかに関わらず必ず消す(でないと、他端末で削除した
+      // 大会が「ローカルに既にあるid」として merge の対象外になり、いつまでも消えない)。
+      const archivedIds = new Set((tournaments||[]).filter(t=>t.archived).map(t=>t.id));
+      if(archivedIds.size){ state.tournaments = state.tournaments.filter(t=>!archivedIds.has(t.id)); }
       persist();
       return { ok:true, counts:{ users:users.length, tournaments:tournaments.length } };
     }catch(e){
@@ -950,7 +956,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 03:20";
+  const BUILD_DATE = "2026-07-27 03:35";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
