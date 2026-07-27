@@ -733,14 +733,25 @@ const AtsuCup = (function(){
 
   // 大会途中で参加者が増えた場合、空いているBYE(不戦勝)枠に新しい参加者を入れて実際の対戦に変える。
   // それより先のラウンドはいったん破棄され、「次のラウンドへ進む」で組み直す。
+  // シード枠への飛び入り登録。保持者(a)が未定ならa(自動勝利)として、決まっていればb(挑戦者)として追加する。
+  // 挑戦者を追加した場合は実質ただの通常対戦になるため、bye扱いを解除する(D&D対象・自動勝利判定などの
+  // 特別扱いをやめて、以降は他の通常枠と同じに振る舞わせるため)
   function addChallengerToBye(r, m, name){
     const match = state.matches[r] && state.matches[r][m];
-    if(!match || match.b !== null) return;
+    if(!match) return;
     name = (name||'').trim();
-    if(!name || name === match.a) return;
-    match.b = name;
-    match.winner = null;
-    match.loser = null;
+    if(!name) return;
+    if(match.a === null){
+      if(name === match.b) return;
+      match.a = name;
+      match.winner = name;
+    } else {
+      if(match.b !== null || name === match.a) return;
+      match.b = name;
+      match.winner = null;
+      match.loser = null;
+      match.bye = false;
+    }
     if(!state.roster.includes(name)) state.roster.push(name);
     if(!state.people.some(p=>p.name===name)) state.people.push({name, rec:true});
     state.matches = state.matches.slice(0, r+1);
@@ -956,7 +967,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 05:30";
+  const BUILD_DATE = "2026-07-27 06:15";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;

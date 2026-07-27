@@ -516,11 +516,14 @@
     if(canMoveCard) return `<g class="tree-slot tree-card-drag" data-cardm="${i}">${rect}${label}</g>${addIcon}`;
     return rect+label+addIcon;
   }
-  // シード保持者(a)がまだ決まっていない間の、b側の非インタラクティブなプレースホルダ
-  function byePlaceholderSvg(centerY){
+  // シード保持者(a)がまだ決まっていない間のb側。➕から保持者を直接飛び入り登録できる(その場合は自動勝利で確定)。
+  // readOnly中は➕を出さない
+  function byePlaceholderSvg(i, centerY){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
+    const addIcon = readOnly ? '' : `<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
     return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5" stroke-dasharray="3 3"/>`
-      +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`;
+      +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`
+      +addIcon;
   }
   // 1回戦の空き枠: タップでエントリー者ピッカーを開く。D&Dのドロップ先にもなる。readOnly中は非インタラクティブな「未定」表示のみ
   function slotTapBoxSvg(m,side,centerY,label){
@@ -573,9 +576,10 @@
         [['a',m?m.a:null,upY],['b',m?m.b:null,downY]].forEach(([side,name,y])=>{
           if(name===null){
             if(r===0 && m && m.bye && side==='b'){
-              // シード枠の空側(b): 保持者(a)が決まっていれば、途中参加として挑戦者を迎えられる(D&D対象外)
+              // シード枠の空側(b): 保持者(a)が決まっていれば、途中参加として挑戦者を迎えられる(D&D対象外)。
+              // 保持者未定の間も➕から直接保持者を飛び入り登録できる(自動勝利で確定)
               if(m.a){ boxesSvg+=byeBoxSvg(r,i,y); }
-              else { boxesSvg+=byePlaceholderSvg(y); } // 保持者未定の間はタップ不可のプレースホルダのみ
+              else { boxesSvg+=byePlaceholderSvg(i,y); }
               return;
             }
             if(r===0){ boxesSvg+=slotTapBoxSvg(i, side, y, 'タップで選ぶ'); return; } // 1回戦の空き枠は常にタップ可能
@@ -825,9 +829,22 @@
     const round0=state.matches[0];
     const tmp=round0[m1]; round0[m1]=round0[m2]; round0[m2]=tmp;
   }
+  // シード同士をドラッグで組み合わせて1回戦の対戦にする。ドロップ先の枠に両者の対戦を作り(自動勝利
+  // ではなく決着待ちの通常対戦にする)、ドラッグ元だった枠は空き枠(a/b両方null、タップで選べる通常枠)にする
+  function mergeSeedsIntoMatch(srcM, tgtM){
+    const round0=state.matches[0];
+    const src=round0[srcM], tgt=round0[tgtM];
+    round0[tgtM] = { a:tgt.a, b:src.a, winner:null, loser:null, video:'', bye:false };
+    round0[srcM] = { a:null, b:null, winner:null, loser:null, video:'', bye:false };
+  }
   function commitDnd(){
     if(dndState.mode==='card'){
-      if(dndState.hoverTarget){ swapWholeCards(dndState.srcM, dndState.hoverTarget.m); }
+      if(dndState.hoverTarget){
+        const srcM=dndState.srcM, tgtM=dndState.hoverTarget.m;
+        const srcMatch=state.matches[0][srcM], tgtMatch=state.matches[0][tgtM];
+        if(srcMatch.bye && tgtMatch.bye && srcMatch.a!==null && tgtMatch.a!==null){ mergeSeedsIntoMatch(srcM, tgtM); }
+        else { swapWholeCards(srcM, tgtM); }
+      }
       else { return; }
       AtsuCup.persist();
       renderTree(); renderExtras();
