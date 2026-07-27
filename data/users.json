@@ -142,5 +142,53 @@
     "archived": false,
     "createdAt": "2026-07-25T16:04:10.239Z",
     "note": ""
+  },
+  {
+    "id": "u0019",
+    "name": "みゃる",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T00:44:52.597Z",
+    "note": ""
+  },
+  {
+    "id": "u0020",
+    "name": "煉獄",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T00:44:52.598Z",
+    "note": ""
+  },
+  {
+    "id": "u0021",
+    "name": "矛盾",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T00:44:52.598Z",
+    "note": ""
+  },
+  {
+    "id": "u0022",
+    "name": "スケ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T00:44:52.598Z",
+    "note": ""
+  },
+  {
+    "id": "u0023",
+    "name": "るいるい",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T00:44:52.598Z",
+    "note": ""
+  },
+  {
+    "id": "u0024",
+    "name": "あきまる",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-27T00:44:52.598Z",
+    "note": ""
   }
 ]
