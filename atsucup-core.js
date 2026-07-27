@@ -498,11 +498,13 @@ const AtsuCup = (function(){
     // ポスター画像をGitHubへアップロードした場合、サーバーから返ってきた最終URLを
     // ローカルの保持データにも反映する(巨大なdata URLをlocalStorageに残さない・
     // 次回以降の保存で毎回再アップロードしないようにするため)
-    if(result.posterUrl) { t.posterUrl = result.posterUrl; }
-    // 保存に成功した=このidは実際にサーバーに存在する、という事実が確定するので記録する
-    // (次のリモート取り込みを待たずに、pruneTournamentsGoneFromServerの保護対象から外れる)
-    t.everSyncedToServer = true;
-    persist();
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    // ⚠️ ここでeverSyncedToServerをtrueにしてはいけない(2026-07-27未明に実際に規制退行が発生し修正)。
+    // GAS書き込みの成功は、GitHub Pages側のdata/tournaments.jsonへの反映完了を意味しない
+    // (GAS→GitHubコミット→Pagesへの反映には時間差がある)。ここで即trueにすると、その反映が
+    // 間に合う前に次のページ読み込みが走った場合、pruneTournamentsGoneFromServerが「サーバーに
+    // まだ見当たらない」と誤判定し、作成直後の大会を消してしまう。everSyncedToServerは、実際に
+    // data/tournaments.jsonから取り込めたこと(mergeRemoteTournaments)を確認できてから初めてtrueにする。
     return result;
   }
 
@@ -518,10 +520,11 @@ const AtsuCup = (function(){
 
     const { tournamentRow, posterImageUpload } = AtsuCupData.tournamentRowOf(t);
     const result = await GasDB.updateTournamentMeta({ tournamentRow, posterImageUpload });
-    if(result.posterUrl) { t.posterUrl = result.posterUrl; }
-    // 保存に成功した=このidは実際にサーバーに存在する、という事実が確定するので記録する
-    t.everSyncedToServer = true;
-    persist();
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    // ⚠️ everSyncedToServerはここでは立てない(理由はsaveTournamentToData内の同種コメント参照)。
+    // 大会作成直後はこの関数が呼ばれるが、GitHub Pages側への反映が間に合う前に次の読み込みが
+    // 走ってプルーニングされてしまうのを防ぐため、実際にdata/tournaments.jsonから取り込めたこと
+    // (mergeRemoteTournaments)を確認できてから初めてtrueにする
     return result;
   }
 
@@ -1176,7 +1179,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 13:30";
+  const BUILD_DATE = "2026-07-27 14:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;

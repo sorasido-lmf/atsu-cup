@@ -125,10 +125,11 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 
 **⚠️ プルーニングの判定基準を`remoteSnapshots`→`everSyncedToServer`フラグに変更(2026-07-27深夜、リリース直後に発覚・再修正)**: 上記実装の初版は「`remoteSnapshots[id]`が記録されている(＝以前に一度でもリモートから取り込んだことがある)」を安全確認の基準にしていたが、これだと**この機能を追加する前からサーバー側で既に削除されていた孤立キャッシュは、その大会がまだリモートに存在するうちに一度も`remoteSnapshots`へ記録される機会が無いため、永久にプルーニングされない**という欠陥があった(ユーザーが実際に「更新してもブラウザに削除したはずの大会データが表示される」と報告して発覚)。そこで大会オブジェクト自身に`everSyncedToServer`という真偽値フラグを持たせる方式に変更した:
   - **新規作成時**(`newBlankTournament`): `everSyncedToServer:false`で始める(＝まだサーバーへ一度も反映できていない可能性がある)。
-  - **保存成功時**(`saveTournamentToData`/`saveTournamentMetaToData`が成功した瞬間): `true`に切り替える(＝このidは実際にサーバーに存在することが確定)。
-  - **リモートからの取り込み時**(`mergeRemoteTournaments`でそのidがリモート一覧に見つかった時、ローカルを採用/保護どちらの場合でも): `true`に切り替える。
+  - **リモートからの取り込み時のみ**(`mergeRemoteTournaments`でそのidが実際にdata/tournaments.jsonの一覧に見つかった時、ローカルを採用/保護どちらの場合でも): `true`に切り替える。
   - **`migrate()`での既存キャッシュの補完**: この機能追加より前からキャッシュされている大会(`everSyncedToServer`フィールド自体が無い)は、既定で`true`として扱う(＝既にサーバーへ反映済みの実データのはず、という前提)。これにより、**修正版デプロイ直後の最初の読み込みから**、以前からの孤立キャッシュも正しくプルーニング対象になる。
   - `pruneTournamentsGoneFromServer()`は`remoteSnapshots`ではなく`t.everSyncedToServer===true`を条件にする。これにより「一度もリモートに存在するうちに取り込めなかった、既にサーバー側で削除済みの大会」も正しく消せるようになった。
+
+**⚠️ 「GAS書き込み成功=即everSyncedToServer:true」にしたら新規作成した大会が消える規制退行が発生(2026-07-27未明、上記の直後に発覚・再修正)**: 当初`saveTournamentToData`/`saveTournamentMetaToData`が成功した時点でも`everSyncedToServer:true`にしていたが、**GASのシート書き込み成功は、GitHub Pages側の`data/tournaments.json`への反映完了を意味しない**(GAS→GitHubへのコミット→Pagesへの反映には時間差がある)。この間に次のページ読み込みが走ると、`data/tournaments.json`にはまだ新しい大会が載っておらず、しかし`everSyncedToServer`は保存成功時点で既に`true`になっているため、`pruneTournamentsGoneFromServer()`が「サーバーから消えた」と誤判定して**作成したばかりの大会を消してしまう**(ユーザーが「追加した大会が表示されない」と報告して発覚)。保存関数からは`everSyncedToServer`への書き込みを削除し、**`mergeRemoteTournaments()`で実際にdata/tournaments.jsonから取り込めたことを確認できた時だけ`true`にする**方式に戻した。この間(保存直後〜実際にリモートへ反映されるまで)は`everSyncedToServer:false`のままなので、プルーニングの対象外として安全に保護される。
 
 **⚠️ さらにもう1つ、致命的な安全弁の誤りが残っていた(2026-07-27深夜、上記修正でも直らずユーザー実機で再検証して発覚)**: `pruneTournamentsGoneFromServer()`に`if(!remoteTournaments || !remoteTournaments.length) return [];`という「空配列なら取得失敗とみなして何もしない」安全弁を入れていたが、これが**サーバーが本当に空(スプレッドシートを空にした、まさにユーザーがやりたかったこと)というケースそのものを弾いてしまっていた**。呼び出し元の`loadFromData()`は、`fetchJson()`が`!res.ok`で例外を投げる作りのため、**取得に失敗した場合はこの関数に到達する前にcatchブロックへ抜ける**。つまりこの関数に到達した時点で取得は必ず成功しており、空配列は「サーバーに大会が1件も無い」という正当な結果でしかない。実機で`data/tournaments.json`が`[]`、ローカルに`everSyncedToServer:true`の大会が残っている状態を再現し、この安全弁が原因で消えないことを確認した上で、この安全弁を削除して修正した(`remoteTournaments`がnull/undefinedの場合のみ早期returnする)。**同種の「呼び出し元が既に成功を保証しているのに、受け取った値の空/非空だけで再度失敗判定しようとする」パターンは、他の箇所でも書く際に注意すること。**
 
