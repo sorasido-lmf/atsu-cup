@@ -236,14 +236,19 @@ const AtsuCup = (function(){
   // サーバー(data/tournaments.json)に存在しなくなった大会を、この端末のキャッシュからも取り除く。
   // 「以前にサーバーへ実際に反映されたことがある(everSyncedToServer===true)」大会に限定することで、
   // まだ一度もサーバーへ反映できていない(オフライン等で未同期の)作成直後の大会を誤って消してしまわない
-  // ようにする(remoteTournamentsが空=取得失敗時は何もしない安全弁も維持)。
+  // ようにする。
   // ※以前は`remoteSnapshots`の有無で判定していたが、これは「このコードに更新された後、リモートに
   // まだ存在するうちに一度でも取り込んだこと」が前提になり、既にサーバー側で削除済みの大会は
   // 一度もその条件を満たせず永久にプルーニングされない不具合があった(2026-07-27深夜に発覚・修正)。
   // `everSyncedToServer`はmigrate()で「この機能追加より前からキャッシュされている大会は既定でtrue」
   // として補完するため、既存キャッシュの孤立大会もこの修正で正しく消えるようになる。
+  // ⚠️ 呼び出し元(loadFromData)は、data/*.jsonの取得に失敗した場合はfetchJson()が例外を投げて
+  // catchブロックへ抜けるため、この関数に到達した時点で「取得は成功している」ことが保証されている。
+  // したがって空配列=「サーバーに大会が1件も無い」という正当な結果であり、取得失敗の可能性と
+  // 混同して何もしない安全弁を入れるのは誤り(2026-07-27深夜に実際にこれが原因で、スプレッド
+  // シートを空にしたのに古い大会が消えない不具合が起きていた)。空配列でも普通にプルーニングする。
   function pruneTournamentsGoneFromServer(remoteTournaments){
-    if(!remoteTournaments || !remoteTournaments.length) return [];
+    if(!remoteTournaments) return [];
     const remoteIds = new Set(remoteTournaments.map(t=>t.id));
     const removed = state.tournaments.filter(t=> !remoteIds.has(t.id) && t.everSyncedToServer===true);
     if(removed.length){
@@ -1171,7 +1176,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 13:00";
+  const BUILD_DATE = "2026-07-27 13:30";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
