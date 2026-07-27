@@ -142,5 +142,29 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true
+  },
+  {
+    "id": "t1785132480425fonmmx_u0001",
+    "tournamentId": "t1785132480425fonmmx",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false
+  },
+  {
+    "id": "t1785132480425fonmmx_u0004",
+    "tournamentId": "t1785132480425fonmmx",
+    "userId": "u0004",
+    "placement": 1,
+    "wins": 2,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785132480425fonmmx_u0009",
+    "tournamentId": "t1785132480425fonmmx",
+    "userId": "u0009",
+    "placement": 2,
+    "wins": 0,
+    "recAtEntry": true
   }
 ]
