@@ -4,7 +4,14 @@
   --cream:#f1e6cf; --muted:#9a8fae; --danger:#ff4d4d; --ok:#3ecf8e;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html{overflow-x:hidden; width:100%;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;overflow-x:hidden;}
+body{width:100%; position:relative;}
+/* スマホで縦スクロールのみに固定する安全策。個別要素の意図しないはみ出しが
+   viewport幅を超えても、ページ全体としては横に動かないようにする
+   (.tree-scroll等、意図的に横スクロールさせたい要素はoverflow-x:autoで個別に許可済み) */
+img, video, canvas, svg, iframe{ max-width:100%; }
+.wrap{ overflow-x:hidden; }
 .ongoing-card{
   display:block; text-decoration:none; color:inherit; background:#0d0a14; border:1px solid var(--line);
   border-radius:12px; padding:12px 14px; margin-bottom:8px;
@@ -95,8 +102,14 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
 .field{flex:1; min-width:120px;}
 .field label{display:block; font-size:11px; color:var(--muted); margin-bottom:5px; letter-spacing:.05em;}
 .field input, .field select{
-  width:100%; background:#0d0a14; border:1px solid var(--line); color:var(--cream); border-radius:9px;
+  width:100%; min-width:0; max-width:100%; background:#0d0a14; border:1px solid var(--line); color:var(--cream); border-radius:9px;
   padding:10px; font-size:13.5px; font-family:'Noto Sans JP',sans-serif;
+}
+/* iOS Safariの日付入力(input[type=date])は、ネイティブのカレンダーUI描画が
+   width:100%を無視して枠からはみ出すことがある(実機のみで再現)。
+   appearance:noneでネイティブ装飾をリセットし、box-sizing/幅計算をCSS通りに戻す */
+.field input[type="date"]{
+  -webkit-appearance:none; appearance:none;
 }
 .empty-state{text-align:center; padding:34px 10px; color:var(--muted); font-size:13px; line-height:1.9;}
 .empty-state .big{font-size:30px; display:block; margin-bottom:8px;}
