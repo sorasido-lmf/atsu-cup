@@ -17,7 +17,7 @@
     "posterImage": null,
     "heldAt": "2026-07-26T14:16:38.197Z",
     "status": "completed",
-    "archived": false,
+    "archived": true,
     "isOfficial": false,
     "isRestricted": false
   },
