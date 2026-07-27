@@ -15,6 +15,10 @@
   AtsuCup.setActive(id);
 
   let mode = 'view'; // 'view'|'editing'|'confirmEnd'|'confirmDelete'
+  // 大会情報の編集直後、サーバーへの反映に失敗した場合のエラーメッセージ(表示用)。
+  // 大会作成直後の反映失敗も、tournament-create.htmlからこのタブ内だけで一度引き継いで表示する
+  let metaSyncError = sessionStorage.getItem('atsucup:syncError');
+  if(metaSyncError) sessionStorage.removeItem('atsucup:syncError');
   let readOnly = false; // 非ログイン中にDB(認証プール)大会を見ている: 編集UIを一切出さない
   function isGuestTournament(){ return AtsuCup.poolKindOfTournamentId(id)==='guest'; }
   function localTagHtml(){ return isGuestTournament() ? ' <span class="status-badge open" style="background:none; border:1px solid var(--line);">ローカル</span>' : ''; }
@@ -102,6 +106,7 @@
         ${state.winnerName ? "この大会を終了して「大会一覧」に保存します。よろしいですか？" : "この大会はまだ優勝者が決まっていません。それでも終了して「大会一覧」に保存しますか？"}
         <div class="row"><button class="btn btn-primary" id="confirmEndBtn">終了する</button><button class="btn btn-ghost" id="cancelEndBtn">キャンセル</button></div>
       </div>` : '';
+    const syncErrorHtml = metaSyncError ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:#ff6a6a;">⚠️ サーバーへの反映に失敗しました(${escapeHtml(metaSyncError)})。内容はこの端末には保存済みです。時間をおいて編集画面を開き直すか、対戦表の「進行状況を保存」でも反映できます。</div>` : '';
     content.innerHTML = `
       ${statusBadge}
       ${meta.posterUrl?`<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">`:''}
@@ -114,7 +119,8 @@
         <button class="btn btn-ghost" id="editBtn">編集する</button>
         <button class="btn btn-ghost" id="endBtn">この大会を終了する</button>
       </div>`}
-      ${confirmHtml}`;
+      ${confirmHtml}
+      ${syncErrorHtml}`;
     if(readOnly) return;
     document.getElementById('editBtn').addEventListener('click', ()=>{ mode='editing'; render(); });
     document.getElementById('endBtn').addEventListener('click', ()=>{ mode='confirmEnd'; renderLiveHeader(); });
@@ -162,7 +168,15 @@
         if(fileInput.files && fileInput.files[0]){ posterUrl = await AtsuCup.resizeImageToDataUrl(fileInput.files[0], 900, 0.75); }
         const createdAt = AtsuCup.isoFromDateInputValue(heldDate);
         state.tournamentMeta = { id: meta.id, title, details, posterUrl, createdAt, isOfficial: editOfficial, isRestricted: editRestricted };
-        AtsuCup.persist(); mode='view'; render();
+        AtsuCup.persist();
+        metaSyncError = null;
+        // DB(認証)大会は、編集内容もこのタイミングでサーバーへ反映する(参加者・対戦結果は
+        // 従来通り「進行状況を保存」ボタンでのみ)。失敗してもこの端末には保存済みなので編集自体は継続する
+        if(!isGuestTournament()){
+          try{ await AtsuCup.saveTournamentToData(meta.id); }
+          catch(e){ metaSyncError = (e && e.message) || String(e); }
+        }
+        mode='view'; render();
       }catch(e){ alert('保存に失敗しました: '+(e.message||e)); saveBtn.disabled=false; saveBtn.textContent='更新する'; }
     });
   }

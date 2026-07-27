@@ -99,6 +99,16 @@
         const createdAt = AtsuCup.isoFromDateInputValue(heldDate);
         state.tournamentMeta = { id, title, details, posterUrl, createdAt, isOfficial, isRestricted }; // setterが新しい大会として追加し操作対象にする
         AtsuCup.persist();
+        // DB(認証)大会は作成した時点でもサーバーへ反映しておく(参加者エントリー前に他端末が
+        // 大会一覧を見た際にも存在が見えるように)。失敗してもこの端末には保存済みなので作成自体は進める
+        if(!AtsuCup.isGuestMode()){
+          try{ await AtsuCup.saveTournamentToData(id); }
+          catch(e){
+            console.error('[atsucup] 大会作成時のサーバー反映に失敗しました:', e);
+            // 大会詳細ページ側で一度だけ警告表示するために、失敗した旨をこのタブ内だけ引き継ぐ
+            sessionStorage.setItem('atsucup:syncError', (e && e.message) || String(e));
+          }
+        }
         location.href = `tournament-detail.html?id=${encodeURIComponent(id)}`;
       }catch(e){
         alert("保存に失敗しました: " + (e.message||e));
