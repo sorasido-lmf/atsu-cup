@@ -463,15 +463,17 @@
   const initialLeafCount = ()=> state.matches[0] ? state.matches[0].length*2 : 0;
   let TREE_ROW_H=40, BOX_H=30;
   const BOX_W=104, STUB_W=22, COL_GAP=6, COL_W=BOX_W+STUB_W+COL_GAP, PAD_LEFT=8, HEADER_H=22;
+  // ⚠️ 以前はwindow.innerHeight基準の予算(avail)に無理に収めようとしており、
+  // leafCount>24(24人超)では行高が18px程度まで縮む一方、枠高の下限は24pxのままだったため
+  // 枠同士が縦に重なって表示される実描画バグになっていた(2026-07-27発覚)。
+  // ビューポートに収めることは諦め、エントリー数ごとの固定の行高を使い、対戦表自体が
+  // 必要なだけ縦に伸びてページ全体の通常スクロールに任せる方針に変更した
+  // (このページの横スクロールは.tree-scrollのoverflow-x:autoで従来通り可能)。
   function computeRowH(){
     const lc=initialLeafCount();
-    const MIN = lc<=8?40:lc<=16?30:lc<=24?22:18;
-    // 少人数時に生まれる過大な余白を圧縮するため上限を縮小(旧: 90/60/40/26)
-    const MAX = lc<=8?56:lc<=16?44:lc<=24?32:22;
-    const avail=Math.max(200, window.innerHeight-200);
-    TREE_ROW_H = lc ? Math.max(MIN, Math.min(MAX, avail/lc)) : MIN;
-    // 枠の高さは行の高さに対してできるだけ大きく取る(タップしやすく・余白を圧縮)
-    BOX_H = Math.max(24, Math.min(TREE_ROW_H-6, 46));
+    TREE_ROW_H = lc<=8?48 : lc<=16?36 : lc<=24?28 : 24;
+    // 枠高は必ず行高より小さくする(最低4pxの隙間を確保し、重なりを構造的に防ぐ)
+    BOX_H = Math.max(18, Math.min(TREE_ROW_H-4, 46));
   }
   function leafY(i){ return HEADER_H + (i+0.5)*TREE_ROW_H; }
   function jointY(r,i){ if(r===0) return (leafY(2*i)+leafY(2*i+1))/2; return (jointY(r-1,2*i)+jointY(r-1,2*i+1))/2; }
@@ -502,13 +504,17 @@
       +`</g>`;
   }
   // 大会開始後に残っているシード空き枠(➕・WalkinModalで新規登録込みの飛び入り)。readOnly中は➕を出さない
+  // 破線ボックス自体は、2回戦がまだ組まれていない間(aSrc/bSrc整合が問題にならない間)だけ、
+  // 枠自体の位置移動(swapWholeCards)のドラッグ元になる(既存の名前D&Dとは別クラスで衝突回避)
   function byeBoxSvg(r,i,centerY){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     treeSlotRects[`bye_${i}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     const addIcon = readOnly ? '' : `<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
-    return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5" stroke-dasharray="3 3"/>`
-      +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6b5f82">シード</text>`
-      +addIcon;
+    const rect=`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+    const label=`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6b5f82">シード</text>`;
+    const canMoveCard = !readOnly && r===0 && state.matches.length===1;
+    if(canMoveCard) return `<g class="tree-slot tree-card-drag" data-cardm="${i}">${rect}${label}</g>${addIcon}`;
+    return rect+label+addIcon;
   }
   // シード保持者(a)がまだ決まっていない間の、b側の非インタラクティブなプレースホルダ
   function byePlaceholderSvg(centerY){
@@ -538,11 +544,12 @@
       +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">？？？</text>`
       +`</g>`;
   }
+  let treeCardRects={};
   function buildTreeSVG(){
-    treeSlotRects={}; bRecMap=AtsuCup.recMapOf();
+    treeSlotRects={}; treeCardRects={}; bRecMap=AtsuCup.recMapOf();
     const round0=state.matches[0]; const leafCount=round0.length*2; const totalRounds=Math.round(Math.log2(leafCount));
     const lastColRight=colLeft(totalRounds-1)+BOX_W+STUB_W; const svgW=lastColRight+40; const svgH=HEADER_H+leafCount*TREE_ROW_H; lastSvgW=svgW;
-    let framesSvg='', linesSvg='', boxesSvg='', pickBtnSvg='';
+    let framesSvg='', linesSvg='', boxesSvg='', pickBtnSvg='', cardZoneSvg='';
     for(let r=0;r<totalRounds;r++){
       const round=state.matches[r]||[]; const matchCount=leafCount/Math.pow(2,r+1);
       const boxRight=colLeft(r)+BOX_W, joinX=boxRight+STUB_W;
@@ -552,6 +559,13 @@
       for(let i=0;i<matchCount;i++){
         const m=round[i]; const centerY=jointY(r,i); const upY=centerY-TREE_ROW_H/2, downY=centerY+TREE_ROW_H/2;
         const isForced = m && m.a && m.b && !bRecMap[m.a] && !bRecMap[m.b];
+        if(r===0){
+          // シード枠の位置移動(swapWholeCards)のドロップ先ヒットテスト・ホバー表示用。
+          // 通常枠/シード枠どちらの見た目でも、カード全体(a+b両側)を覆う不可視の判定領域を用意する
+          const cardY=upY-BOX_H/2, cardH=(downY+BOX_H/2)-(upY-BOX_H/2);
+          treeCardRects[i]={x:colLeft(0),y:cardY,w:BOX_W,h:cardH};
+          cardZoneSvg+=`<rect class="tree-card-hoverzone" data-cardhover="${i}" x="${colLeft(0)}" y="${cardY}" width="${BOX_W}" height="${cardH}" rx="8" fill="none" stroke="transparent" stroke-width="3" pointer-events="none"/>`;
+        }
         // カード内の短いコの字のみ(次カラムへ伸びる線は引かない)
         linesSvg+=`<path d="M${boxRight},${upY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
         linesSvg+=`<path d="M${boxRight},${downY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
@@ -575,7 +589,7 @@
       }
     }
     let trophySvg=''; if(state.winnerName){ const fy=jointY(totalRounds-1,0); trophySvg=`<text x="${lastColRight+6}" y="${fy+8}" font-size="22">🏆</text>`; }
-    return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="${svgW}" height="${svgH}" fill="#0a0810"/>${framesSvg}${linesSvg}${boxesSvg}${pickBtnSvg}${trophySvg}</svg>`;
+    return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="${svgW}" height="${svgH}" fill="#0a0810"/>${framesSvg}${linesSvg}${boxesSvg}${pickBtnSvg}${cardZoneSvg}${trophySvg}</svg>`;
   }
 
   function renderBracket(){
@@ -643,6 +657,28 @@
     document.querySelectorAll('#treeScroll .tree-add-icon').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startAddChallenger(+el.dataset.addm); }));
     document.querySelectorAll('#treeScroll .tree-slot-tap').forEach(el=> el.addEventListener('click', ()=> { if(dndJustDragged){ dndJustDragged=false; return; } openSlotPicker(+el.dataset.m, el.dataset.side); }));
     wireTreeDnd();
+    wireTreeCardDnd();
+  }
+  // シード枠自体の未決着状態(自動勝利は除く)を判定。swapWholeCardsの移動先として有効かどうかに使う
+  function cardMoveEligible(m){
+    const t = state.matches[0] && state.matches[0][m];
+    if(!t) return false;
+    if(t.bye) return true;
+    return !t.winner;
+  }
+  function wireTreeCardDnd(){
+    ensureDndEls();
+    document.querySelectorAll('#treeScroll .tree-card-drag').forEach(el=> el.addEventListener('pointerdown', onCardDndPointerDown));
+  }
+  function onCardDndPointerDown(ev){
+    const el=ev.currentTarget;
+    const m=+el.dataset.cardm;
+    ev.preventDefault();
+    try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+    dndState={ mode:'card', pointerId:ev.pointerId, srcR:0, srcM:m, srcSide:null, name:null, startX:ev.clientX, startY:ev.clientY, dragging:false, el, hoverTarget:null, hoverIsUnassign:false };
+    el.addEventListener('pointermove', onDndPointerMove);
+    el.addEventListener('pointerup', onDndPointerUp);
+    el.addEventListener('pointercancel', onDndPointerCancel);
   }
 
   /* ---- エントリー枠のドラッグ&ドロップ(同ラウンド内の移動・入れ替え・選択解除) ---- */
@@ -669,9 +705,9 @@
   }
   function startDndVisuals(){
     dndState.el.classList.add('dragging');
-    dndUnassignEl.classList.add('active');
+    if(dndState.mode!=='card') dndUnassignEl.classList.add('active'); // 枠自体の移動では🗑️ゾーンは出さない(空にする概念が無いため)
     const recMap=AtsuCup.recMapOf();
-    dndGhostEl.textContent = dndState.name+' '+(recMap[dndState.name]?'📹':'🚫');
+    dndGhostEl.textContent = dndState.mode==='card' ? '🎫 シード枠を移動' : (dndState.name+' '+(recMap[dndState.name]?'📹':'🚫'));
     dndGhostEl.style.display='block';
   }
   function onDndPointerMove(ev){
@@ -687,13 +723,45 @@
   }
   function clearHoverTarget(){
     if(dndState.hoverTarget){
-      const {r,m,side}=dndState.hoverTarget;
-      const el=document.querySelector(`#treeScroll .tree-slot[data-r="${r}"][data-m="${m}"][data-side="${side}"]`);
-      if(el) el.classList.remove('drop-hover');
+      if(dndState.mode==='card'){
+        const el=document.querySelector(`#treeScroll .tree-card-hoverzone[data-cardhover="${dndState.hoverTarget.m}"]`);
+        if(el) el.classList.remove('drop-hover');
+      } else {
+        const {r,m,side}=dndState.hoverTarget;
+        const el=document.querySelector(`#treeScroll .tree-slot[data-r="${r}"][data-m="${m}"][data-side="${side}"]`);
+        if(el) el.classList.remove('drop-hover');
+      }
     }
     dndState.hoverTarget=null;
   }
   function updateDndHover(clientX, clientY){
+    if(dndState.mode==='card'){
+      // 枠自体の移動: 🗑️ゾーンは対象外。round0の他マッチ全体(カード領域)をヒットテストする
+      dndState.hoverIsUnassign=false;
+      const svgEl=document.querySelector('#treeScroll svg');
+      if(!svgEl){ clearHoverTarget(); return; }
+      const ctm=svgEl.getScreenCTM();
+      if(!ctm){ clearHoverTarget(); return; }
+      const pt=svgEl.createSVGPoint(); pt.x=clientX; pt.y=clientY;
+      const svgPt=pt.matrixTransform(ctm.inverse());
+      let found=null;
+      for(const key in treeCardRects){
+        const m=+key;
+        if(m===dndState.srcM) continue;
+        if(!cardMoveEligible(m)) continue;
+        const rect=treeCardRects[key];
+        if(svgPt.x>=rect.x && svgPt.x<=rect.x+rect.w && svgPt.y>=rect.y && svgPt.y<=rect.y+rect.h){ found={m}; break; }
+      }
+      if(found){
+        if(dndState.hoverTarget && dndState.hoverTarget.m!==found.m) clearHoverTarget();
+        dndState.hoverTarget=found;
+        const targetEl=document.querySelector(`#treeScroll .tree-card-hoverzone[data-cardhover="${found.m}"]`);
+        if(targetEl) targetEl.classList.add('drop-hover');
+      } else {
+        clearHoverTarget();
+      }
+      return;
+    }
     const uRect=dndUnassignEl.getBoundingClientRect();
     const overUnassign = clientX>=uRect.left && clientX<=uRect.right && clientY>=uRect.top && clientY<=uRect.bottom;
     dndUnassignEl.classList.toggle('drop-hover', overUnassign);
@@ -750,7 +818,21 @@
       }
     });
   }
+  // シード枠(枠自体)の位置を丸ごと入れ替える。名前だけでなくbye/winner/videoごとカード全体を交換する。
+  // 2回戦以降が組まれるとaSrc/bSrcの対応関係が実体とズレるため、wireTreeCardDndの発火条件
+  // (state.matches.length===1)によって、この操作自体が1回戦のみに限定されている
+  function swapWholeCards(m1,m2){
+    const round0=state.matches[0];
+    const tmp=round0[m1]; round0[m1]=round0[m2]; round0[m2]=tmp;
+  }
   function commitDnd(){
+    if(dndState.mode==='card'){
+      if(dndState.hoverTarget){ swapWholeCards(dndState.srcM, dndState.hoverTarget.m); }
+      else { return; }
+      AtsuCup.persist();
+      renderTree(); renderExtras();
+      return;
+    }
     const {srcR,srcM,srcSide,hoverTarget,hoverIsUnassign}=dndState;
     if(hoverIsUnassign){ unassignSlot(srcR,srcM,srcSide); }
     else if(hoverTarget){ swapSlots(srcR,srcM,srcSide,hoverTarget.m,hoverTarget.side); }
@@ -767,6 +849,7 @@
     if(dndGhostEl) dndGhostEl.style.display='none';
     if(dndUnassignEl){ dndUnassignEl.classList.remove('active'); dndUnassignEl.classList.remove('drop-hover'); }
     document.querySelectorAll('#treeScroll .tree-slot.dragging, #treeScroll .tree-slot.drop-hover').forEach(el=>{ el.classList.remove('dragging'); el.classList.remove('drop-hover'); });
+    document.querySelectorAll('#treeScroll .tree-card-drag.dragging, #treeScroll .tree-card-hoverzone.drop-hover').forEach(el=>{ el.classList.remove('dragging'); el.classList.remove('drop-hover'); });
     dndState=null;
   }
   function onDndPointerUp(ev){
