@@ -248,6 +248,56 @@ const AtsuCup = (function(){
     }
   }
 
+  // ⚠️ 2026-07-27方針変更: ログインした瞬間だけは、data/tournaments.jsonに存在しない
+  // DB(認証)大会をこの端末のキャッシュから取り除く(サーバー側を正とする)。
+  // 通常のページ読み込み(loadFromData、上記のローカル優先マージ)ではこれをしない。
+  // 理由: 大会作成直後などサーバーへまだ一度も保存できていない大会を、ログイン中の
+  // 通常利用の裏でうっかり消してしまわないようにするため。ログインの瞬間
+  // (GoogleAuth.onStateChangeの発火時)だけに限定すれば、その端末で今まさに
+  // 作りかけの未保存大会が巻き込まれることはまず無い。
+  async function reconcileAuthPoolWithServer(){
+    if(typeof AtsuCupData === 'undefined') return;
+    let remoteTournaments;
+    try{ remoteTournaments = await fetchJson(DATA_PATHS.tournaments); }
+    catch(e){ console.warn('[atsucup] ログイン時のサーバー整合チェックに失敗しました:', e); return; }
+    const remoteIds = new Set(remoteTournaments.map(t=>t.id));
+    const removed = state.tournaments.filter(t=>!remoteIds.has(t.id));
+    if(!removed.length) return;
+    state.tournaments = state.tournaments.filter(t=>remoteIds.has(t.id));
+    persist();
+    showAuthResyncNotice(removed);
+  }
+
+  let authResyncNoticeShown = false;
+  // サーバーから既に消えていた大会をこの端末からも取り除いた旨を知らせる、閉じるだけの
+  // 非ブロッキングな通知(ゲストプールの確認バナーと違い「元に戻す」選択肢が無いための簡易版)。
+  function showAuthResyncNotice(removed){
+    if(typeof document === 'undefined') return;
+    if(!document.body){ document.addEventListener('DOMContentLoaded', ()=> showAuthResyncNotice(removed)); return; }
+    if(authResyncNoticeShown) return;
+    authResyncNoticeShown = true;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .atsucup-resync-toast{ position:fixed; left:14px; right:14px; bottom:14px; z-index:9998;
+        max-width:460px; margin:0 auto; background:#150f22; border:1.5px solid var(--gold-dim,#8a6d2f);
+        border-radius:14px; padding:14px 16px; color:#f5efe0; font-family:'Noto Sans JP',sans-serif;
+        box-shadow:0 10px 30px rgba(0,0,0,.5); }
+      .atsucup-resync-toast p{ margin:0 0 10px; font-size:13px; line-height:1.7; color:#d8cfe6; }
+      .atsucup-resync-toast button{ font-family:inherit; font-size:13px; font-weight:700; padding:8px 14px;
+        border-radius:9px; cursor:pointer; border:1.5px solid #3a2f4d; background:transparent; color:#f5efe0; }
+    `;
+    document.head.appendChild(style);
+
+    const box = document.createElement('div');
+    box.className = 'atsucup-resync-toast';
+    box.innerHTML = `
+      <p>🔄 サーバー側で既に削除されていた大会(${removed.length}件)を、この端末のキャッシュからも取り除きました。</p>
+      <button id="atsucupResyncCloseBtn">閉じる</button>`;
+    document.body.appendChild(box);
+    document.getElementById('atsucupResyncCloseBtn').addEventListener('click', ()=> box.remove());
+  }
+
   /* ---------- ゲスト/認証済みプールの分離: ログイン時の自己申告制リセット ---------- */
   // 不変条件: ログイン中はゲストプールが空でなければならない。
   // これを満たすため、ログイン状態への変化を検知するたびに enforceGuestSeparation() を呼ぶ。
@@ -315,7 +365,10 @@ const AtsuCup = (function(){
   }
 
   if(typeof GoogleAuth !== 'undefined'){
-    GoogleAuth.onStateChange(()=> enforceGuestSeparation());
+    GoogleAuth.onStateChange((s)=>{
+      enforceGuestSeparation();
+      if(s && s.signedIn) reconcileAuthPoolWithServer();
+    });
   }
 
   // 端末のユーザーマスタ(roster/recDefaults/archived)を GAS 経由でシート/GitHubへ反映する。
@@ -972,7 +1025,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 08:15";
+  const BUILD_DATE = "2026-07-27 08:45";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
