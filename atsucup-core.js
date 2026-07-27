@@ -774,6 +774,9 @@ const AtsuCup = (function(){
     const loser = side === 'a' ? match.b : match.a;
     match.winner = val;
     match.loser = loser || null;
+    // 以前pickWinnerAsSeedで不戦勝(シード)化していた対戦を、通常の勝敗入力で選び直した場合は
+    // 見た目も通常の決着済み対戦に戻す(本物の1回戦シードはb===nullなので巻き込まない)
+    if(match.bye && match.a && match.b) match.bye = false;
 
     // 決勝(1試合)の勝者は優勝者
     if(state.matches[r].length === 1){
@@ -790,6 +793,31 @@ const AtsuCup = (function(){
     persist();
   }
 
+  // 両者決まっている対戦を、実際には対戦させず不戦勝(シード)として片方を勝ち上がらせる。
+  // pickWinnerとほぼ同じだが、a/bはどちらも残したままmatch.bye=trueを立てる(見た目をシード枠にするため)。
+  // これにより、対戦せずに次ラウンドへ進めたい枠(相手が見つからない・単に見栄えの都合等)に対応できる。
+  // 敗れた側は通常の敗者と同様に扱う(順位・戦績への反映は通常の敗北と同じ)。
+  function pickWinnerAsSeed(r, m, side){
+    const match = state.matches[r][m];
+    const val = side === 'a' ? match.a : match.b;
+    if(!val) return;
+    const isRepick = !!match.winner && match.winner !== val;
+    const loser = side === 'a' ? match.b : match.a;
+    match.winner = val;
+    match.loser = loser || null;
+    match.bye = true;
+
+    if(state.matches[r].length === 1){
+      state.winnerName = match.winner;
+      persist();
+      return;
+    }
+    if(isRepick){ clearDownstreamFrom(r, m); }
+    if(state.matches[r+1]){ propagateWinnerDownstream(r, m, val); }
+    maybeCreateThirdPlace(r);
+    persist();
+  }
+
   // 決着済みカードの勝敗を取り消す(下流に伝播済みなら一緒に掃除する)
   function resetMatchResult(r, m){
     const match = state.matches[r][m];
@@ -797,6 +825,9 @@ const AtsuCup = (function(){
     if(state.matches[r].length === 1){ state.winnerName = ""; }
     else { clearDownstreamFrom(r, m); }
     match.winner = null; match.loser = null;
+    // pickWinnerAsSeedで不戦勝(シード)化した対戦を取り消す場合、a/b両方に名前が残っているので通常対戦に戻す
+    // (本物の1回戦シードはb===nullで作られるため、この条件では誤って巻き込まない)
+    if(match.bye && match.a && match.b) match.bye = false;
     persist();
   }
 
@@ -924,7 +955,7 @@ const AtsuCup = (function(){
     (entry.participants||[]).forEach(p=>{ points[p.name] = 0; });
     (entry.matches||[]).forEach(round=>{
       round.forEach(m=>{
-        if(m.a && m.b && m.winner){ points[m.winner] = (points[m.winner]||0) + 1; }
+        if(m.a && m.b && m.winner && !m.bye){ points[m.winner] = (points[m.winner]||0) + 1; }
       });
     });
     const tp = entry.thirdPlaceMatch;
@@ -1078,7 +1109,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 10:00";
+  const BUILD_DATE = "2026-07-27 11:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1130,7 +1161,7 @@ const AtsuCup = (function(){
     dateInputValueOf, isoFromDateInputValue,
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
-    advanceRound, pickWinner, resetMatchResult, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
+    advanceRound, pickWinner, pickWinnerAsSeed, resetMatchResult, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
     propagateWinnerDownstream,
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
     setActive, activeT,

@@ -554,20 +554,25 @@
   function slotDndEligible(r, m, side){
     const match = state.matches[r] && state.matches[r][m];
     if(!match) return false;
-    if(match.bye) return side==='a';
+    // 不戦勝(シード)にする、で決着した対戦(bye:trueだがa/b両方に名前が入っている)は、
+    // 通常の決着済み対戦と同じくロックする(本物の1回戦シードはb===nullなので区別できる)
+    if(match.bye && match.b===null) return side==='a';
     return !match.winner;
   }
   let treeSlotRects={}, lastSvgW=0, bRecMap={};
-  function boxSvg(r,i,side,name,centerY,isWinner,isForced,hasWinner,dndOn){
+  function boxSvg(r,i,side,name,centerY,isWinner,isForced,hasWinner,dndOn,isSeedWin){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     const isLoser = hasWinner && !isWinner;
     const fill=isWinner?'#161020':'#0d0a14'; const stroke=isWinner?'#e8b34c':(isForced?'#7a2c2c':'#3a2f4d');
     const strokeW=isWinner?2.5:1.5;
     const nameFill=isWinner?'#e8b34c':'#f1e6cf'; const weight=isWinner?'900':'700';
     const opacity=isLoser?0.45:1;
+    const dash = isSeedWin ? ' stroke-dasharray="3 3"' : '';
+    const seedTag = isSeedWin ? `<text x="${cLeft+BOX_W-8}" y="${boxY+11}" font-size="9" font-style="italic" text-anchor="end" fill="#6b5f82">シード</text>` : '';
     treeSlotRects[`${r}_${i}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     return `<g class="tree-slot" data-r="${r}" data-m="${i}" data-side="${side}" opacity="${opacity}"${dndOn?' data-dnd="1"':''}>`
-      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"/>`
+      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"${dash}/>`
+      +seedTag
       +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="13" font-weight="${weight}" fill="${nameFill}">${escapeHtml(truncate(name,7))}</text>`
       +`<text x="${cLeft+BOX_W-8}" y="${centerY+4.5}" font-size="10.5" text-anchor="end">${bRecMap[name]?'📹':'🚫'}</text>`
       +`</g>`;
@@ -662,7 +667,8 @@
           }
           const isWinner=!!m.winner && m.winner===name; const hasWinner=!!m.winner;
           const dndOn = !readOnly && slotDndEligible(r,i,side);
-          boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced,hasWinner,dndOn);
+          const isSeedWin = isWinner && !!m.bye; // 不戦勝(シード)にする、で決着した対戦の勝者側
+          boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced,hasWinner,dndOn,isSeedWin);
         });
         if(!readOnly && m && m.a && m.b){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
       }
@@ -743,7 +749,8 @@
   function cardMoveEligible(m){
     const t = state.matches[0] && state.matches[0][m];
     if(!t) return false;
-    if(t.bye) return true;
+    // 不戦勝(シード)にする、で決着した対戦(bye:trueだがb!==null)は通常の決着済み対戦と同様ロックする
+    if(t.bye && t.b===null) return true;
     return !t.winner;
   }
   function wireTreeCardDnd(){
@@ -1003,6 +1010,7 @@
     return null;
   }
   function pick(r,m,side){ if(r==='third'){ AtsuCup.pickThirdPlaceWinner(side); } else { AtsuCup.pickWinner(r,m,side); } renderTree(); renderExtras(); renderLiveHeader(); }
+  function pickAsSeed(r,m,side){ AtsuCup.pickWinnerAsSeed(r,m,side); renderTree(); renderExtras(); renderLiveHeader(); }
   function openMatchPickModal(r,m){
     const match=state.matches[r]&&state.matches[r][m]; if(!match||!match.a||!match.b) return; const recMap=AtsuCup.recMapOf();
     ensureMatchModal();
@@ -1015,13 +1023,23 @@
     const resetBtn=document.getElementById('modalResetBtn');
     resetBtn.style.display = match.winner ? 'block' : 'none';
     resetBtn.onclick=()=>{ AtsuCup.resetMatchResult(r,m); closeMatchModal(); renderTree(); renderExtras(); renderLiveHeader(); };
+    // 「不戦勝(シード)にする」: 実際に対戦させず片方を勝ち上がらせる(未決着の対戦のみ、3位決定戦は対象外)
+    const seedRow=document.getElementById('modalSeedRow');
+    if(r!=='third' && !match.winner){
+      seedRow.style.display='block';
+      const seedA=document.getElementById('modalSeedA'), seedB=document.getElementById('modalSeedB');
+      seedA.textContent=`🎫 ${truncate(match.a,10)}をシードにする`; seedB.textContent=`🎫 ${truncate(match.b,10)}をシードにする`;
+      seedA.onclick=()=>{ pickAsSeed(r,m,'a'); closeMatchModal(); }; seedB.onclick=()=>{ pickAsSeed(r,m,'b'); closeMatchModal(); };
+    }else{
+      seedRow.style.display='none';
+    }
     document.getElementById('matchPickModal').style.display='flex';
   }
   let matchModalEl=null;
   function ensureMatchModal(){
     if(matchModalEl) return;
     matchModalEl=document.createElement('div'); matchModalEl.className='match-pick-modal'; matchModalEl.id='matchPickModal'; matchModalEl.style.display='none';
-    matchModalEl.innerHTML=`<div class="match-pick-modal-backdrop" id="matchPickModalBackdrop"></div><div class="match-pick-modal-card"><div class="match-pick-modal-title" id="modalMatchTitle"></div><p class="hint" style="margin-top:0; text-align:center;">勝った方をタップしてください</p><div class="match-pick-modal-row"><button type="button" class="modal-pick-btn" id="modalPickA"></button><span class="vs-label">VS</span><button type="button" class="modal-pick-btn" id="modalPickB"></button></div><button type="button" class="btn btn-ghost" id="modalResetBtn" style="width:100%; margin-top:12px; display:none;">勝敗をリセット</button><button type="button" class="btn btn-ghost" id="modalCancelBtn" style="width:100%; margin-top:8px;">キャンセル</button></div>`;
+    matchModalEl.innerHTML=`<div class="match-pick-modal-backdrop" id="matchPickModalBackdrop"></div><div class="match-pick-modal-card"><div class="match-pick-modal-title" id="modalMatchTitle"></div><p class="hint" style="margin-top:0; text-align:center;">勝った方をタップしてください</p><div class="match-pick-modal-row"><button type="button" class="modal-pick-btn" id="modalPickA"></button><span class="vs-label">VS</span><button type="button" class="modal-pick-btn" id="modalPickB"></button></div><div id="modalSeedRow" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid var(--line);"><p class="hint" style="margin:0 0 8px; text-align:center;">対戦せずに、不戦勝(シード)として進める場合:</p><div class="row"><button type="button" class="btn btn-ghost" id="modalSeedA" style="flex:1;"></button><button type="button" class="btn btn-ghost" id="modalSeedB" style="flex:1;"></button></div></div><button type="button" class="btn btn-ghost" id="modalResetBtn" style="width:100%; margin-top:12px; display:none;">勝敗をリセット</button><button type="button" class="btn btn-ghost" id="modalCancelBtn" style="width:100%; margin-top:8px;">キャンセル</button></div>`;
     document.body.appendChild(matchModalEl);
     matchModalEl.querySelector('#matchPickModalBackdrop').addEventListener('click', closeMatchModal);
     matchModalEl.querySelector('#modalCancelBtn').addEventListener('click', closeMatchModal);
