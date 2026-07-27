@@ -59,8 +59,11 @@ const AtsuCupData = (function(){
       // キーの並びはアプリ側の生成順(buildRound1 / advanceRound)に合わせる。
       // 2回戦以降は「前ラウンドのどのカードの勝者か」の対応関係も復元する(撮影不可回避の入れ替えを保持)
       const hasSrc = rIdx >= 1 && r.player1SrcIndex !== undefined && r.player1SrcIndex !== null;
+      // ⚠️ byeは2回戦以降(hasSrcが真)でも必ず引き継ぐこと。pickWinnerAsSeed(不戦勝で確定)は
+      // どのラウンドでも使えるため、ここで落とすと保存→サーバーから再読込した時点で
+      // 不戦勝の見た目と判定が消える(2026-07-27に実際の不具合として発覚・修正)
       grid[rIdx][mIdx] = hasSrc
-        ? { a, b, aSrc: r.player1SrcIndex, bSrc: r.player2SrcIndex, winner, loser, video }
+        ? { a, b, aSrc: r.player1SrcIndex, bSrc: r.player2SrcIndex, winner, loser, video, bye: !!r.isBye }
         : { a, b, winner, loser, video, bye: !!r.isBye };
     });
     return grid;

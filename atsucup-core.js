@@ -836,6 +836,17 @@ const AtsuCup = (function(){
     return false;
   }
 
+  // pickWinnerAsSeedで不戦勝(シード)化した対戦を、通常の対戦の状態に戻す。
+  // 本物のシード枠は1回戦(r===0・b===null)にしか存在しないため、それ以外のbyeは常に解除してよい。
+  // ⚠️ 「a&&b が両方ある時だけ解除」という条件にすると、片側だけ埋まった不戦勝カード
+  // (相手が永久に入らない枠を不戦勝で確定したもの)でbyeが残り続け、slotDndEligibleが
+  // それを1回戦の本物のシード枠と誤認してD&D対象にしてしまう。ラウンドで判定すること
+  function clearPickedSeedFlag(r, match){
+    if(!match.bye) return;
+    if(r === 0 && !match.b) return;   // 1回戦の本物のシード枠は維持する
+    match.bye = false;
+  }
+
   function pickWinner(r, m, side){
     const match = state.matches[r][m];
     const val = side === 'a' ? match.a : match.b;
@@ -845,8 +856,8 @@ const AtsuCup = (function(){
     match.winner = val;
     match.loser = loser || null;
     // 以前pickWinnerAsSeedで不戦勝(シード)化していた対戦を、通常の勝敗入力で選び直した場合は
-    // 見た目も通常の決着済み対戦に戻す(本物の1回戦シードはb===nullなので巻き込まない)
-    if(match.bye && match.a && match.b) match.bye = false;
+    // 見た目も通常の決着済み対戦に戻す
+    clearPickedSeedFlag(r, match);
 
     // 決勝(1試合)の勝者は優勝者
     if(state.matches[r].length === 1){
@@ -863,10 +874,15 @@ const AtsuCup = (function(){
     persist();
   }
 
-  // 両者決まっている対戦を、実際には対戦させず不戦勝(シード)として片方を勝ち上がらせる。
+  // 対戦を実際には行わせず、不戦勝(シード)として片方を勝ち上がらせる。
   // pickWinnerとほぼ同じだが、a/bはどちらも残したままmatch.bye=trueを立てる(見た目をシード枠にするため)。
   // これにより、対戦せずに次ラウンドへ進めたい枠(相手が見つからない・単に見栄えの都合等)に対応できる。
-  // 敗れた側は通常の敗者と同様に扱う(順位・戦績への反映は通常の敗北と同じ)。
+  //
+  // 2つの使われ方がある:
+  //  1. 両者決まっている対戦を不戦勝にする → 敗れた側は通常の敗者と同様に扱う(順位・戦績も通常の敗北と同じ)
+  //  2. 片側だけ埋まった枠(相手が前ラウンドの空カード由来で永久に入らない)を確定する
+  //     → loserがnullになる。3位決定戦は「両敗者が揃った時」しか作られないので、準決勝で
+  //        このケースが起きると3位決定戦は作られない(敗者が存在しないため、仕様として正しい)
   function pickWinnerAsSeed(r, m, side){
     const match = state.matches[r][m];
     const val = side === 'a' ? match.a : match.b;
@@ -895,9 +911,8 @@ const AtsuCup = (function(){
     if(state.matches[r].length === 1){ state.winnerName = ""; }
     else { clearDownstreamFrom(r, m); }
     match.winner = null; match.loser = null;
-    // pickWinnerAsSeedで不戦勝(シード)化した対戦を取り消す場合、a/b両方に名前が残っているので通常対戦に戻す
-    // (本物の1回戦シードはb===nullで作られるため、この条件では誤って巻き込まない)
-    if(match.bye && match.a && match.b) match.bye = false;
+    // pickWinnerAsSeedで不戦勝(シード)化した対戦を取り消す場合は、通常の対戦の状態に戻す
+    clearPickedSeedFlag(r, match);
     persist();
   }
 
@@ -1179,7 +1194,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 14:00";
+  const BUILD_DATE = "2026-07-27 15:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;

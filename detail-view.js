@@ -554,10 +554,35 @@
   function slotDndEligible(r, m, side){
     const match = state.matches[r] && state.matches[r][m];
     if(!match) return false;
-    // 不戦勝(シード)にする、で決着した対戦(bye:trueだがa/b両方に名前が入っている)は、
-    // 通常の決着済み対戦と同じくロックする(本物の1回戦シードはb===nullなので区別できる)
-    if(match.bye && match.b===null) return side==='a';
+    // 不戦勝(シード)にする、で決着した対戦のbyeは、通常の決着済み対戦と同じくロックする。
+    // 本物のシード枠は1回戦にしか存在しないので、r===0 も条件に入れて2回戦以降の
+    // 片側だけの不戦勝カード(b===nullのままbyeが立つ)を誤ってD&D対象にしないようにする
+    if(r===0 && match.bye && match.b===null) return side==='a';
     return !match.winner;
+  }
+
+  // このスロットの供給元(前ラウンドのカード)が、決着もしておらず誰も入っていない=永久に埋まらないか。
+  // 「前のラウンドがまだ進行中で一時的に相手が未定」なだけの枠と区別するために使う
+  function slotSourceDead(r, m, side){
+    if(r===0) return false;
+    const card = state.matches[r][m];
+    const src = side==='a' ? card.aSrc : card.bSrc;
+    const up = (src===undefined || src===null) ? null : (state.matches[r-1]||[])[src];
+    if(!up) return true;   // 供給元を辿れない古いデータは「埋まらない」側に倒す(行き止まりを作らないため)
+    return !up.winner && !up.a && !up.b;
+  }
+  // カードが勝敗入力ボタンの対象か。
+  // 'match'    = 両者そろった通常の勝敗入力(⚔️)
+  // 'seedOnly' = 片側だけ埋まっていて相手が永久に入らない枠の不戦勝確定(🎫)
+  function pickableCard(r, m){
+    const card = state.matches[r] && state.matches[r][m];
+    if(!card) return null;
+    if(card.a && card.b) return 'match';
+    if(r===0) return null;              // 1回戦の空き枠・シード枠は「タップで選ぶ」「➕」の担当
+    const side = card.a ? 'a' : (card.b ? 'b' : null);
+    if(!side) return null;              // 両側とも空のカードは対象外
+    if(card.winner) return 'seedOnly';  // 決着後もリセットできるようボタンを残す
+    return slotSourceDead(r, m, side==='a'?'b':'a') ? 'seedOnly' : null;
   }
   let treeSlotRects={}, lastSvgW=0, bRecMap={};
   function boxSvg(r,i,side,name,centerY,isWinner,isForced,hasWinner,dndOn,isSeedWin){
@@ -618,9 +643,15 @@
       +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#e8b34c">${escapeHtml(label)}</text>`
       +`</g>`;
   }
-  // 2回戦以降で、まだ勝ち上がりが決まっていない未確定枠。D&Dのドロップ先にもなる
-  function pendingBoxSvg(r,i,side,centerY){
+  // 2回戦以降で、まだ勝ち上がりが決まっていない未確定枠。D&Dのドロップ先にもなる。
+  // isSeed=trueは「不戦勝(シード)で決着したカードの、相手が入らない側」。もう誰も入らないので
+  // スロット登録(=D&Dのドロップ先)はせず、1回戦のシード枠と同じ破線ボックスで描く
+  function pendingBoxSvg(r,i,side,centerY,isSeed){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
+    if(isSeed){
+      return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5" stroke-dasharray="3 3"/>`
+        +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6b5f82">シード</text>`;
+    }
     treeSlotRects[`${r}_${i}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     return `<g class="tree-slot" data-r="${r}" data-m="${i}" data-side="${side}">`
       +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
@@ -663,14 +694,20 @@
               return;
             }
             if(r===0){ boxesSvg+=slotTapBoxSvg(i, side, y, 'タップで選ぶ'); return; } // 1回戦の空き枠は常にタップ可能
-            boxesSvg+=pendingBoxSvg(r,i,side,y); return;
+            // 不戦勝で決着済みのカードの空いている側は、1回戦のシード枠と同じ破線ボックスで描く
+            boxesSvg+=pendingBoxSvg(r,i,side,y, !!(m && m.bye && m.winner)); return;
           }
           const isWinner=!!m.winner && m.winner===name; const hasWinner=!!m.winner;
           const dndOn = !readOnly && slotDndEligible(r,i,side);
           const isSeedWin = isWinner && !!m.bye; // 不戦勝(シード)にする、で決着した対戦の勝者側
           boxesSvg+=boxSvg(r,i,side,name,y,isWinner,isForced,hasWinner,dndOn,isSeedWin);
         });
-        if(!readOnly && m && m.a && m.b){ const bx=boxRight+STUB_W/2; pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">⚔️</text></g>`; }
+        const pickKind = readOnly ? null : pickableCard(r,i);
+        if(pickKind){
+          const bx=boxRight+STUB_W/2;
+          const icon = pickKind==='match' ? '⚔️' : '🎫'; // 片側だけの枠は不戦勝の確定なので札アイコンで区別する
+          pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">${icon}</text></g>`;
+        }
       }
     }
     let trophySvg=''; if(state.winnerName){ const fy=jointY(totalRounds-1,0); trophySvg=`<text x="${lastColRight+6}" y="${fy+8}" font-size="22">🏆</text>`; }
@@ -1006,30 +1043,61 @@
   }
   function findNextMatch(){
     for(let r=0;r<state.matches.length;r++){ for(let m=0;m<state.matches[r].length;m++){ const x=state.matches[r][m]; if(x.a&&x.b&&!x.winner) return {r,m,match:x}; } }
+    // 通常の対戦が残っていなければ、相手が入らないまま決着していない枠(🎫)へ誘導する。
+    // ここを拾わないと、その枠が原因で先へ進めない時に「次の対戦へ」が何も案内できなくなる
+    for(let r=0;r<state.matches.length;r++){ for(let m=0;m<state.matches[r].length;m++){ const x=state.matches[r][m]; if(!x.winner && pickableCard(r,m)==='seedOnly') return {r,m,match:x}; } }
     if(state.thirdPlaceMatch&&!state.thirdPlaceMatch.winner&&state.thirdPlaceMatch.a&&state.thirdPlaceMatch.b) return {r:'third',m:0,match:state.thirdPlaceMatch};
     return null;
   }
   function pick(r,m,side){ if(r==='third'){ AtsuCup.pickThirdPlaceWinner(side); } else { AtsuCup.pickWinner(r,m,side); } renderTree(); renderExtras(); renderLiveHeader(); }
   function pickAsSeed(r,m,side){ AtsuCup.pickWinnerAsSeed(r,m,side); renderTree(); renderExtras(); renderLiveHeader(); }
   function openMatchPickModal(r,m){
-    const match=state.matches[r]&&state.matches[r][m]; if(!match||!match.a||!match.b) return; const recMap=AtsuCup.recMapOf();
+    const match=state.matches[r]&&state.matches[r][m]; if(!match) return;
+    if(r!=='third' && !pickableCard(r,m)) return; // 対戦表の⚔️/🎫ボタンと同じ判定で入口をそろえる
+    // 片側だけ埋まっているカード(相手が永久に入らない枠)。この場合はA/Bの勝敗選択が意味を持たない
+    const soloSide = (match.a && match.b) ? null : (match.a ? 'a' : (match.b ? 'b' : null));
+    if(!match.a && !match.b) return;
+    const recMap=AtsuCup.recMapOf();
     ensureMatchModal();
     document.getElementById('modalMatchTitle').textContent=AtsuCup.roundLabel(state.matches[r].length);
+    const hintEl=document.getElementById('modalPickHint'), rowEl=document.getElementById('modalPickRow');
     const btnA=document.getElementById('modalPickA'), btnB=document.getElementById('modalPickB');
-    btnA.innerHTML=`<span class="nm">${escapeHtml(match.a)}</span><span>${recMap[match.a]?'📹':'🚫'}</span>`;
-    btnB.innerHTML=`<span class="nm">${escapeHtml(match.b)}</span><span>${recMap[match.b]?'📹':'🚫'}</span>`;
-    btnA.classList.toggle('winner',match.winner===match.a); btnB.classList.toggle('winner',match.winner===match.b);
-    btnA.onclick=()=>{ pick(r,m,'a'); closeMatchModal(); }; btnB.onclick=()=>{ pick(r,m,'b'); closeMatchModal(); };
+    // ⚠️ モーダル要素は使い回すため、通常モード側で表示状態を必ず元に戻すこと
+    rowEl.style.display = soloSide ? 'none' : 'flex';
+    if(soloSide){
+      hintEl.textContent = match.winner
+        ? `🎫 ${match.winner} の不戦勝で確定しています`
+        : 'この枠には対戦相手が入りません。';
+    }else{
+      hintEl.textContent='勝った方をタップしてください';
+      btnA.innerHTML=`<span class="nm">${escapeHtml(match.a)}</span><span>${recMap[match.a]?'📹':'🚫'}</span>`;
+      btnB.innerHTML=`<span class="nm">${escapeHtml(match.b)}</span><span>${recMap[match.b]?'📹':'🚫'}</span>`;
+      btnA.classList.toggle('winner',match.winner===match.a); btnB.classList.toggle('winner',match.winner===match.b);
+      btnA.onclick=()=>{ pick(r,m,'a'); closeMatchModal(); }; btnB.onclick=()=>{ pick(r,m,'b'); closeMatchModal(); };
+    }
     const resetBtn=document.getElementById('modalResetBtn');
     resetBtn.style.display = match.winner ? 'block' : 'none';
     resetBtn.onclick=()=>{ AtsuCup.resetMatchResult(r,m); closeMatchModal(); renderTree(); renderExtras(); renderLiveHeader(); };
     // 「不戦勝(シード)にする」: 実際に対戦させず片方を勝ち上がらせる(未決着の対戦のみ、3位決定戦は対象外)
     const seedRow=document.getElementById('modalSeedRow');
+    const seedA=document.getElementById('modalSeedA'), seedB=document.getElementById('modalSeedB');
+    const seedNote=document.getElementById('modalSeedNote');
     if(r!=='third' && !match.winner){
       seedRow.style.display='block';
-      const seedA=document.getElementById('modalSeedA'), seedB=document.getElementById('modalSeedB');
-      seedA.textContent=`🎫 ${truncate(match.a,10)}をシードにする`; seedB.textContent=`🎫 ${truncate(match.b,10)}をシードにする`;
-      seedA.onclick=()=>{ pickAsSeed(r,m,'a'); closeMatchModal(); }; seedB.onclick=()=>{ pickAsSeed(r,m,'b'); closeMatchModal(); };
+      if(soloSide){
+        // 勝敗行を隠しているので、シード行だけで完結する見た目にする(区切り線と余白を消す)
+        seedRow.style.borderTop='none'; seedRow.style.marginTop='0'; seedRow.style.paddingTop='0';
+        seedNote.textContent='前のラウンドが空のため、この枠には相手が入りません。不戦勝(シード)として次のラウンドへ進めます。';
+        seedA.textContent=`🎫 ${truncate(match[soloSide],10)}の不戦勝で確定`;
+        seedA.onclick=()=>{ pickAsSeed(r,m,soloSide); closeMatchModal(); };
+        seedB.style.display='none';
+      }else{
+        seedRow.style.borderTop=''; seedRow.style.marginTop=''; seedRow.style.paddingTop='';
+        seedNote.textContent='対戦せずに、不戦勝(シード)として進める場合:';
+        seedB.style.display='';
+        seedA.textContent=`🎫 ${truncate(match.a,10)}をシードにする`; seedB.textContent=`🎫 ${truncate(match.b,10)}をシードにする`;
+        seedA.onclick=()=>{ pickAsSeed(r,m,'a'); closeMatchModal(); }; seedB.onclick=()=>{ pickAsSeed(r,m,'b'); closeMatchModal(); };
+      }
     }else{
       seedRow.style.display='none';
     }
@@ -1039,7 +1107,7 @@
   function ensureMatchModal(){
     if(matchModalEl) return;
     matchModalEl=document.createElement('div'); matchModalEl.className='match-pick-modal'; matchModalEl.id='matchPickModal'; matchModalEl.style.display='none';
-    matchModalEl.innerHTML=`<div class="match-pick-modal-backdrop" id="matchPickModalBackdrop"></div><div class="match-pick-modal-card"><div class="match-pick-modal-title" id="modalMatchTitle"></div><p class="hint" style="margin-top:0; text-align:center;">勝った方をタップしてください</p><div class="match-pick-modal-row"><button type="button" class="modal-pick-btn" id="modalPickA"></button><span class="vs-label">VS</span><button type="button" class="modal-pick-btn" id="modalPickB"></button></div><div id="modalSeedRow" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid var(--line);"><p class="hint" style="margin:0 0 8px; text-align:center;">対戦せずに、不戦勝(シード)として進める場合:</p><div class="row"><button type="button" class="btn btn-ghost" id="modalSeedA" style="flex:1;"></button><button type="button" class="btn btn-ghost" id="modalSeedB" style="flex:1;"></button></div></div><button type="button" class="btn btn-ghost" id="modalResetBtn" style="width:100%; margin-top:12px; display:none;">勝敗をリセット</button><button type="button" class="btn btn-ghost" id="modalCancelBtn" style="width:100%; margin-top:8px;">キャンセル</button></div>`;
+    matchModalEl.innerHTML=`<div class="match-pick-modal-backdrop" id="matchPickModalBackdrop"></div><div class="match-pick-modal-card"><div class="match-pick-modal-title" id="modalMatchTitle"></div><p class="hint" id="modalPickHint" style="margin-top:0; text-align:center;">勝った方をタップしてください</p><div class="match-pick-modal-row" id="modalPickRow"><button type="button" class="modal-pick-btn" id="modalPickA"></button><span class="vs-label">VS</span><button type="button" class="modal-pick-btn" id="modalPickB"></button></div><div id="modalSeedRow" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid var(--line);"><p class="hint" id="modalSeedNote" style="margin:0 0 8px; text-align:center;">対戦せずに、不戦勝(シード)として進める場合:</p><div class="row"><button type="button" class="btn btn-ghost" id="modalSeedA" style="flex:1;"></button><button type="button" class="btn btn-ghost" id="modalSeedB" style="flex:1;"></button></div></div><button type="button" class="btn btn-ghost" id="modalResetBtn" style="width:100%; margin-top:12px; display:none;">勝敗をリセット</button><button type="button" class="btn btn-ghost" id="modalCancelBtn" style="width:100%; margin-top:8px;">キャンセル</button></div>`;
     document.body.appendChild(matchModalEl);
     matchModalEl.querySelector('#matchPickModalBackdrop').addEventListener('click', closeMatchModal);
     matchModalEl.querySelector('#modalCancelBtn').addEventListener('click', closeMatchModal);
@@ -1088,8 +1156,14 @@
       const doAdvance=()=>{ AtsuCup.advanceRound(lastR); renderTree(); renderExtras(); };
       document.getElementById('advanceRoundBtn').onclick=()=>{
         const undecided=lastRound.filter(m=>m.a&&m.b&&!m.winner).length;
-        if(undecided>0){
-          document.getElementById('advanceConfirm').innerHTML=`<div class="advance-warn">終了していない対戦が${undecided}件ありますが、${escapeHtml(nextLabel)}を始めますか？(未決着カードの勝者は決まり次第この先の枠に自動で入ります)<div class="row"><button class="btn btn-primary" id="advanceYesBtn">進む</button><button class="btn btn-ghost" id="advanceNoBtn">キャンセル</button></div></div>`;
+        // 相手が永久に入らない片側だけの枠も数える。放置したまま進むと次のラウンドが
+        // 「？？？」のまま埋まらず、そこから先へ進めなくなるため(2026-07-27に実際に発生)
+        const soloPending=lastRound.filter((m,i)=> !m.winner && pickableCard(lastR,i)==='seedOnly').length;
+        if(undecided>0 || soloPending>0){
+          const lines=[];
+          if(undecided>0) lines.push(`終了していない対戦が${undecided}件`);
+          if(soloPending>0) lines.push(`相手が入らないまま決着していない枠が${soloPending}件(🎫で不戦勝にできます)`);
+          document.getElementById('advanceConfirm').innerHTML=`<div class="advance-warn">${lines.join('、')}ありますが、${escapeHtml(nextLabel)}を始めますか？(未決着カードの勝者は決まり次第この先の枠に自動で入ります)<div class="row"><button class="btn btn-primary" id="advanceYesBtn">進む</button><button class="btn btn-ghost" id="advanceNoBtn">キャンセル</button></div></div>`;
           document.getElementById('advanceYesBtn').onclick=doAdvance;
           document.getElementById('advanceNoBtn').onclick=()=>{ document.getElementById('advanceConfirm').innerHTML=''; };
         } else { doAdvance(); }
