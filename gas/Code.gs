@@ -298,7 +298,9 @@ function githubApiUrl_(path) {
   return 'https://api.github.com/repos/' + prop_('GITHUB_OWNER') + '/' + prop_('GITHUB_REPO') + '/contents/' + path;
 }
 
-function pushToGitHub_(path, rows, message) {
+// GitHub Contents APIへ、base64済みのコンテンツをそのままPUTする共通処理
+// (JSON書き出し・バイナリ画像アップロードの両方から使う)
+function putGithubContent_(path, base64Content, message) {
   var pat    = prop_('GITHUB_PAT');
   var branch = prop_('GITHUB_BRANCH', 'main');
   var url    = githubApiUrl_(path);
@@ -313,12 +315,7 @@ function pushToGitHub_(path, rows, message) {
     throw new Error('GitHubの取得に失敗しました(' + get.getResponseCode() + '): ' + path);
   }
 
-  var body = {
-    message: message,
-    // 日本語を含むのでUTF-8を明示する
-    content: Utilities.base64Encode(JSON.stringify(rows, null, 2) + '\n', Utilities.Charset.UTF_8),
-    branch: branch
-  };
+  var body = { message: message, content: base64Content, branch: branch };
   if (sha) body.sha = sha;
 
   var put = UrlFetchApp.fetch(url, {
@@ -330,22 +327,38 @@ function pushToGitHub_(path, rows, message) {
   }
 }
 
+function pushToGitHub_(path, rows, message) {
+  // 日本語を含むのでUTF-8を明示する
+  var base64Content = Utilities.base64Encode(JSON.stringify(rows, null, 2) + '\n', Utilities.Charset.UTF_8);
+  putGithubContent_(path, base64Content, message);
+}
+
+// ポスター画像など、既にbase64化済みのバイナリファイルをGitHubへ保存する
+function pushBinaryToGitHub_(path, base64Content, message) {
+  putGithubContent_(path, base64Content, message);
+}
+
 /**
  * 指定テーブルをシートから読み直してGitHubへ書き出す。
  *
  * 事故防止: シートが空なのにGitHub側にデータがある場合は書き出しを中断する。
  * (移行前や、旧方式でGitHubを直接更新した後に書き込むと、空のシートで上書きして
  *  GitHub側のデータを失うため。先に importFromGitHub() を実行させる)
+ *
+ * force=true にすると、このチェックを完全にスキップして常に上書きする。
+ * ゴミデータの一括削除など、シートを意図的に空にしてGitHub側も空にしたい場合の
+ * 破壊的操作専用(通常は使わない。forcePushSheetChangesToGitHub()からのみ呼ぶ想定)。
  */
-function exportTables_(tables, message) {
+function exportTables_(tables, message, force) {
   tables.forEach(function (name) {
     var rows = readSheet_(name);
-    if (!rows.length) {
+    if (!rows.length && !force) {
       var existing = readJsonFromGitHub_('data/' + name + '.json');
       if (existing.length) {
         throw new Error(
           '安全のため中断しました: シートの「' + name + '」は空ですが、GitHubには' + existing.length + '行あります。' +
-          'このまま書き出すとGitHub側のデータが消えます。先に importFromGitHub() を実行してください。'
+          'このまま書き出すとGitHub側のデータが消えます。先に importFromGitHub() を実行するか、' +
+          '本当に空にしたい場合は forcePushSheetChangesToGitHub() を使ってください。'
         );
       }
     }
@@ -474,6 +487,36 @@ function actionSaveTournament_(payload) {
   var oldRow = existingTournaments.filter(function (t) { return t.id === tid; })[0];
   var newRow = payload.tournamentRow;
   newRow.archived = oldRow ? oldRow.archived : false;
+
+  // ⚠️ スプレッドシートは1セル50,000文字が上限。ポスター画像をdata URL(base64)のまま
+  // セルへ直接保存すると、大きめの写真だとこの上限を超え、tournaments行の書き込みそのものが
+  // 失敗して大会情報(heldAt/status/archived等)ごと空欄化してしまう不具合になっていた
+  // (2026-07-27発覚)。まだアップロードされていない(data URLのままの)画像は、GitHubへ
+  // 別ファイルとしてpushし、そのURLだけをシートに書く(URLなら十分短い)。
+  var posterUploadedUrl = null, posterUploadError = null;
+  if (payload.posterImageUpload) {
+    try {
+      var m = String(payload.posterImageUpload).match(/^data:[^;]+;base64,(.+)$/);
+      if (!m) throw new Error('画像データの形式が不正です。');
+      var base64Content = m[1];
+      // resizeImageToDataUrl(900px/quality0.75)の出力なら通常十分収まる余裕を持った上限
+      if (base64Content.length > 4000000) throw new Error('画像が大きすぎます。');
+      var posterPath = 'posters/' + tid + '.jpg';
+      pushBinaryToGitHub_(posterPath, base64Content, 'ポスター画像を更新: ' + (newRow.title || tid));
+      posterUploadedUrl = 'https://raw.githubusercontent.com/' + prop_('GITHUB_OWNER') + '/' + prop_('GITHUB_REPO') + '/' + prop_('GITHUB_BRANCH', 'main') + '/' + posterPath;
+      newRow.posterImage = posterUploadedUrl;
+    } catch (e) {
+      // 画像アップロードだけ失敗しても、大会情報の保存は止めない(直前の値を維持する)
+      posterUploadError = String((e && e.message) || e);
+      newRow.posterImage = oldRow ? oldRow.posterImage : null;
+    }
+  }
+  // 古いキャッシュ済みクライアントが直接data URLを送ってきた場合の最後の安全策
+  // (通常のクライアントはposterImageUploadを使うため、ここに来るのは想定外ケースのみ)
+  if (newRow.posterImage && String(newRow.posterImage).length > 45000) {
+    newRow.posterImage = oldRow ? oldRow.posterImage : null;
+  }
+
   var tournaments = existingTournaments.filter(function (t) { return t.id !== tid; });
   tournaments.push(newRow);
   writeSheet_('tournaments', tournaments);
@@ -489,12 +532,15 @@ function actionSaveTournament_(payload) {
   if (ensured.added.length) tables.unshift('users');
   exportTables_(tables, '大会を保存: ' + (payload.tournamentRow.title || tid));
 
-  return {
+  var result = {
     tournamentId: tid,
     entries: entryRows.length,
     matches: matchRows.length,
     addedUsers: ensured.added.length
   };
+  if (posterUploadedUrl) result.posterUrl = posterUploadedUrl;
+  if (posterUploadError) result.posterUploadError = posterUploadError;
+  return result;
 }
 
 /**
@@ -777,6 +823,18 @@ function dumpUsersJson() {
 function pushSheetChangesToGitHub() {
   exportTables_(['tournaments', 'entries', 'matches'], '手動編集をGitHubへ反映');
   Logger.log('GitHubへの反映が完了しました。');
+}
+
+/**
+ * ⚠️ 破壊的操作。シートが空でもGitHub側の安全チェック(exportTables_のforce)をスキップして
+ * 常に上書きする。ゴミデータを一括削除したい場合、シート側の該当行を先に手で全部消してから
+ * このままGASエディタで実行する(tournaments/entries/matchesの3シートが対象。実行するとGitHub側の
+ * data/tournaments.json・entries.json・matches.jsonがシートの現在の内容==空、で上書きされる)。
+ * 通常の運用では絶対に使わず、必ず pushSheetChangesToGitHub() を使うこと。
+ */
+function forcePushSheetChangesToGitHub() {
+  exportTables_(['tournaments', 'entries', 'matches'], 'シートを空にしてGitHubへ強制反映(ゴミデータ削除)', true);
+  Logger.log('GitHubへの強制反映が完了しました。');
 }
 
 /** 往復テスト: シート→JSON→シート→JSON で内容が変わらないことを確認する */

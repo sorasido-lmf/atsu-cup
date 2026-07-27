@@ -145,16 +145,26 @@ const AtsuCupData = (function(){
 
     // archivedは含めない(通常保存では触らない専用フィールド。GAS側のactionSaveTournament_が
     // 既存行の値をそのまま引き継ぐ。archiveTournamentアクションのみがここを変更する)。
+    //
+    // ⚠️ Googleスプレッドシートは1セル50,000文字が上限。ポスター画像をdata URL(base64)の
+    // まま直接セルへ保存すると、大きめの写真だとこの上限を超え、tournaments行の書き込み
+    // そのものが失敗して大会情報(heldAt/status/archived等)ごと空欄化していた(2026-07-27発覚)。
+    // → シートには保存せず、data URLのままローカルに残っている(＝まだアップロード未済の)
+    //   画像だけを別送りし、GAS側でGitHubへ画像ファイルとして保存、そのURLだけをシートに
+    //   書き込む(URLなら短いので上限にかからない)。既にアップロード済み(http(s)://の
+    //   URLになっている)ものはそのまま渡すだけで再アップロードしない。
+    const isLocalDataUrl = !!(t.posterUrl && t.posterUrl.indexOf('data:') === 0);
     const tournamentRow = {
       id: t.id,
       title: t.title || "",
       detail: t.details || "",
-      posterImage: t.posterUrl || null,
+      posterImage: isLocalDataUrl ? null : (t.posterUrl || null),
       heldAt: t.createdAt || new Date().toISOString(),
       status: t.status || 'ongoing',
       isOfficial: !!t.isOfficial,
       isRestricted: !!t.isRestricted
     };
+    const posterImageUpload = isLocalDataUrl ? t.posterUrl : null;
 
     // placementは既存の順位計算をそのまま再利用する(history形式のentryを渡す)
     const placements = AtsuCup.computePlacements({
@@ -219,7 +229,7 @@ const AtsuCupData = (function(){
       });
     }
 
-    return { tournamentRow, entryRows, matchRows };
+    return { tournamentRow, entryRows, matchRows, posterImageUpload };
   }
 
   /* ================= users.json ↔ 端末のroster ================= */

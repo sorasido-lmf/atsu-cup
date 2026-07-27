@@ -348,9 +348,14 @@ const AtsuCup = (function(){
     // userId/player*Id欄に実IDではなく名前が入り、GAS側でそこから実IDへ解決する。
     const identity = {};
     names.forEach(n=>{ identity[n] = n; });
-    const { tournamentRow, entryRows, matchRows } = AtsuCupData.fromAppTournament(t, identity);
+    const { tournamentRow, entryRows, matchRows, posterImageUpload } = AtsuCupData.fromAppTournament(t, identity);
 
-    return GasDB.saveTournament({ tournamentRow, entryRows, matchRows, participantNames: names });
+    const result = await GasDB.saveTournament({ tournamentRow, entryRows, matchRows, participantNames: names, posterImageUpload });
+    // ポスター画像をGitHubへアップロードした場合、サーバーから返ってきた最終URLを
+    // ローカルの保持データにも反映する(巨大なdata URLをlocalStorageに残さない・
+    // 次回以降の保存で毎回再アップロードしないようにするため)
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    return result;
   }
 
   // 大会をアーカイブする(行削除ではなくサーバー側でarchived=trueを立てる)。
@@ -967,7 +972,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 07:15";
+  const BUILD_DATE = "2026-07-27 08:15";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;

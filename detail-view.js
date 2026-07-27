@@ -173,7 +173,10 @@
         // DB(認証)大会は、編集内容もこのタイミングでサーバーへ反映する(参加者・対戦結果は
         // 従来通り「進行状況を保存」ボタンでのみ)。失敗してもこの端末には保存済みなので編集自体は継続する
         if(!isGuestTournament()){
-          try{ await AtsuCup.saveTournamentToData(meta.id); }
+          try{
+            const r = await AtsuCup.saveTournamentToData(meta.id);
+            if(r.posterUploadError) metaSyncError = 'ポスター画像のアップロードに失敗しました('+r.posterUploadError+')。それ以外(大会名・詳細・開催日等)は反映済みです。';
+          }
           catch(e){ metaSyncError = (e && e.message) || String(e); }
         }
         mode='view'; render();
@@ -664,7 +667,8 @@
     show('保存中...(参加者・大会・対戦結果をスプレッドシートへ反映します)');
     try{
       const r = await AtsuCup.saveTournamentToData(tid || (state.tournamentMeta && state.tournamentMeta.id));
-      show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})`, '#7cffb0');
+      const posterNote = r.posterUploadError ? `⚠️ ポスター画像のアップロードに失敗しました(${r.posterUploadError})。` : '';
+      show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})${posterNote?' '+posterNote:''}`, r.posterUploadError ? '#ffcf6a' : '#7cffb0');
     }catch(e){
       show('保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a');
     }finally{

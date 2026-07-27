@@ -62,7 +62,9 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | 対象 | トリガー | 実装 |
 |---|---|---|
 | `users.json` | ユーザー管理/大会エントリーでの登録・撮影可否変更・アーカイブ時に**即時** | `AtsuCup.saveUsersToData()` → `GasDB.saveUsers()` |
-| `tournaments/entries/matches.json` | 大会詳細の「💾 GitHubに保存」ボタンで**明示的に**のみ | `AtsuCup.saveTournamentToData(id)` → `GasDB.saveTournament()` |
+| `tournaments.json`（大会情報のみ。entries/matchesは含まない） | 大会の**作成時**・大会詳細の「編集する」保存時に**即時**（2026-07-27追加。以前は参加者エントリー前の大会が他端末から見えないバグがあった） | `tournament-create.html`/`detail-view.js`の`renderEditForm()` → `AtsuCup.saveTournamentToData(id)` |
+| `tournaments/entries/matches.json`（参加者・対戦結果を含む完全な保存） | 大会詳細の「💾 GitHubに保存」ボタンで**明示的に**のみ | `AtsuCup.saveTournamentToData(id)` → `GasDB.saveTournament()` |
+| ポスター画像（`posters/<id>.jpg`） | 大会の作成・情報編集・「💾 GitHubに保存」のいずれかで、ローカルにdata URL（未アップロード）のポスターがある場合 | `atsucup-data.js`の`fromAppTournament()`が`posterImageUpload`として分離送信 → `gas/Code.gs`の`actionSaveTournament_()`が`pushBinaryToGitHub_()`でファイルとしてアップロードし、そのURLを`tournamentRow.posterImage`に書き込む（2026-07-27変更。以前はdata URLをスプレッドシートのセルへ直接保存しており、1セル50,000文字の上限を超えると大会行ごと空欄化する不具合があった） |
 
 ### 反映タイミングの一覧（2026-07-26 整理・重要）
 
@@ -73,7 +75,8 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | ユーザーの登録・撮影可否デフォルト・アーカイブ/復元 | `users.html`での各操作 | **操作の都度、即時** | `users.html`の各ハンドラ末尾で`syncToGitHub()` |
 | ユーザーの新規登録（大会エントリー画面経由） | `tournament-entry.html`の「新規ユーザー登録」 | **登録の都度、即時** | `tournament-entry.html`の`onRegistered`コールバック |
 | 大会限定の撮影可否上書き（`person.rec`） | `tournament-entry.html`の📹/🚫トグル | **反映されるのは大会保存時のみ**（`entries.json`の`recAtEntry`列）。**ここ単体でのGitHub反映は無い** | `tournament-entry.html`、`fromAppTournament`の`recAtEntry`算出 |
-| 参加者の選出・組み合わせ・勝敗入力・ラウンド進行など、大会に関するすべての変更 | 大会詳細画面での各種操作 | **反映されない。「💾 GitHubに保存」ボタンを押した時のみ** | `detail-view.js`の`saveTournamentToGitHub()` |
+| 大会の作成・タイトル/詳細/開催日/公式大会・制限杯フラグ/ポスター画像の編集 | `tournament-create.html`での作成、大会詳細の「編集する」→「更新する」 | **操作の都度、即時**（2026-07-27追加）。失敗してもローカルの保存は維持し、インライン警告のみ表示 | `tournament-create.html`、`detail-view.js`の`renderEditForm()` |
+| 参加者の選出・組み合わせ・勝敗入力・ラウンド進行など、大会の進行に関する変更 | 大会詳細画面での各種操作 | **反映されない。「💾 GitHubに保存」ボタンを押した時のみ** | `detail-view.js`の`saveTournamentToGitHub()` |
 | スプレッドシートの手編集 | 人がシートを直接編集 | **反映されない。`gas/Code.gs`の`pushSheetChangesToGitHub()`をGASエディタから手動実行するまでGitHubへは伝わらない** | `gas/README.md` |
 | GitHub上の`data/*.json` → 開発者のローカル | 上記いずれかでGitHubが更新された後 | **反映されない。`git update-index --no-skip-worktree`→`git checkout data`→`--skip-worktree`の手動取り込みが必要** | 前節「データ管理方針」 |
 

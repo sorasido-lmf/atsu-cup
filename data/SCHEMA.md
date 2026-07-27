@@ -20,7 +20,7 @@ GitHubリポジトリで管理する参加者・大会マスタデータ。JSON�
 | id | string | 一意なID（例: t2026-07） |
 | title | string | 大会名 |
 | detail | string | 説明文 |
-| posterImage | string \| null | ポスター画像。リポジトリ相対パス（例: assets/posters/t2026-07.jpg）または data URL（`data:image/jpeg;base64,...`）。アプリから作成した場合は後者になる |
+| posterImage | string \| null | ポスター画像のURL。`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/posters/<id>.jpg`（GAS側`actionSaveTournament_`がアップロードして書き込む）。スプレッドシートは1セル50,000文字が上限のため、data URL（base64）のまま直接この列へ保存することはしない（2026-07-27に画像サイズ超過で行が空欄化する不具合があり、GitHubへのファイルアップロード方式に変更した） |
 | heldAt | string (ISO8601 date) | 開催日。アプリの大会作成/編集フォームで指定した日付(内部的には`createdAt`と呼ぶ) |
 | status | string | "ongoing" \| "completed" |
 | archived | boolean | アーカイブ済み(=アプリ上で削除された)かどうか(デフォルトfalse)。行の物理削除は行わず、trueが立つと`toAppTournaments()`がそもそも読み込まない(大会一覧・歴代優勝者・戦績すべてに出てこなくなる)。entries/matchesはそのまま残るため、復元は可能(このフラグを手動でfalseに戻す) |
