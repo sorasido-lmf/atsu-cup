@@ -347,7 +347,7 @@
     "id": "u0044",
     "name": "Zimron",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-28T14:22:40.662Z",
     "note": ""
   },
