@@ -106,5 +106,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-28T13:25:58.454Z"
+  },
+  {
+    "id": "t1785245281567xlfxi0",
+    "title": "27回あつ杯 ～もう1つのロードオブマスターズ⑥～",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-12-12T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-28T13:28:04.394Z"
   }
 ]
