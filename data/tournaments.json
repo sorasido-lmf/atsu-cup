@@ -154,5 +154,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-28T14:16:18.614Z"
+  },
+  {
+    "id": "t1785248467911zhfkk2",
+    "title": "第24回あつ杯～もう1つのロードオブマスターズ④～",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-10-10T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-28T14:21:17.205Z"
   }
 ]
