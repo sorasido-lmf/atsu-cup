@@ -46,6 +46,28 @@
     if(!state.matches.length) return false;
     return state.matches[0].some(m=> !m.bye && (m.a===null || m.b===null));
   }
+  // 全枠が空(名前も勝者も無い)のラウンドか。
+  // 前のラウンドを編集し直しても、clearDownstreamFromは下流の「枠をnullに戻す」だけで
+  // ラウンド配列自体は消さない。そのため state.matches の末尾に中身の無いラウンドが残る。
+  // このようなラウンドは情報量が定義上ゼロなので、作り直しても失うものが存在しない。
+  function roundIsEmptyShell(r){
+    const round = state.matches[r];
+    return !!round && round.every(m=> m.a===null && m.b===null && !m.winner);
+  }
+  // 「次のラウンドへ進む」の対象ラウンド。末尾から空の残骸ラウンドを読み飛ばし、
+  // 実際に組み直すべき(中身のある)一番後ろのラウンドを返す。
+  // ⚠️ 末尾ラウンド固定(state.matches.length-1)にしてはいけない。前のラウンドを編集し直すと
+  // 空の残骸が末尾に残り、決勝(length===1)を見てしまって進行ボタンが永久に出なくなる
+  // (2026-07-28に実際に発生: 準々決勝を決着させても準決勝へ進めず、「🎯次の対戦へ」も
+  //  消えて画面から進行手段が完全に無くなった)。
+  // ⚠️ 判定は「勝敗が入っていない」ではなく「全枠が空」であること。2回戦以降の枠は勝敗が
+  // 入っていなくてもD&Dで手作業で並べ替えられる(slotDndEligibleが!winnerで通す)ため、
+  // 「勝敗が無ければ組み直す」にするとその手作業を黙って壊してしまう。
+  function advanceTargetRound(){
+    let r = state.matches.length - 1;
+    while(r > 0 && roundIsEmptyShell(r)) r--;
+    return r;
+  }
   // ログイン中に(ログインで削除されるはずの)練習用大会をURL直指定で開こうとしていないか。
   // 逆方向(非ログイン中にDB大会を開く)はブロックせず、読み取り専用(readOnly)として閲覧を許可する
   // (「過去の大会のログは閲覧のみ可」という要件のため)。
@@ -577,7 +599,7 @@
     if(card.winner) return 'seedOnly';  // 決着後もリセットできるようボタンを残す
     return slotSourceDead(r, m, side==='a'?'b':'a') ? 'seedOnly' : null;
   }
-  let treeSlotRects={}, lastSvgW=0, bRecMap={};
+  let treeSlotRects={}, lastSvgW=0, bRecMap={}, bHasUnplaced=false;
   function boxSvg(r,i,side,name,centerY,isWinner,isForced,hasWinner,dndOn,isSeedWin){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     const isLoser = hasWinner && !isWinner;
@@ -662,6 +684,9 @@
   let treeCardRects={};
   function buildTreeSVG(){
     treeSlotRects={}; treeCardRects={}; bRecMap=AtsuCup.recMapOf();
+    // シード枠の空きを「タップで選ぶ」に見せるかの判定に使う。枠の数だけ呼ぶと
+    // people×カード数の二重ループになるため、bRecMapと同じく描画1回につき1度だけ計算する
+    bHasUnplaced = unplacedEntrants().length > 0;
     const round0=state.matches[0]; const leafCount=round0.length*2; const totalRounds=Math.round(Math.log2(leafCount));
     const lastColRight=colLeft(totalRounds-1)+BOX_W+STUB_W; const svgW=lastColRight+40; const svgH=HEADER_H+leafCount*TREE_ROW_H; lastSvgW=svgW;
     let framesSvg='', linesSvg='', boxesSvg='', pickBtnSvg='', cardZoneSvg='';
@@ -694,10 +719,15 @@
               else { boxesSvg+=byePlaceholderSvg(i,y); }
               return;
             }
-            // シード枠の保持者(a)未定側は、b側と同じ控えめな「シード」表示に揃える。
-            // 「タップで選ぶ」のままだと、同じカードなのに上下で見た目がちぐはぐになり、
-            // 使っていない枠なのに操作を促しているように見えてしまう(タップ自体は生きている)
-            if(r===0 && m && m.bye){ boxesSvg+=slotTapBoxSvg(i, side, y, 'シード', true); return; }
+            // シード枠の保持者(a)未定側。まだ枠に入っていないエントリー者が残っている間は
+            // 「タップで選ぶ」として保持者を選べることを示す(新規作成直後はこちら。19人なら
+            // 通常枠3枚+シード枠13枚のa側に人が入るので、そこに導線が必要)。
+            // 全員配置済み=もう誰も入らない空シード枠(convertCardToSeed(m,null)で作ったもの)なら、
+            // b側と同じ控えめな「シード」表示に揃えて、使っていない枠が操作を促さないようにする
+            if(r===0 && m && m.bye){
+              boxesSvg+=slotTapBoxSvg(i, side, y, bHasUnplaced?'タップで選ぶ':'シード', !bHasUnplaced);
+              return;
+            }
             if(r===0){ boxesSvg+=slotTapBoxSvg(i, side, y, 'タップで選ぶ'); return; } // 1回戦の空き枠は常にタップ可能
             // 不戦勝で決着済みのカードの空いている側は、1回戦のシード枠と同じ破線ボックスで描く
             boxesSvg+=pendingBoxSvg(r,i,side,y, !!(m && m.bye && m.winner)); return;
@@ -1152,13 +1182,18 @@
     if(round1HasEmpty()){
       document.getElementById('advanceArea').innerHTML='';
       document.getElementById('jumpRow').style.display='none';
-      document.getElementById('noticeArea').innerHTML='';
+      // 何も出ないと「ボタンが消えた」ようにしか見えないため、理由だけは必ず伝える
+      // (シード枠は対象外。埋まっていないのは通常枠のa/bだけ)
+      const emptySlots = state.matches[0].filter(m=> !m.bye && (m.a===null || m.b===null)).length;
+      document.getElementById('noticeArea').innerHTML =
+        `<div class="warn-box">⚠️ 1回戦に空いている通常枠が${emptySlots}枠あります。枠をタップして埋めるか、シード枠に変更すると進行できます。</div>`;
       document.getElementById('thirdPlaceArea').innerHTML='';
       document.getElementById('championArea').innerHTML='';
       return;
     }
     // 次のラウンドへ進む(readOnly中は進行操作を出さない)
-    const advanceArea=document.getElementById('advanceArea'); const lastR=state.matches.length-1; const lastRound=lastR>=0?state.matches[lastR]:null;
+    // ⚠️ 末尾ラウンド固定にしないこと(理由はadvanceTargetRoundのコメント参照)
+    const advanceArea=document.getElementById('advanceArea'); const lastR=advanceTargetRound(); const lastRound=lastR>=0?state.matches[lastR]:null;
     if(readOnly){ advanceArea.innerHTML=''; }
     else if(lastRound && lastRound.length>1){
       const nextLabel=AtsuCup.roundLabel(lastRound.length/2);
@@ -1169,11 +1204,19 @@
         // 相手が永久に入らない片側だけの枠も数える。放置したまま進むと次のラウンドが
         // 「？？？」のまま埋まらず、そこから先へ進めなくなるため(2026-07-27に実際に発生)
         const soloPending=lastRound.filter((m,i)=> !m.winner && pickableCard(lastR,i)==='seedOnly').length;
-        if(undecided>0 || soloPending>0){
-          const lines=[];
-          if(undecided>0) lines.push(`終了していない対戦が${undecided}件`);
-          if(soloPending>0) lines.push(`相手が入らないまま決着していない枠が${soloPending}件(🎫で不戦勝にできます)`);
-          document.getElementById('advanceConfirm').innerHTML=`<div class="advance-warn">${lines.join('、')}ありますが、${escapeHtml(nextLabel)}を始めますか？(未決着カードの勝者は決まり次第この先の枠に自動で入ります)<div class="row"><button class="btn btn-primary" id="advanceYesBtn">進む</button><button class="btn btn-ghost" id="advanceNoBtn">キャンセル</button></div></div>`;
+        // advanceRoundはslice(0,r+1)で下流を作り直すため3位決定戦・優勝がクリアされる。
+        // 空の残骸ラウンドを読み飛ばして戻った場合、通常はそれらも存在しないはずだが、
+        // 旧データ・同期経由の不整合で残っていることがあるので、その時だけ事前に知らせる
+        const rebuilt = lastR < state.matches.length-1;
+        const dropsRecord = rebuilt && !!(state.thirdPlaceMatch || state.winnerName);
+        if(undecided>0 || soloPending>0 || dropsRecord){
+          // 「〜件ありますが、」と繋がる件数の列挙と、独立した注意文を分けて組み立てる
+          const counts=[];
+          if(undecided>0) counts.push(`終了していない対戦が${undecided}件`);
+          if(soloPending>0) counts.push(`相手が入らないまま決着していない枠が${soloPending}件(🎫で不戦勝にできます)`);
+          const head = counts.length ? `${counts.join('、')}ありますが、` : '';
+          const note = dropsRecord ? '⚠️ 3位決定戦・優勝の記録は作り直しになります。' : '';
+          document.getElementById('advanceConfirm').innerHTML=`<div class="advance-warn">${note}${head}${escapeHtml(nextLabel)}を始めますか？(未決着カードの勝者は決まり次第この先の枠に自動で入ります)<div class="row"><button class="btn btn-primary" id="advanceYesBtn">進む</button><button class="btn btn-ghost" id="advanceNoBtn">キャンセル</button></div></div>`;
           document.getElementById('advanceYesBtn').onclick=doAdvance;
           document.getElementById('advanceNoBtn').onclick=()=>{ document.getElementById('advanceConfirm').innerHTML=''; };
         } else { doAdvance(); }
