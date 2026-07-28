@@ -1,17 +1,5 @@
 [
   {
-    "id": "t1785150826872lhf6la",
-    "title": "第34回あつ杯　～メタルナー/ワーム/ナーガ部門〜",
-    "detail": "",
-    "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t1785150826872lhf6la.jpg",
-    "heldAt": "2026-06-26T15:00:00.000Z",
-    "status": "ongoing",
-    "archived": false,
-    "isOfficial": true,
-    "isRestricted": true,
-    "updatedAt": "2026-07-28T11:04:45.538Z"
-  },
-  {
     "id": "t17852032535363ygjkd",
     "title": "第33回あつ杯 ～もう1つのロードオブマスターズ⑪〜",
     "detail": "",
@@ -22,5 +10,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-28T11:37:39.651Z"
+  },
+  {
+    "id": "t1785150826872lhf6la",
+    "title": "第34回あつ杯　～メタルナー/ワーム/ナーガ部門〜",
+    "detail": "",
+    "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t1785150826872lhf6la.jpg",
+    "heldAt": "2026-06-26T15:00:00.000Z",
+    "status": "completed",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-28T11:39:05.641Z"
   }
 ]
