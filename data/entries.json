@@ -1524,7 +1524,7 @@
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0030",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -1532,7 +1532,7 @@
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0014",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -1547,8 +1547,8 @@
     "id": "t1785248467911zhfkk2_u0005",
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0005",
-    "placement": null,
-    "wins": 0,
+    "placement": 1,
+    "wins": 4,
     "recAtEntry": true
   },
   {
@@ -1563,8 +1563,8 @@
     "id": "t1785248467911zhfkk2_u0004",
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0004",
-    "placement": null,
-    "wins": 0,
+    "placement": 3,
+    "wins": 4,
     "recAtEntry": true
   },
   {
@@ -1579,8 +1579,8 @@
     "id": "t1785248467911zhfkk2_u0045",
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0045",
-    "placement": null,
-    "wins": 0,
+    "placement": 4,
+    "wins": 3,
     "recAtEntry": true
   },
   {
@@ -1596,7 +1596,7 @@
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0015",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -1611,8 +1611,8 @@
     "id": "t1785248467911zhfkk2_u0006",
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0006",
-    "placement": null,
-    "wins": 0,
+    "placement": 2,
+    "wins": 4,
     "recAtEntry": true
   },
   {
@@ -1636,7 +1636,7 @@
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0007",
     "placement": null,
-    "wins": 0,
+    "wins": 2,
     "recAtEntry": true
   },
   {
@@ -1652,7 +1652,7 @@
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0047",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -1668,7 +1668,7 @@
     "tournamentId": "t1785248467911zhfkk2",
     "userId": "u0017",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
