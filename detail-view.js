@@ -19,7 +19,9 @@
   // 大会作成直後の反映失敗も、tournament-create.htmlからこのタブ内だけで一度引き継いで表示する
   let metaSyncError = sessionStorage.getItem('atsucup:syncError');
   if(metaSyncError) sessionStorage.removeItem('atsucup:syncError');
-  let readOnly = false; // 非ログイン中にDB(認証プール)大会を見ている: 編集UIを一切出さない
+  // 編集ロック: 非ログイン中にDB(認証プール)大会を見ている、または大会が終了済み
+  let readOnly = false;
+  let finished = false; // 終了済み(status==='completed')
   function isGuestTournament(){ return AtsuCup.poolKindOfTournamentId(id)==='guest'; }
   function localTagHtml(){ return isGuestTournament() ? ' <span class="status-badge open" style="background:none; border:1px solid var(--line);">ローカル</span>' : ''; }
   // 公式大会/制限杯バッジ。並び順は呼び出し側で 公式大会→制限杯→進行中/完了→ローカル に固定する
@@ -35,8 +37,11 @@
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
   function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
-  function isLive(){ const t=AtsuCup.activeT(); return !!(t && t.status==='ongoing'); }
-  function findHistory(){ return state.history.find(h=>h.id===id); }
+  // 終了済み。組み合わせ・勝敗の編集はロックし、リザルト(1〜4位)を出す。
+  // ⚠️ 終了しても対戦表と3位決定戦は「あとから見たい」ので描画パスは進行中と共通にする
+  // (2026-07-28にrenderPastを廃止。順位と全対戦結果をテキストで羅列する画面はresults.htmlと
+  //  役割が重複していて見づらかった)
+  function isFinished(){ const t=AtsuCup.activeT(); return !!(t && t.status==='completed'); }
   function recDefaultOf(name){ return AtsuCup.pool().userRecDefaults[name] !== false; }
   // 1回戦のどこか(a/b)に空き枠が残っているか(=まだ全枠埋まっていない)。
   // ⚠️ シード枠(bye:true)は保持者(a)の有無を問わず対象外にする(2026-07-27変更)。
@@ -78,6 +83,9 @@
   function isReadOnlyView(){
     return AtsuCup.poolKindOfTournamentId(id)==='auth' && AtsuCup.isGuestMode();
   }
+  // 管理操作(💾進行状況を保存・🗑️削除)の可否。終了済みでもこの2つはしたいので、
+  // 編集ロック(readOnly)とは別軸で判定する
+  function canManage(){ return !isReadOnlyView(); }
   function renderBlocked(){
     hideSub(); content.style.display='block';
     content.innerHTML = `<div class="empty-state"><span class="big">🚫</span>この大会は表示できません。<br><a class="btn btn-ghost" href="tournaments.html" style="margin-top:12px;">大会一覧へ戻る</a></div>`;
@@ -89,38 +97,38 @@
   function render(){
     if(!id){ renderNotFound(); return; }
     if(isCrossPool()){ renderBlocked(); return; }
-    readOnly = isReadOnlyView();
-    if(isLive()){
-      if(mode === 'editing' && !readOnly){ renderEditForm(); return; }
-      mode = readOnly ? 'view' : mode;
-      renderLiveHeader();
-      // 組み合わせ操作(まだ対戦が始まっておらず参加者がいる間)とトーナメント表を、必要に応じて両方表示する
-      // readOnly中は組み合わせ決定(編集操作)を一切見せない
-      const decidable = !readOnly && AtsuCup.bracketNotStarted() && state.people.length>0;
-      const hasTree = state.matches.length>0 && state.matches[0].length>0;
-      matchupSection.style.display = decidable ? 'block' : 'none';
-      if(decidable) renderMatchup();
-      bracketSection.style.display = hasTree ? 'block' : 'none';
-      if(hasTree) renderBracket();
-      // 参加者0で組み合わせも無いときは、何かしら表示する(readOnly中に画面が丸ごと空白に
-      // なるバグの修正、2026-07-27)。ログイン中はエントリー誘導、readOnly中は閲覧のみの
-      // 空き状態を表示する(以前はreadOnly中は何も表示されなかった)
-      if(!decidable && !hasTree){
-        matchupSection.style.display = 'block';
-        if(readOnly){
-          matchupSection.innerHTML = `<div class="empty-state"><span class="big">🙋</span>この大会にはまだエントリーがありません。(閲覧のみ)</div>`;
-        }else{
-          renderMatchup();
-        }
+    if(!AtsuCup.activeT()){ renderNotFound(); return; }
+    finished = isFinished();
+    // 終了済みの大会も、対戦表・3位決定戦は「あとから見たい」ため通常の描画パスを通す。
+    // 編集操作だけをreadOnlyでロックし、管理操作(保存・削除)はcanManage()で別途出す
+    readOnly = isReadOnlyView() || finished;
+    if(mode === 'editing' && !readOnly){ renderEditForm(); return; }
+    // ⚠️ 'view'へ丸めるのはeditingの時だけ。confirmDeleteまで潰すと、終了済み(=readOnly)で
+    // 削除ボタンを押しても確認バナーが出ず、削除できない詰みになる
+    mode = (readOnly && mode==='editing') ? 'view' : mode;
+    renderLiveHeader();
+    // 組み合わせ操作(まだ対戦が始まっておらず参加者がいる間)とトーナメント表を、必要に応じて両方表示する
+    // readOnly中は組み合わせ決定(編集操作)を一切見せない
+    const decidable = !readOnly && AtsuCup.bracketNotStarted() && state.people.length>0;
+    const hasTree = state.matches.length>0 && state.matches[0].length>0;
+    matchupSection.style.display = decidable ? 'block' : 'none';
+    if(decidable) renderMatchup();
+    bracketSection.style.display = hasTree ? 'block' : 'none';
+    if(hasTree) renderBracket();
+    // 参加者0で組み合わせも無いときは、何かしら表示する(readOnly中に画面が丸ごと空白に
+    // なるバグの修正、2026-07-27)。ログイン中はエントリー誘導、readOnly中は閲覧のみの
+    // 空き状態を表示する(以前はreadOnly中は何も表示されなかった)
+    if(!decidable && !hasTree){
+      matchupSection.style.display = 'block';
+      if(readOnly){
+        matchupSection.innerHTML = `<div class="empty-state"><span class="big">🙋</span>${finished?'この大会は終了しています(対戦データがありません)。':'この大会にはまだエントリーがありません。(閲覧のみ)'}</div>`;
+      }else{
+        renderMatchup();
       }
-      // ⚠️ セッション切れの案内はここでは出さない(2026-07-28に共通化)。
-      // atsucup-core.jsのinitSessionExpiredBannerが全ページ・全分岐で画面下部に固定表示するため、
-      // ここで出すと同じ内容が同一画面に二重に出てしまう
-      return;
     }
-    const h = findHistory();
-    if(h){ renderPast(h); return; }
-    renderNotFound();
+    // ⚠️ セッション切れの案内はここでは出さない(2026-07-28に共通化)。
+    // atsucup-core.jsのinitSessionExpiredBannerが全ページ・全分岐で画面下部に固定表示するため、
+    // ここで出すと同じ内容が同一画面に二重に出てしまう
   }
 
   function hideSub(){ matchupSection.style.display='none'; bracketSection.style.display='none'; }
@@ -130,38 +138,93 @@
     content.innerHTML = `<div class="empty-state"><span class="big">🔍</span>大会が見つかりません。<br><a class="btn btn-ghost" href="tournaments.html" style="margin-top:12px;">大会一覧へ戻る</a></div>`;
   }
 
-  /* ================= 進行中: 上部カード ================= */
+  /* ================= 上部カード(進行中・終了済み共通) ================= */
   function renderLiveHeader(){
     content.style.display='block';
     const meta = state.tournamentMeta;
-    const statusBadge = flagBadgesHtml(meta) + (state.winnerName ? `<span class="status-badge done">優勝者決定</span>` : `<span class="status-badge open">進行中</span>`) + localTagHtml();
-    const confirmHtml = mode==='confirmEnd' ? `
+    const statusBadge = flagBadgesHtml(meta)
+      + (finished ? `<span class="status-badge done">終了</span>`
+        : state.winnerName ? `<span class="status-badge done">優勝者決定</span>`
+        : `<span class="status-badge open">進行中</span>`)
+      + localTagHtml();
+    // 終了は実質取り消せないので、編集できなくなることを明示してから確認させる
+    const confirmEndHtml = mode==='confirmEnd' ? `
       <div class="confirm-banner">
-        ${state.winnerName ? "この大会を終了して「大会一覧」に保存します。よろしいですか？" : "この大会はまだ優勝者が決まっていません。それでも終了して「大会一覧」に保存しますか？"}
+        ${state.winnerName
+          ? "この大会を終了します。終了すると<b>組み合わせや勝敗の編集ができなくなります</b>(対戦表と3位決定戦は引き続き見られます)。よろしいですか？"
+          : "この大会はまだ優勝者が決まっていません。終了すると<b>編集できなくなり、順位も記録されません</b>。それでも終了しますか？"}
         <div class="row"><button class="btn btn-primary" id="confirmEndBtn">終了する</button><button class="btn btn-ghost" id="cancelEndBtn">キャンセル</button></div>
       </div>` : '';
+    // ゲスト(ローカル)大会は完全削除で戻せないが、DB大会はアーカイブ(復元可能)なので文言を分ける
+    const confirmDeleteHtml = mode==='confirmDelete' ? `
+      <div class="confirm-banner">${isGuestTournament()
+          ? `「${escapeHtml(meta.title)}」を大会一覧から削除します。よろしいですか？(元に戻せません)`
+          : `「${escapeHtml(meta.title)}」を大会一覧から削除します。よろしいですか？(データは残りますが一覧には出なくなります。復元が必要な場合は管理者にご連絡ください)`}
+        <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div>
+        <div id="deleteErrorArea"></div>
+      </div>` : '';
     const syncErrorHtml = metaSyncError ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:#ff6a6a;">⚠️ サーバーへの反映に失敗しました(${escapeHtml(metaSyncError)})。内容はこの端末には保存済みです。時間をおいて編集画面を開き直すか、対戦表の「進行状況を保存」でも反映できます。</div>` : '';
+    // 終了後は下のリザルト枠(対戦表の上)に集約するので、ヘッダーには順位を出さない
+    const placementLines = finished ? '' : topPlacements().map(r=>
+      `<div class="cur-line ${r.place===1?'champ':''}">${medalOf(r.place)} ${escapeHtml(r.label)}: ${escapeHtml(r.name)}</div>`).join('');
+    // ⚠️ ローカル(ゲスト)大会にはそもそも保存ボタンが無いので案内を出さない
+    const finishedNote = finished && canManage() && !AtsuCup.isGuestMode()
+      ? `<p class="hint" style="margin:8px 0 0;">この大会は終了しました。サーバーへ反映するには、対戦表の下にある「💾 進行状況を保存」を押してください。</p>` : '';
     content.innerHTML = `
       ${statusBadge}
       ${meta.posterUrl?`<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">`:''}
       <div class="cur-title">${escapeHtml(meta.title)}</div>
       ${meta.details?`<div class="cur-details">${escapeHtml(meta.details)}</div>`:''}
       ${heldDateLine(meta.createdAt)}
-      ${state.winnerName?`<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>`:''}
-      ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div class="cur-line third">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
-      ${readOnly ? '' : `<div class="row">
-        <button class="btn btn-ghost" id="editBtn">編集する</button>
-        <button class="btn btn-ghost" id="endBtn">この大会を終了する</button>
-      </div>`}
-      ${confirmHtml}
+      ${placementLines}
+      ${canManage() ? `<div class="row">
+        ${finished
+          ? `<button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>`
+          : `<button class="btn btn-ghost" id="editBtn">編集する</button><button class="btn btn-ghost" id="endBtn">この大会を終了する</button>`}
+      </div>` : ''}
+      ${confirmEndHtml}
+      ${confirmDeleteHtml}
+      ${finishedNote}
       ${syncErrorHtml}`;
-    if(readOnly) return;
+    if(!canManage()) return;
+    if(finished){
+      document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderLiveHeader(); });
+      if(mode==='confirmDelete') wireDeleteConfirm(meta);
+      return;
+    }
     document.getElementById('editBtn').addEventListener('click', ()=>{ mode='editing'; render(); });
     document.getElementById('endBtn').addEventListener('click', ()=>{ mode='confirmEnd'; renderLiveHeader(); });
     if(mode==='confirmEnd'){
       document.getElementById('cancelEndBtn').addEventListener('click', ()=>{ mode='view'; renderLiveHeader(); });
-      document.getElementById('confirmEndBtn').addEventListener('click', ()=>{ AtsuCup.endCurrentTournament(); mode='view'; render(); });
+      document.getElementById('confirmEndBtn').addEventListener('click', ()=>{
+        AtsuCup.endCurrentTournament();
+        AtsuCup.setActive(id); // ⚠️ endCurrentTournamentがactiveIdを外すので、この画面用に張り直す
+        mode='view'; render();
+      });
     }
+  }
+
+  // 削除の確認バナーの配線(終了済みのヘッダーから使う)
+  function wireDeleteConfirm(meta){
+    document.getElementById('cancelDeleteBtn').addEventListener('click', ()=>{ mode='view'; renderLiveHeader(); });
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async ()=>{
+      if(isGuestTournament()){
+        state.history = state.history.filter(x=>x.id!==meta.id);
+        AtsuCup.persist();
+        location.href='tournaments.html';
+        return;
+      }
+      const btn = document.getElementById('confirmDeleteBtn');
+      const errBox = document.getElementById('deleteErrorArea');
+      btn.disabled = true; btn.textContent = '削除中...';
+      try{
+        await AtsuCup.archiveTournamentInData(meta.id);
+        location.href='tournaments.html';
+      }catch(e){
+        errBox.innerHTML = `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:#ff6a6a;">削除に失敗しました: ${escapeHtml((e&&e.message)||String(e))}</div>`;
+        btn.disabled = false; btn.textContent = '削除する';
+      }
+    });
   }
 
   function renderEditForm(){
@@ -218,78 +281,6 @@
     });
   }
 
-  /* ================= 過去大会 ================= */
-  function recMapOfEntry(entry){ const m={}; (entry.participants||[]).forEach(p=> m[p.name]=p.rec); return m; }
-  function renderPast(h){
-    hideSub(); content.style.display='block';
-    const placements = AtsuCup.computePlacements(h);
-    const rows = (h.participants||[]).map(p=>({ name:p.name, ...(placements[p.name]||{place:null,label:'参加'}) }));
-    rows.sort((a,b)=> (a.place||99) - (b.place||99));
-    const date = h.createdAt ? new Date(h.createdAt).toLocaleDateString('ja-JP') : '';
-    const recMap = recMapOfEntry(h);
-    const matchRounds = (h.matches||[]).map((round)=> round.map(m=>{
-      if(m.b===null){ return `<div class="video-card"><div class="vs"><span class="rlabel">${roundLabel(round.length)}</span> ${escapeHtml(m.a)} <span class="rlabel">BYE(不戦勝)</span></div></div>`; }
-      return `<div class="video-card"><div class="vs"><span class="rlabel">${roundLabel(round.length)}</span> ${escapeHtml(m.a)}${recMap[m.a]?'📹':'🚫'} vs ${escapeHtml(m.b)}${recMap[m.b]?'📹':'🚫'} ${m.winner?`<span class="rlabel">勝者: ${escapeHtml(m.winner)}</span>`:'<span class="rlabel">未決着</span>'}</div>${AtsuCup.videoEmbedHtml(m.video)}</div>`;
-    }).join('')).join('');
-    let thirdHtml = '';
-    if(h.thirdPlaceMatch){ const tp=h.thirdPlaceMatch; thirdHtml = `<div class="video-card"><div class="vs"><span class="rlabel">3位決定戦</span> ${escapeHtml(tp.a)} vs ${escapeHtml(tp.b)} ${tp.winner?`<span class="rlabel">勝者: ${escapeHtml(tp.winner)}</span>`:'<span class="rlabel">未決着</span>'}</div></div>`; }
-    // ゲスト(ローカル)大会は完全削除で本当に元に戻せないが、DB大会はアーカイブ(復元可能)なので文言を分ける
-    const isGuestT = isGuestTournament();
-    const confirmMsg = isGuestT
-      ? `「${escapeHtml(h.title)}」を大会一覧から削除します。よろしいですか？(元に戻せません)`
-      : `「${escapeHtml(h.title)}」を大会一覧から削除します。よろしいですか？(データは残りますが一覧には出なくなります。復元が必要な場合は管理者にご連絡ください)`;
-    const confirmHtml = mode==='confirmDelete' ? `
-      <div class="confirm-banner">${confirmMsg}
-        <div class="row"><button class="btn btn-primary" id="confirmDeleteBtn">削除する</button><button class="btn btn-ghost" id="cancelDeleteBtn">キャンセル</button></div>
-        <div id="deleteErrorArea"></div>
-      </div>` : '';
-    content.innerHTML = `
-      ${readOnly ? '' : `<div class="row" style="margin-top:0;">
-        ${saveButtonHtml()}
-        <button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
-      </div>
-      <div id="dataSaveStatus"></div>
-      ${confirmHtml}`}
-      <div class="video-card" style="margin-top:14px;">
-        <div style="margin-bottom:8px;">${flagBadgesHtml(h)}${localTagHtml()}</div>
-        ${h.posterUrl?`<img class="poster-img" src="${escapeHtml(h.posterUrl)}" alt="poster">`:''}
-        <div class="cur-title">${escapeHtml(h.title)}</div>
-        ${h.details?`<div class="cur-details">${escapeHtml(h.details)}</div>`:''}
-        ${date?`<div class="cur-details" style="color:var(--muted);">開催日: ${date}</div>`:''}
-        ${h.championName?`<div class="cur-line champ">👑 優勝: ${escapeHtml(h.championName)}</div>`:'<div class="cur-line" style="color:var(--muted);">結果未記録(途中終了)</div>'}
-      </div>
-      <h3 class="section-title" style="margin-top:18px;">🏅 順位</h3>
-      ${rows.map(r=>`<div class="place-row ${r.place===1?'p1':''}"><span class="p">${r.place?('#'+r.place):'-'}</span><span style="flex:1;">${escapeHtml(r.name)}</span><span>${escapeHtml(r.label)}</span></div>`).join('') || '<div class="empty-state" style="padding:12px;">参加者データがありません。</div>'}
-      <h3 class="section-title" style="margin-top:18px;">⚔️ 対戦結果</h3>
-      ${matchRounds || '<div class="empty-state" style="padding:12px;">対戦データがありません。</div>'}
-      ${thirdHtml}`;
-    if(!readOnly){
-      wireSaveButton(h.id);
-      document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderPast(h); });
-      if(mode==='confirmDelete'){
-        document.getElementById('cancelDeleteBtn').addEventListener('click', ()=>{ mode='view'; renderPast(h); });
-        document.getElementById('confirmDeleteBtn').addEventListener('click', async ()=>{
-          if(isGuestT){
-            state.history = state.history.filter(x=>x.id!==h.id);
-            AtsuCup.persist();
-            location.href='tournaments.html';
-            return;
-          }
-          const btn = document.getElementById('confirmDeleteBtn');
-          const errBox = document.getElementById('deleteErrorArea');
-          btn.disabled = true; btn.textContent = '削除中...';
-          try{
-            await AtsuCup.archiveTournamentInData(h.id);
-            location.href='tournaments.html';
-          }catch(e){
-            errBox.innerHTML = `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:#ff6a6a;">削除に失敗しました: ${escapeHtml((e&&e.message)||String(e))}</div>`;
-            btn.disabled = false; btn.textContent = '削除する';
-          }
-        });
-      }
-    }
-    window.scrollTo({top:0, behavior:'instant'});
-  }
 
   /* ================= 組み合わせ決定(matchup) ================= */
   let matchupMode = 'view'; // 'view'|'confirmReset'
@@ -751,12 +742,15 @@
 
   function renderBracket(){
     computeRowH();
-    const hint = readOnly
+    const hint = finished
+      ? '終了した大会の対戦表(閲覧のみ)'
+      : readOnly
       ? '対戦表(閲覧のみ)'
       : round1HasEmpty()
         ? '空いている枠をタップして、対戦相手を選んでください。ドラッグ&ドロップで枠の移動・入れ替え・取り消し、シード枠同士を重ねると1回戦の対戦にできます。'
         : '⚔️で勝敗入力・シード枠の➕で途中参加・ドラッグ&ドロップで枠の移動/入れ替え';
     bracketSection.innerHTML = `
+      <div id="championArea"></div>
       <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
       <p class="hint" style="margin:2px 0 8px;">${hint}</p>
       <div class="row" id="jumpRow" style="display:none; margin-bottom:8px;"><button class="btn btn-ghost" id="jumpNextBtn" style="width:100%;">🎯 次の対戦へ</button></div>
@@ -764,15 +758,56 @@
       <div id="advanceArea"></div>
       <div class="row" style="margin-top:12px;">
         <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
-        ${readOnly ? '' : saveButtonHtml()}
+        ${canManage() ? saveButtonHtml() : ''}
       </div>
       <div id="dataSaveStatus"></div>
       <div id="noticeArea"></div>
-      <div id="thirdPlaceArea"></div>
-      <div id="championArea"></div>`;
+      <div id="thirdPlaceArea"></div>`;
     document.getElementById('saveBracketImgBtn').addEventListener('click', saveBracketImg);
-    if(!readOnly) wireSaveButton(state.tournamentMeta.id);
-    renderTree(); renderExtras();
+    if(canManage()) wireSaveButton(state.tournamentMeta.id);
+    // ⚠️ リザルトはrenderExtrasから切り離す。renderExtrasはround1HasEmptyの早期returnで
+    // championAreaを空にするため、組み合わせが埋まらないまま終了した大会でリザルトが消える
+    renderResultBox(); renderTree(); renderExtras();
+  }
+
+  function medalOf(place){ return {1:'🥇',2:'🥈',3:'🥉',4:'🎖️'}[place] || ''; }
+  function stripMedal(label){ return String(label||'').replace(/^[🥇🥈🥉🎖️]+\s*/,''); }
+  // 決まっている1〜4位を [{place, name, label}] で返す(未確定は含まない)。
+  // ヘッダー(進行中)とリザルト枠(終了後)の両方から使う
+  function topPlacements(){
+    const placements = AtsuCup.computePlacements({
+      participants: state.people, championName: state.winnerName,
+      matches: state.matches, thirdPlaceMatch: state.thirdPlaceMatch
+    });
+    const byPlace = {};
+    Object.keys(placements).forEach(name=>{
+      const info = placements[name];
+      // ⚠️ computePlacementsのlabelは「🥇 優勝」のようにメダル絵文字込み(4位だけ絵文字なし)。
+      // こちらでmedalOf()を前置するので、絵文字は剥がしておかないと二重表示になる
+      if(info.place && info.place<=4) byPlace[info.place] = { name, label: stripMedal(info.label) };
+    });
+    return [1,2,3,4].filter(p=>byPlace[p]).map(p=>({ place:p, name:byPlace[p].name, label:byPlace[p].label }));
+  }
+
+  // 終了した大会のリザルト(1位〜4位)。対戦表の上に出す。
+  // ⚠️ renderExtrasではなくrenderBracketから直接呼ぶこと(renderExtrasはround1HasEmptyで
+  // 早期returnするため、そこに置くと組み合わせが埋まらないまま終了した大会で消える)
+  function renderResultBox(){
+    const area = document.getElementById('championArea');
+    if(!area) return;
+    if(!finished){ area.innerHTML=''; return; }
+    const rows = topPlacements();
+    if(!rows.length){
+      // 優勝者も3位も決まらないまま終了した場合。results.htmlは行き止まりになるのでリンクも出さない
+      area.innerHTML = `<div class="champion-box" style="margin-top:0; padding:14px;"><div class="cur-details" style="color:var(--muted); margin:0;">結果が記録されないまま終了しました。</div></div>`;
+      return;
+    }
+    const list = rows.map(r=>
+      `<div class="place-row ${r.place===1?'p1':''}"><span class="p">${medalOf(r.place)}</span><span style="flex:1;">${escapeHtml(r.name)}</span><span>${escapeHtml(r.label)}</span></div>`).join('');
+    const link = state.winnerName
+      ? `<a class="btn btn-gold" style="width:100%; margin-top:12px;" href="results.html?id=${encodeURIComponent(state.tournamentMeta.id)}">🏆 最終結果を見る(全順位)</a>` : '';
+    area.innerHTML = `<div class="champion-box" style="margin-top:0; text-align:left; padding:16px 14px;">
+      <div class="label" style="text-align:center; margin-bottom:10px;">Final Result</div>${list}${link}</div>`;
   }
 
   // ゲスト(練習用)大会はサーバーに保存できないため、ボタンの代わりに案内文を出す
@@ -1092,14 +1127,19 @@
   function pick(r,m,side){ if(r==='third'){ AtsuCup.pickThirdPlaceWinner(side); } else { AtsuCup.pickWinner(r,m,side); } renderTree(); renderExtras(); renderLiveHeader(); }
   function pickAsSeed(r,m,side){ AtsuCup.pickWinnerAsSeed(r,m,side); renderTree(); renderExtras(); renderLiveHeader(); }
   function openMatchPickModal(r,m){
-    const match=state.matches[r]&&state.matches[r][m]; if(!match) return;
+    // 3位決定戦は state.matches の外(state.thirdPlaceMatch)にあるので取得元を分ける。
+    // 名前の直タップで勝敗が入れ替わる誤操作を防ぐため、対戦表と同じモーダル方式に統一した(2026-07-28)
+    const match = (r==='third') ? state.thirdPlaceMatch : (state.matches[r] && state.matches[r][m]);
+    if(!match) return;
     if(r!=='third' && !pickableCard(r,m)) return; // 対戦表の⚔️/🎫ボタンと同じ判定で入口をそろえる
     // 片側だけ埋まっているカード(相手が永久に入らない枠)。この場合はA/Bの勝敗選択が意味を持たない
+    // (3位決定戦はmaybeCreateThirdPlaceが両者の敗者が揃った時にしか作らないので常にnullになる)
     const soloSide = (match.a && match.b) ? null : (match.a ? 'a' : (match.b ? 'b' : null));
     if(!match.a && !match.b) return;
     const recMap=AtsuCup.recMapOf();
     ensureMatchModal();
-    document.getElementById('modalMatchTitle').textContent=AtsuCup.roundLabel(state.matches[r].length);
+    document.getElementById('modalMatchTitle').textContent =
+      (r==='third') ? '🥉 3位決定戦' : AtsuCup.roundLabel(state.matches[r].length);
     const hintEl=document.getElementById('modalPickHint'), rowEl=document.getElementById('modalPickRow');
     const btnA=document.getElementById('modalPickA'), btnB=document.getElementById('modalPickB');
     // ⚠️ モーダル要素は使い回すため、通常モード側で表示状態を必ず元に戻すこと
@@ -1117,7 +1157,11 @@
     }
     const resetBtn=document.getElementById('modalResetBtn');
     resetBtn.style.display = match.winner ? 'block' : 'none';
-    resetBtn.onclick=()=>{ AtsuCup.resetMatchResult(r,m); closeMatchModal(); renderTree(); renderExtras(); renderLiveHeader(); };
+    resetBtn.onclick=()=>{
+      // 3位決定戦は state.matches の外にあるので専用のリセットを使う
+      if(r==='third'){ AtsuCup.resetThirdPlaceWinner(); } else { AtsuCup.resetMatchResult(r,m); }
+      closeMatchModal(); renderTree(); renderExtras(); renderLiveHeader();
+    };
     // 「不戦勝(シード)にする」: 実際に対戦させず片方を勝ち上がらせる(未決着の対戦のみ、3位決定戦は対象外)
     const seedRow=document.getElementById('modalSeedRow');
     const seedA=document.getElementById('modalSeedA'), seedB=document.getElementById('modalSeedB');
@@ -1159,18 +1203,12 @@
     const zones=document.querySelectorAll(`#treeScroll .tree-pick[data-r="${next.r}"][data-m="${next.m}"]`); if(!zones.length) return;
     zones[0].scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'}); zones.forEach(z=>{ z.classList.remove('tree-flash'); void z.getBoundingClientRect(); z.classList.add('tree-flash'); });
   }
-  function startEditThirdName(side,scopeEl){
-    const nmSpan=scopeEl?scopeEl.querySelector('.nm'):null; if(!nmSpan) return; const match=state.thirdPlaceMatch; const current=side==='a'?match.a:match.b;
-    const input=document.createElement('input'); input.type='text'; input.className='nm-edit-input'; input.value=current; input.setAttribute('list','rosterCandidates'); input.addEventListener('click',ev=>ev.stopPropagation());
-    nmSpan.replaceWith(input); input.focus(); input.select();
-    let done=false; const commit=()=>{ if(done)return; done=true; const val=input.value.trim(); if(val&&val!==current){ AtsuCup.renameParticipant(current,val); } renderTree(); renderExtras(); };
-    input.addEventListener('blur',commit); input.addEventListener('keydown',e=>{ if(e.key==='Enter')input.blur(); });
-  }
-  function pickBtnHtml(name,winner,r,m,side,recMap){
+  // 3位決定戦の名前ボタン(表示専用)。勝敗の入力は⚔️モーダル側で行う。
+  // ⚠️ ここをタップ可能にしないこと。以前は名前の直タップで即座に勝者が入れ替わり、
+  // 誤操作の原因になっていた(2026-07-28にモーダル方式へ統一)。✏️(名前のインライン編集)も廃止
+  function pickBtnHtml(name,winner,recMap){
     const isWinner=winner===name;
-    const mainAttrs = readOnly ? '' : ` data-r="${r}" data-m="${m}" data-side="${side}"`;
-    const editBtn = readOnly ? '' : `<button class="pick-edit-btn" data-editname data-side="${side}">✏️</button>`;
-    return `<div class="pick-btn ${isWinner?'winner':''}"><span class="pick-main"${mainAttrs}><span class="avatar">${escapeHtml(initials(name))}</span><span class="nm">${escapeHtml(name)}</span><span>${recMap[name]?'📹':'🚫'}</span></span>${editBtn}</div>`;
+    return `<div class="pick-btn ${isWinner?'winner':''}"><span class="pick-main"><span class="avatar">${escapeHtml(initials(name))}</span><span class="nm">${escapeHtml(name)}</span><span>${recMap[name]?'📹':'🚫'}</span></span></div>`;
   }
   function swappedMatchIndices(r){
     if(r===0) return new Set(); const cur=state.matches[r]; if(!cur) return new Set(); const swapped=new Set();
@@ -1182,13 +1220,15 @@
     if(round1HasEmpty()){
       document.getElementById('advanceArea').innerHTML='';
       document.getElementById('jumpRow').style.display='none';
-      // 何も出ないと「ボタンが消えた」ようにしか見えないため、理由だけは必ず伝える
+      // 何も出ないと「ボタンが消えた」ようにしか見えないため、理由だけは必ず伝える。
+      // 終了済み(readOnly)では埋める操作自体ができないので出さない
       // (シード枠は対象外。埋まっていないのは通常枠のa/bだけ)
       const emptySlots = state.matches[0].filter(m=> !m.bye && (m.a===null || m.b===null)).length;
-      document.getElementById('noticeArea').innerHTML =
+      document.getElementById('noticeArea').innerHTML = readOnly ? '' :
         `<div class="warn-box">⚠️ 1回戦に空いている通常枠が${emptySlots}枠あります。枠をタップして埋めるか、シード枠に変更すると進行できます。</div>`;
       document.getElementById('thirdPlaceArea').innerHTML='';
-      document.getElementById('championArea').innerHTML='';
+      // ⚠️ championAreaはここでクリアしないこと(renderResultBoxの担当。クリアすると
+      // 組み合わせが埋まらないまま終了した大会でリザルトが消える)
       return;
     }
     // 次のラウンドへ進む(readOnly中は進行操作を出さない)
@@ -1239,18 +1279,18 @@
     const thirdArea=document.getElementById('thirdPlaceArea');
     if(state.thirdPlaceMatch){
       const tp=state.thirdPlaceMatch;
-      thirdArea.innerHTML=`<h3 class="section-title" style="margin-top:16px;">🥉 3位決定戦</h3><div class="video-card" id="thirdPlaceCard"><div class="match-pick-row">${pickBtnHtml(tp.a,tp.winner,'third',0,'a',recMap)}<span class="vs-label">VS</span>${pickBtnHtml(tp.b,tp.winner,'third',0,'b',recMap)}</div></div>`;
-      if(!readOnly){
-        thirdArea.querySelectorAll('.pick-main[data-r]').forEach(el=> el.addEventListener('click', ()=> pick('third',0,el.dataset.side)));
-        thirdArea.querySelectorAll('[data-editname]').forEach(el=> el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startEditThirdName(el.dataset.side, el.closest('.pick-btn')); }));
-      }
+      // 勝敗の入力は対戦表と同じ⚔️モーダルに揃える(名前の直タップでは入れ替わらない)。
+      // ⚠️ #thirdPlaceCard の id は jumpToNextMatch のスクロール先なので必ず残すこと
+      const pickBtn = readOnly ? '' :
+        `<button type="button" class="btn btn-ghost" id="thirdPickBtn" style="width:100%; margin-top:10px;">⚔️ ${tp.winner?'勝敗を修正':'勝敗を入力'}</button>`;
+      thirdArea.innerHTML=`<h3 class="section-title" style="margin-top:16px;">🥉 3位決定戦</h3><div class="video-card" id="thirdPlaceCard"><div class="match-pick-row">${pickBtnHtml(tp.a,tp.winner,recMap)}<span class="vs-label">VS</span>${pickBtnHtml(tp.b,tp.winner,recMap)}</div>${pickBtn}</div>`;
+      const tpBtn = document.getElementById('thirdPickBtn');
+      if(tpBtn) tpBtn.addEventListener('click', ()=> openMatchPickModal('third',0));
     } else { thirdArea.innerHTML=''; }
 
-    const championArea=document.getElementById('championArea');
-    if(state.winnerName){
-      championArea.innerHTML=`<div class="champion-box"><div class="label">Champion</div><div class="name">👑 ${escapeHtml(state.winnerName)}</div>${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div style="color:var(--muted);font-weight:700;margin-bottom:10px;">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}<a class="btn btn-gold" style="width:100%; margin-bottom:10px;" href="results.html?id=${encodeURIComponent(state.tournamentMeta.id)}">🏆 最終結果を見る(1位〜4位・全順位)</a><div class="row" style="justify-content:center;"><button class="btn btn-ghost" id="toCardBtn">優勝カードを作る</button><a class="btn btn-ghost" href="hall.html">歴代優勝者を見る</a></div></div>`;
-      document.getElementById('toCardBtn').addEventListener('click', ()=>{ const c=document.createElement('canvas'); c.width=1000; c.height=1000; AtsuCup.generateAndSaveCard(c, state.tournamentMeta.title, state.winnerName); });
-    } else { championArea.innerHTML=''; }
+    // ⚠️ リザルト(championArea)はここでは触らない。renderExtrasは冒頭のround1HasEmptyで
+    // 早期returnするため、ここに置くと組み合わせが埋まらないまま終了した大会でリザルトが消える。
+    // 描画はrenderResultBox()がrenderBracketから直接行う
   }
 
   // pick-btn の CSS(3位決定戦で使用)を注入
@@ -1258,12 +1298,11 @@
     const s=document.createElement('style');
     s.textContent=`.match-pick-row{display:flex; flex-direction:column; gap:6px;}
       .pick-btn{display:flex; align-items:center; gap:6px; min-width:0; background:#161320; border:1px solid var(--line); border-radius:10px; color:var(--cream); font-weight:700; font-size:16px; padding:4px;}
-      .pick-main{flex:1; display:flex; align-items:center; gap:10px; min-width:0; padding:9px 8px; cursor:pointer; border-radius:8px;}
-      .pick-main:active{ background:rgba(255,255,255,.08); }
+      /* ⚠️ cursor:pointer や :active を付けないこと。3位決定戦の名前は表示専用で、
+         勝敗の入力は⚔️モーダル側。押せそうに見えると誤タップを誘発する(2026-07-28) */
+      .pick-main{flex:1; display:flex; align-items:center; gap:10px; min-width:0; padding:9px 8px; border-radius:8px;}
       .pick-btn span.nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-      .pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); font-weight:900; }
-      .pick-edit-btn{flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:var(--muted); font-size:14px; padding:0 10px; cursor:pointer; align-self:center; height:34px;}
-      .nm-edit-input{flex:1; min-width:0; background:#0d0a14; border:1px solid var(--ember2); color:var(--cream); border-radius:6px; padding:7px 9px; font-size:15px; font-family:'Noto Sans JP',sans-serif;}`;
+      .pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); font-weight:900; }`;
     document.head.appendChild(s);
   })();
 

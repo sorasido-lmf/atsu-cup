@@ -1158,6 +1158,16 @@ const AtsuCup = (function(){
     persist();
   }
 
+  // 3位決定戦の勝敗を取り消す。トーナメント本体と違い先の対戦が無いので、勝者を消すだけでよい
+  // (resetMatchResultはstate.matches[r][m]を見るため3位決定戦では使えない)。
+  // a/bは残るので、そのまま選び直せる
+  function resetThirdPlaceWinner(){
+    const m = state.thirdPlaceMatch;
+    if(!m || !m.winner) return;
+    m.winner = null;
+    persist();
+  }
+
   // 対戦が始まった後でも参加者名を書き換えられるよう、全ラウンド・3位決定戦・優勝者名・参加者一覧まで
   // 同じ名前をまとめて置き換える(対戦表の接続線は勝者名の一致で辿っているため、一部だけ書き換えると
   // つながりが壊れてしまう)
@@ -1427,7 +1437,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-28 03:00";
+  const BUILD_DATE = "2026-07-28 05:20";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1518,7 +1528,7 @@ const AtsuCup = (function(){
     dateInputValueOf, isoFromDateInputValue,
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
-    advanceRound, pickWinner, pickWinnerAsSeed, resetMatchResult, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
+    advanceRound, pickWinner, pickWinnerAsSeed, resetMatchResult, pickThirdPlaceWinner, resetThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
     propagateWinnerDownstream,
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
     setActive, activeT,
