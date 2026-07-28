@@ -270,5 +270,21 @@
     "archived": false,
     "createdAt": "2026-07-28T12:57:04.412Z",
     "note": ""
+  },
+  {
+    "id": "u0035",
+    "name": "あ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T12:57:13.566Z",
+    "note": ""
+  },
+  {
+    "id": "u0036",
+    "name": "ぐびなま",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T12:57:13.567Z",
+    "note": ""
   }
 ]
