@@ -230,5 +230,13 @@
     "archived": false,
     "createdAt": "2026-07-28T01:49:05.410Z",
     "note": ""
+  },
+  {
+    "id": "u0030",
+    "name": "ちゃんこ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T01:49:20.259Z",
+    "note": ""
   }
 ]
