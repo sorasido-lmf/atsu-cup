@@ -326,5 +326,13 @@
     "archived": false,
     "createdAt": "2026-07-28T13:28:29.479Z",
     "note": ""
+  },
+  {
+    "id": "u0042",
+    "name": "いえもん",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T14:00:57.553Z",
+    "note": ""
   }
 ]
