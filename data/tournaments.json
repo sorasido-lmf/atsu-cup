@@ -142,5 +142,17 @@
     "isOfficial": false,
     "isRestricted": false,
     "updatedAt": "2026-07-28T13:58:59.186Z"
+  },
+  {
+    "id": "t1785247206782p7v2ff",
+    "title": "第25回あつ杯～もう1つのロードオブマスターズ⑤～",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-11-07T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-28T14:00:11.741Z"
   }
 ]
