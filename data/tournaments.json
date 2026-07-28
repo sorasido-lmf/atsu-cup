@@ -30,9 +30,9 @@
     "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t1785239654864z18qn8.jpg",
     "heldAt": "2026-05-29T15:00:00.000Z",
     "status": "completed",
-    "archived": false,
+    "archived": true,
     "isOfficial": true,
     "isRestricted": true,
-    "updatedAt": "2026-07-28T11:56:00.432Z"
+    "updatedAt": "2026-07-28T11:56:04.014Z"
   }
 ]
