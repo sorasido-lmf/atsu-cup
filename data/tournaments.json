@@ -82,5 +82,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-28T13:07:59.855Z"
+  },
+  {
+    "id": "t1785244347303xb731l",
+    "title": "第29回あつ杯　～もう1つのロードオブマスターズ⑧～",
+    "detail": "",
+    "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t1785244347303xb731l.jpg",
+    "heldAt": "2026-03-20T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-28T13:12:29.903Z"
   }
 ]
