@@ -254,5 +254,13 @@
     "archived": false,
     "createdAt": "2026-07-28T12:56:51.341Z",
     "note": ""
+  },
+  {
+    "id": "u0033",
+    "name": "いちか",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T12:56:57.034Z",
+    "note": ""
   }
 ]
