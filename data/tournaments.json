@@ -94,5 +94,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-28T13:18:41.154Z"
+  },
+  {
+    "id": "t1785244946340mxro0f",
+    "title": "第28回あつ杯 ～もう1つのロードオブマスターズ⑦～",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2026-02-13T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-28T13:22:28.290Z"
   }
 ]
