@@ -366,5 +366,13 @@
     "archived": false,
     "createdAt": "2026-07-28T14:22:51.638Z",
     "note": ""
+  },
+  {
+    "id": "u0047",
+    "name": "雅",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T14:23:22.625Z",
+    "note": ""
   }
 ]
