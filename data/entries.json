@@ -1411,8 +1411,8 @@
     "id": "t1785247206782p7v2ff_u0009",
     "tournamentId": "t1785247206782p7v2ff",
     "userId": "u0009",
-    "placement": null,
-    "wins": 1,
+    "placement": 1,
+    "wins": 4,
     "recAtEntry": true
   },
   {
@@ -1443,8 +1443,8 @@
     "id": "t1785247206782p7v2ff_u0042",
     "tournamentId": "t1785247206782p7v2ff",
     "userId": "u0042",
-    "placement": null,
-    "wins": 1,
+    "placement": 3,
+    "wins": 3,
     "recAtEntry": true
   },
   {
@@ -1475,8 +1475,8 @@
     "id": "t1785247206782p7v2ff_u0005",
     "tournamentId": "t1785247206782p7v2ff",
     "userId": "u0005",
-    "placement": null,
-    "wins": 0,
+    "placement": 4,
+    "wins": 2,
     "recAtEntry": true
   },
   {
@@ -1492,7 +1492,7 @@
     "tournamentId": "t1785247206782p7v2ff",
     "userId": "u0003",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -1507,8 +1507,8 @@
     "id": "t1785247206782p7v2ff_u0004",
     "tournamentId": "t1785247206782p7v2ff",
     "userId": "u0004",
-    "placement": null,
-    "wins": 0,
+    "placement": 2,
+    "wins": 2,
     "recAtEntry": true
   }
 ]
