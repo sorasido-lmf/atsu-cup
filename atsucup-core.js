@@ -12,9 +12,13 @@ const AtsuCup = (function(){
     userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値
     archivedUsers: {}, // {name: boolean} アーカイブ済みユーザー
     tournaments: [],  // [{id,title,details,posterUrl,createdAt,status,people,order,remaining,matches,winnerName,thirdPlaceMatch}]
-    // {tournamentId: JSON文字列} 「前回data/*.jsonから取り込んだ時点のその大会の内容」のスナップショット。
-    // mergeRemoteTournamentsが「この端末に未同期のローカル編集が無いか」を判定するための基準値として使う
-    remoteSnapshots: {},
+    // {tournamentId: {sig, updatedAt}} 「この端末が最後に把握しているサーバー側の状態」。
+    //   sig       : AtsuCupData.syncSignatureOf() で作った、その時点のサーバー内容の署名
+    //   updatedAt : その内容のサーバー側更新時刻(GASが打ったISO文字列。''=不明な旧行)
+    // ローカル/サーバーそれぞれが前回時点から変わったかを判定する基準値。
+    // ⚠️ 旧 remoteSnapshots(生JSON文字列)から置き換え。sigとupdatedAtを1本にまとめてあるのは、
+    //    大会を消すときに片方だけ消し忘れる事故を防ぐため(delete state.remoteMeta[id] の1箇所で済む)
+    remoteMeta: {},
     // ---- ゲストプール: 未ログイン時の練習用。この端末だけ。サーバーへは絶対に出さない ----
     guestRoster: [],
     guestUserRecDefaults: {},
@@ -194,16 +198,19 @@ const AtsuCup = (function(){
   // 今度は逆に「他端末で保存した内容がいつまで経っても反映されない」「スプレッドシートを
   // 作り直しても古いキャッシュのまま」という不具合(2026-07-27夜に発覚)を生んでいた。
   //
-  // ⚠️ 現方式(2026-07-27深夜): `state.remoteSnapshots[id]`に「前回data/*.jsonから取り込んだ
-  // 時点のその大会の内容」を保持しておき、**今のローカルの内容がそのスナップショットと
-  // 完全一致する(＝この端末でその後に未保存の編集をしていない)場合に限り**、新しく取得した
-  // リモートの内容を安全に採用する。逆にローカルが前回スナップショットと異なる(＝未保存の
-  // 編集がある)場合は、これまで通りローカルを保護して上書きしない。
-  // これにより「他端末の保存が反映されない」「大会を丸ごと作り直しても古いまま」の両方が
-  // 直る一方、「保存ボタンを押すまでの進行状況が消える」不具合は再発しない
-  // (＝この端末で何か編集した直後は、次に取り込んでも自分の未保存の編集を優先し続ける)。
+  // ⚠️ 現方式(2026-07-28): `state.remoteMeta[id]`に「この端末が最後に把握しているサーバーの状態」
+  // (署名 sig + サーバー更新時刻 updatedAt)を保持し、ローカル・サーバーそれぞれが前回時点から
+  // 変わったかを判定して3つに分類する:
+  //   ・この端末だけ変更 → 何もしない(次の保存で反映される)
+  //   ・他の端末だけ変更 → 自動で取り込む
+  //   ・両方変更(競合)  → ローカルを保護し、ユーザーに選ばせる(showSyncConflictModal)
   //
-  // このidを一度も取り込んだことが無い(=`remoteSnapshots[id]`が無い)場合は、上記の判定基準が
+  // ⚠️ 比較には必ず AtsuCupData.syncSignatureOf() を使うこと。アプリ内部の大会オブジェクトを
+  // そのままJSON.stringifyして比べると、内容が同じでも必ず不一致になる(remaining/matchesの深さ/
+  // byeキーの有無がローカルとtoAppTournamentsで構造的に違うため)。詳細は syncSignatureOf の
+  // コメント参照。2026-07-27〜28に「他端末の保存が永久に反映されない」不具合の真因だった。
+  //
+  // このidを一度も取り込んだことが無い(=`remoteMeta[id]`が無い)場合は、上記の判定基準が
   // まだ無いため、従来通り「ローカルに守るべき進行状況が無い場合のみ上書きする」保守的な
   // 判定にフォールバックする(このコード更新の直後の初回読み込みや、大会作成直後で
   // まだ一度もリモートから取り込んでいない大会が誤って巻き込まれないようにするため)。
@@ -217,21 +224,81 @@ const AtsuCup = (function(){
   function hasProgress(t){
     return !!((t && t.people && t.people.length) || (t && t.matches && t.matches.length));
   }
-  function mergeRemoteTournaments(remoteList){
+  // サーバー側の更新時刻が、この端末が最後に把握している時刻より「厳密に新しい」か。
+  // 判定できない(どちらかが空の旧行など)場合は null を返し、呼び出し側で内容比較へ倒す。
+  //
+  // ⚠️ 不一致ではなく大小比較にすること。GAS保存→GitHubコミット→Pages反映には数十秒〜数分の
+  //    遅延があり、保存直後のリロードでは「自分が保存する前の古い行」が返ってくる。
+  //    不一致で判定すると、この古い行を「サーバーが変わった」と誤検出して自分の保存内容を
+  //    巻き戻してしまう(2026-07-27に実際に起きた「保存した大会が直後のリロードで消える」)。
+  function isRemoteNewer(remoteUpdatedAt, knownUpdatedAt){
+    if(!remoteUpdatedAt || !knownUpdatedAt) return null;
+    const r = new Date(remoteUpdatedAt).getTime(), k = new Date(knownUpdatedAt).getTime();
+    if(isNaN(r) || isNaN(k)) return null;
+    return r > k;
+  }
+
+  // リモートの大会をローカルへ取り込む。差異を3つに分類して扱う(2026-07-28方針):
+  //   ・この端末だけ変更 → 何もしない(次の保存で反映される)
+  //   ・他の端末だけ変更 → 自動で取り込む(モーダル無し)
+  //   ・両方変更(競合)  → ローカルを保護したまま、戻り値のconflictsで呼び出し側へ渡す
+  // 戻り値: [{ id, local, remote, remoteSig, remoteUpdatedAt }] 競合した大会の一覧
+  function mergeRemoteTournaments(remoteList, remoteUpdatedAtMap){
+    const upd = remoteUpdatedAtMap || {};
+    const conflicts = [];
     (remoteList||[]).forEach(rt=>{
-      const remoteSnap = JSON.stringify(rt);
+      const remoteUpdatedAt = upd[rt.id] || '';
+      const remoteSig = AtsuCupData.syncSignatureOf(rt);
       const i = state.tournaments.findIndex(t=>t.id===rt.id);
-      if(i < 0){ state.tournaments.push({...rt, everSyncedToServer:true}); state.remoteSnapshots[rt.id] = remoteSnap; return; }
-      const lastKnownRemote = state.remoteSnapshots[rt.id];
-      const shouldTakeRemote = lastKnownRemote===undefined
-        ? (!hasProgress(state.tournaments[i]) && hasProgress(rt)) // 初回取り込み: 従来通りの保守的な判定
-        : (JSON.stringify(state.tournaments[i]) === lastKnownRemote); // この端末での未保存編集が無いか
-      if(shouldTakeRemote) state.tournaments[i] = {...rt, everSyncedToServer:true};
-      // ローカルを保護する場合も、このidが実際にサーバーに存在することは確定した事実なので記録しておく
-      // (pruneTournamentsGoneFromServerが「未同期の新規作成大会」と正しく区別できるようにするため)
-      else { state.tournaments[i].everSyncedToServer = true; }
-      state.remoteSnapshots[rt.id] = remoteSnap;
+
+      // (a) この端末に無い大会 → 無条件で取り込む
+      if(i < 0){
+        state.tournaments.push({...rt, everSyncedToServer:true});
+        state.remoteMeta[rt.id] = { sig: remoteSig, updatedAt: remoteUpdatedAt };
+        return;
+      }
+      // このidが実際にサーバーに存在することは確定した事実なので必ず記録する
+      // (pruneTournamentsGoneFromServerが「未同期の新規作成大会」と正しく区別するために使う)
+      state.tournaments[i].everSyncedToServer = true;
+
+      const local = state.tournaments[i];
+      const localSig = AtsuCupData.syncSignatureOf(local);
+      const known = state.remoteMeta[rt.id];
+
+      // (b) 基準値が無い(初回取り込み・コード更新直後) → 従来通りの保守的な判定で基準値を張る
+      if(!known){
+        const take = (localSig === remoteSig) || (!hasProgress(local) && hasProgress(rt));
+        if(take) state.tournaments[i] = {...rt, everSyncedToServer:true};
+        state.remoteMeta[rt.id] = { sig: remoteSig, updatedAt: remoteUpdatedAt };
+        return;
+      }
+
+      // (c) 中身が完全に同じ → 何もしない(updatedAtだけ進んだ無意味な再保存を競合扱いしない)
+      if(localSig === remoteSig){
+        state.remoteMeta[rt.id] = { sig: remoteSig, updatedAt: remoteUpdatedAt };
+        return;
+      }
+
+      const localChanged = (localSig !== known.sig);
+      // updatedAtが使えない旧行だけ、内容比較にフォールバックする
+      const newer = isRemoteNewer(remoteUpdatedAt, known.updatedAt);
+      const remoteChanged = (newer === null) ? (remoteSig !== known.sig) : newer;
+
+      if(!remoteChanged){
+        // サーバー側は前回把握した状態のまま(または反映待ちの古いコピー)。
+        // ⚠️ ここで remoteMeta を更新してはいけない。古いコピーを「最新の把握値」として
+        //    書き込むと、次に本物の新しい行が来たときの比較基準が壊れる
+        return;
+      }
+      if(!localChanged){
+        state.tournaments[i] = {...rt, everSyncedToServer:true}; // 他の端末だけ変更 → 自動取り込み
+        state.remoteMeta[rt.id] = { sig: remoteSig, updatedAt: remoteUpdatedAt };
+        return;
+      }
+      // 両方変更 = 競合。ローカルは保護したまま、判断をユーザーへ委ねる
+      conflicts.push({ id: rt.id, local, remote: rt, remoteSig, remoteUpdatedAt });
     });
+    return conflicts;
   }
   // サーバー(data/tournaments.json)に存在しなくなった大会を、この端末のキャッシュからも取り除く。
   // 「以前にサーバーへ実際に反映されたことがある(everSyncedToServer===true)」大会に限定することで、
@@ -254,7 +321,7 @@ const AtsuCup = (function(){
     if(removed.length){
       const removedIdSet = new Set(removed.map(t=>t.id));
       state.tournaments = state.tournaments.filter(t=>!removedIdSet.has(t.id));
-      removed.forEach(t=>{ delete state.remoteSnapshots[t.id]; });
+      removed.forEach(t=>{ delete state.remoteMeta[t.id]; });
     }
     return removed;
   }
@@ -291,19 +358,24 @@ const AtsuCup = (function(){
       ]);
       mergeRemoteUsers(users);
       const appTournaments = AtsuCupData.toAppTournaments({ users, tournaments, entries, matches });
-      mergeRemoteTournaments(appTournaments);
-      // 以前にリモートから取り込んだことがある大会が、サーバー側でid自体無くなっていれば
+      // updatedAtは生の行にしか無い(アプリの大会オブジェクトには持たせない方針)ので、
+      // ここでid→updatedAtのマップにしてmergeへ渡す
+      const conflicts = mergeRemoteTournaments(appTournaments, AtsuCupData.updatedAtMapOf(tournaments));
+      // 以前にサーバーへ反映されたことがある大会が、サーバー側でid自体無くなっていれば
       // この端末のキャッシュからも取り除く(スプレッドシートの作り直し等でidが変わった場合の回復)。
-      // 未同期の新規作成大会(remoteSnapshots未記録)は対象外なので安全
+      // 未同期の新規作成大会(everSyncedToServer:false)は対象外なので安全
       pruneTournamentsGoneFromServer(appTournaments);
-      // ⚠️ ローカル優先マージは「未保存の進行状況を勝手に上書きしない」ためのものだが、
+      // ⚠️ 3分類マージは「未保存の進行状況を勝手に上書きしない」ためのものだが、
       // アーカイブ(削除)はこれとは別軸: サーバー側でarchived=trueになった大会は、
       // 既にこの端末にキャッシュ済みかどうかに関わらず必ず消す(でないと、他端末で削除した
       // 大会が「ローカルに既にあるid」として merge の対象外になり、いつまでも消えない)。
       const archivedIds = new Set((tournaments||[]).filter(t=>t.archived).map(t=>t.id));
       if(archivedIds.size){ state.tournaments = state.tournaments.filter(t=>!archivedIds.has(t.id)); }
       persist();
-      return { ok:true, counts:{ users:users.length, tournaments:tournaments.length } };
+      // ⚠️ awaitしない。ready(=各ページのrender)をブロックせず、まずローカルの内容で画面を出し、
+      // その上にモーダルを重ねる(取り込みを選んだ場合だけ location.reload() で描き直す)
+      if(conflicts.length) showSyncConflictModal(conflicts);
+      return { ok:true, counts:{ users:users.length, tournaments:tournaments.length }, conflicts };
     }catch(e){
       console.warn('[atsucup] data/ の取り込みに失敗しました:', e);
       return { ok:false, error:(e && e.message) || String(e) };
@@ -331,10 +403,16 @@ const AtsuCup = (function(){
     let removedTournaments = [];
     if(remoteTournaments.length){
       const remoteIds = new Set(remoteTournaments.map(t=>t.id));
-      removedTournaments = state.tournaments.filter(t=>!remoteIds.has(t.id));
+      // ⚠️ everSyncedToServer のガードが必須(2026-07-28追加)。これが無いと、大会を作った直後
+      // (GitHub Pagesへの反映がまだ済んでいない状態)でログインした瞬間に、作りたての大会が
+      // 「サーバーに存在しない」と判定されて消える。pruneTournamentsGoneFromServer と同じ条件。
+      removedTournaments = state.tournaments.filter(t=> !remoteIds.has(t.id) && t.everSyncedToServer===true);
       if(removedTournaments.length){
-        state.tournaments = state.tournaments.filter(t=>remoteIds.has(t.id));
-        removedTournaments.forEach(t=>{ delete state.remoteSnapshots[t.id]; });
+        // 上の判定で選んだものだけを取り除く(remoteIds基準で消し直すと、ガードで守った
+        // 未同期の大会まで巻き込んで消してしまう)
+        const removedIds = new Set(removedTournaments.map(t=>t.id));
+        state.tournaments = state.tournaments.filter(t=> !removedIds.has(t.id));
+        removedTournaments.forEach(t=>{ delete state.remoteMeta[t.id]; });
       }
     }
 
@@ -455,6 +533,127 @@ const AtsuCup = (function(){
     });
   }
 
+  /* ---------- 端末間同期: 選択モーダル(競合の解決・保存前の警告で共用) ---------- */
+  // confirm()/alert()は使わない(プロジェクト方針)。非ダイスミス(Esc・オーバーレイクリックでは
+  // 閉じない)で、必ずどれか1つをタップさせる。showGuestWipeBannerと同じ流儀。
+  // ⚠️ .match-pick-modal のCSSは tournament-detail.html 内のインライン定義なので他ページでは
+  //    使えない。全ページ共通で使うため、ここでstyleを注入する。
+  //
+  // choices = [{ key, label, primary? }] / 戻り値: 選ばれたkeyで解決するPromise
+  let syncModalStyleInjected = false;
+  function showSyncChoiceModal({ title, bodyHtml, choices }){
+    return new Promise(resolve=>{
+      if(typeof document === 'undefined') return resolve(null);
+      if(!document.body){
+        document.addEventListener('DOMContentLoaded', ()=> showSyncChoiceModal({title, bodyHtml, choices}).then(resolve));
+        return;
+      }
+      if(!syncModalStyleInjected){
+        syncModalStyleInjected = true;
+        const style = document.createElement('style');
+        style.textContent = `
+          .atsucup-sync-overlay{ position:fixed; inset:0; background:rgba(5,3,10,.86); z-index:9999;
+            display:flex; align-items:center; justify-content:center; padding:20px; }
+          .atsucup-sync-card{ max-width:440px; width:100%; background:#150f22; border:1.5px solid var(--gold-dim,#8a6d2f);
+            border-radius:16px; padding:22px 20px; color:#f5efe0; font-family:'Noto Sans JP',sans-serif;
+            box-shadow:0 10px 30px rgba(0,0,0,.5); }
+          .atsucup-sync-card h3{ margin:0 0 10px; font-size:16px; }
+          .atsucup-sync-card p{ margin:0 0 14px; font-size:13.5px; line-height:1.7; color:#d8cfe6; }
+          .atsucup-sync-card .atsucup-sync-actions{ display:flex; flex-direction:column; gap:8px; }
+          .atsucup-sync-card button{ font-family:inherit; font-size:13.5px; font-weight:700; padding:11px 14px;
+            border-radius:10px; cursor:pointer; border:1.5px solid transparent; text-align:left; line-height:1.5; }
+          .atsucup-sync-card button.primary{ background:#e8b34c; color:#160f08; }
+          .atsucup-sync-card button.ghost{ background:transparent; border-color:#3a2f4d; color:#f5efe0; }
+        `;
+        document.head.appendChild(style);
+      }
+      const overlay = document.createElement('div');
+      overlay.className = 'atsucup-sync-overlay';
+      overlay.innerHTML = `
+        <div class="atsucup-sync-card">
+          <h3>${title}</h3>
+          ${bodyHtml}
+          <div class="atsucup-sync-actions">${choices.map((c,i)=>
+            `<button class="${c.primary?'primary':'ghost'}" data-i="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelectorAll('button').forEach(b=>{
+        b.addEventListener('click', ()=>{ overlay.remove(); resolve(choices[+b.dataset.i].key); });
+      });
+    });
+  }
+
+  // 読み込み時に検出した競合(この端末とサーバーの両方が前回把握時から変わっている)を解決させる。
+  // 複数大会が同時に競合しうるのでキューで1件ずつ聞き、取り込みがあれば最後に1回だけリロードする。
+  let syncConflictModalRunning = false;
+  async function showSyncConflictModal(conflicts){
+    if(syncConflictModalRunning || !conflicts || !conflicts.length) return;
+    syncConflictModalRunning = true;
+    let changed = false;
+    for(const c of conflicts){
+      const when = c.remoteUpdatedAt ? new Date(c.remoteUpdatedAt).toLocaleString('ja-JP') : '不明';
+      const key = await showSyncChoiceModal({
+        title: '🔄 他の端末でも更新されています',
+        bodyHtml: `<p>「${escapeHtml(c.local.title||'(無題)')}」は、この端末にまだ保存していない変更があり、`
+          + `同時にサーバー側も別の端末から更新されています(サーバーの更新: ${escapeHtml(when)})。`
+          + `どちらの内容を使うか選んでください。</p>`,
+        choices: [
+          { key:'remote', label:'🔄 サーバーの内容を取り込む(この端末の未保存の変更は破棄されます)' },
+          { key:'local',  label:'この端末の内容を使う(次に保存すると他の端末の変更を上書きします)', primary:true }
+        ]
+      });
+      const i = state.tournaments.findIndex(t=>t.id===c.id);
+      if(key === 'remote' && i >= 0){
+        state.tournaments[i] = {...c.remote, everSyncedToServer:true};
+        changed = true;
+      }
+      // どちらを選んでも「サーバーのこの状態は把握した」ことにする。これをしないと次の
+      // ページ読み込みでも同じ競合を毎回聞かれ続ける。ローカルを選んだ場合、ローカルは
+      // 基準値と食い違ったまま(=未保存の変更あり)になるので、その後もローカルは保護され、
+      // 次の保存でサーバーへ反映される
+      state.remoteMeta[c.id] = { sig: c.remoteSig, updatedAt: c.remoteUpdatedAt };
+    }
+    persist();
+    syncConflictModalRunning = false;
+    // 取り込んだ場合の再描画。coreには購読機構が無いため、showGuestWipeBannerと同じくreloadで揃える
+    if(changed) location.reload();
+  }
+
+  // 保存の直前に、サーバー側がこの端末の把握している状態より新しくなっていないか確認する。
+  // ⚠️ ベストエフォート。data/tournaments.json はGASのコミット→Pages反映に数十秒〜数分の
+  //    遅延があるため、「直前に他の端末が保存した」ケースは検知できないことがある。
+  // 戻り値: null(問題なし/判定不能) または { remoteUpdatedAt }
+  async function checkRemoteNewerBeforeSave(tournamentId){
+    const known = state.remoteMeta[tournamentId];
+    if(!known || !known.updatedAt) return null; // 基準値が無ければ判定できない(保存は止めない)
+    let rows;
+    try{ rows = await fetchJson(DATA_PATHS.tournaments); }
+    catch(e){ return null; } // 取得できない=オフライン等。保存を妨げない
+    const row = (rows||[]).find(r=>r.id===tournamentId);
+    if(!row || !row.updatedAt) return null;
+    return isRemoteNewer(row.updatedAt, known.updatedAt) ? { remoteUpdatedAt: row.updatedAt } : null;
+  }
+
+  // 保存前の確認。⚠️「それでも上書き保存する」を必ず選べるようにすること。
+  // 保存ボタンを押した時点では必ずローカルに未保存の変更があるので、ここで操作不能になると
+  // 大会の進行そのものが止まってしまう。
+  // 戻り値: 'overwrite' | 'reload' | 'cancel'
+  async function confirmOverwriteIfRemoteNewer(tournamentId){
+    const hit = await checkRemoteNewerBeforeSave(tournamentId);
+    if(!hit) return 'overwrite';
+    const when = new Date(hit.remoteUpdatedAt).toLocaleString('ja-JP');
+    return await showSyncChoiceModal({
+      title: '⚠️ 他の端末で更新されています',
+      bodyHtml: `<p>この大会はサーバー側で ${escapeHtml(when)} に更新されています。`
+        + `このまま保存すると、その変更をこの端末の内容で上書きします。</p>`,
+      choices: [
+        { key:'overwrite', label:'それでも上書き保存する', primary:true },
+        { key:'reload',    label:'サーバーの内容を見る(このページを再読み込み)' },
+        { key:'cancel',    label:'保存をやめる' }
+      ]
+    });
+  }
+
   if(typeof GoogleAuth !== 'undefined'){
     GoogleAuth.onStateChange((s)=>{
       enforceGuestSeparation();
@@ -498,7 +697,15 @@ const AtsuCup = (function(){
     // ポスター画像をGitHubへアップロードした場合、サーバーから返ってきた最終URLを
     // ローカルの保持データにも反映する(巨大なdata URLをlocalStorageに残さない・
     // 次回以降の保存で毎回再アップロードしないようにするため)
-    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; }
+    // ⚠️ 保存が成功した時点で「サーバーはこの内容・この時刻になった」ことが確定する。
+    // これを記録しておかないと、直後のリロードで返ってくる反映待ちの古いPagesコピーを
+    // 「サーバーが変わった」と誤検出し、保存した内容が巻き戻る(2026-07-27の不具合)。
+    // posterUrlを反映した後に署名を取ること(実際に送った内容と一致させるため)。
+    if(result.updatedAt){
+      state.remoteMeta[t.id] = { sig: AtsuCupData.syncSignatureOf(t), updatedAt: result.updatedAt };
+    }
+    persist();
     // ⚠️ ここでeverSyncedToServerをtrueにしてはいけない(2026-07-27未明に実際に規制退行が発生し修正)。
     // GAS書き込みの成功は、GitHub Pages側のdata/tournaments.jsonへの反映完了を意味しない
     // (GAS→GitHubコミット→Pagesへの反映には時間差がある)。ここで即trueにすると、その反映が
@@ -520,7 +727,16 @@ const AtsuCup = (function(){
 
     const { tournamentRow, posterImageUpload } = AtsuCupData.tournamentRowOf(t);
     const result = await GasDB.updateTournamentMeta({ tournamentRow, posterImageUpload });
-    if(result.posterUrl) { t.posterUrl = result.posterUrl; persist(); }
+    if(result.posterUrl) { t.posterUrl = result.posterUrl; }
+    // ⚠️ メタ情報だけの保存では entries/matches をサーバーへ送っていない。ここで sig を
+    // 「ローカル全体の署名」に更新すると、この端末の未保存の対戦表進行までサーバーに反映済みだと
+    // 誤認し、次の自動取り込みで黙って消えてしまう。そのため updatedAt(=競合の誤検出を防ぐ値)
+    // だけを進め、sig は前回の基準値のまま残す。結果として「ローカルに未保存の変更あり」の
+    // 判定が続くが、entries/matchesは実際にまだ送っていないのでそれが正しい状態
+    if(result.updatedAt && state.remoteMeta[t.id]){
+      state.remoteMeta[t.id].updatedAt = result.updatedAt;
+    }
+    persist();
     // ⚠️ everSyncedToServerはここでは立てない(理由はsaveTournamentToData内の同種コメント参照)。
     // 大会作成直後はこの関数が呼ばれるが、GitHub Pages側への反映が間に合う前に次の読み込みが
     // 走ってプルーニングされてしまうのを防ぐため、実際にdata/tournaments.jsonから取り込めたこと
@@ -537,7 +753,7 @@ const AtsuCup = (function(){
     if(!GasDB.canWrite()) throw new Error('ログインが必要です。「設定」画面からGoogleログインしてください。');
     const r = await GasDB.archiveTournament(tournamentId);
     state.tournaments = state.tournaments.filter(t=>t.id!==tournamentId);
-    delete state.remoteSnapshots[tournamentId];
+    delete state.remoteMeta[tournamentId];
     persist();
     return r;
   }
@@ -574,7 +790,11 @@ const AtsuCup = (function(){
       // 導入前から残っていた「サーバー側では既に削除済みの孤立キャッシュ」もpruneTournamentsGoneFromServer
       // の対象として正しく扱われるようになる
       state.tournaments = data.tournaments.map(t=> t.everSyncedToServer===undefined ? {...t, everSyncedToServer:true} : t);
-      state.remoteSnapshots = data.remoteSnapshots || {};
+      // remoteMeta導入(2026-07-28)より前のキャッシュには旧 remoteSnapshots(生JSON文字列)しか無い。
+      // 旧スナップショットは新しい署名方式(syncSignatureOf)とは比較できない形式なので引き継がず捨てる。
+      // 捨てても実害は無い: 次のloadFromDataで「基準値なし」のフォールバック判定が一度だけ走り、
+      // そこで各大会の基準値が張り直される(その間ローカルの進行状況は保守的に保護される)
+      state.remoteMeta = data.remoteMeta || {};
       state.activeId = data.activeId || null;
       state.activePool = data.activePool || 'auth';
       return;
@@ -1194,7 +1414,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-27 15:30";
+  const BUILD_DATE = "2026-07-28 01:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1243,6 +1463,7 @@ const AtsuCup = (function(){
   return {
     get ready(){ if(!readyPromise) readyPromise = loadFromData(); return readyPromise; },
     mergeRemoteTournaments, pruneTournamentsGoneFromServer, saveTournamentToData, saveTournamentMetaToData, saveUsersToData, archiveTournamentInData,
+    checkRemoteNewerBeforeSave, confirmOverwriteIfRemoteNewer, showSyncChoiceModal,
     dateInputValueOf, isoFromDateInputValue,
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,

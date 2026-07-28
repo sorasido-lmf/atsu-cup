@@ -770,10 +770,15 @@
     const btn = document.getElementById('saveToDataBtn');
     const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
     if(!GasDB.canWrite()){ show('ログインが必要です。「設定」画面からGoogleログインしてください。', '#ff6a6a'); return; }
+    const id = tid || (state.tournamentMeta && state.tournamentMeta.id);
+    // 保存前に、他の端末が先に更新していないか確認する(検知しても「上書き」は常に選べる)
+    const choice = await AtsuCup.confirmOverwriteIfRemoteNewer(id);
+    if(choice === 'cancel'){ show('保存をやめました。', '#ffcf6a'); return; }
+    if(choice === 'reload'){ location.reload(); return; }
     btn.disabled = true; btn.textContent = '保存中...';
     show('保存中...(参加者・大会・対戦結果をスプレッドシートへ反映します)');
     try{
-      const r = await AtsuCup.saveTournamentToData(tid || (state.tournamentMeta && state.tournamentMeta.id));
+      const r = await AtsuCup.saveTournamentToData(id);
       const posterNote = r.posterUploadError ? `⚠️ ポスター画像のアップロードに失敗しました(${r.posterUploadError})。` : '';
       show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})${posterNote?' '+posterNote:''}`, r.posterUploadError ? '#ffcf6a' : '#7cffb0');
     }catch(e){

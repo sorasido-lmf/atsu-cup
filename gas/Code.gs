@@ -49,7 +49,13 @@ var SCHEMA = {
     // (readSheet_は列名をヘッダから引き当てるため、シート側に列が無いと例外になる)。
     { k: 'archived',      t: 'bool' },
     { k: 'isOfficial',    t: 'bool' },
-    { k: 'isRestricted',  t: 'bool' }
+    { k: 'isRestricted',  t: 'bool' },
+    // 2026-07-28追加。書き込みのたびにサーバー(GAS)側で new Date().toISOString() を打つ。
+    // ⚠️ クライアントから送られてきた値は使わない(端末の時計がずれていると比較が壊れるため)。
+    // 端末間同期で「サーバー側が更新されたか」を、内容比較ではなく時刻の大小で判定するのに使う。
+    // 列追加より前に保存された既存行は空欄('')になるが、その場合クライアントは内容比較へ
+    // フォールバックするだけなのでデータ破損にはならない。
+    { k: 'updatedAt',     t: 'str'  }
   ],
   entries: [
     { k: 'id',           t: 'str'  },
@@ -487,6 +493,7 @@ function actionSaveTournament_(payload) {
   var oldRow = existingTournaments.filter(function (t) { return t.id === tid; })[0];
   var newRow = payload.tournamentRow;
   newRow.archived = oldRow ? oldRow.archived : false;
+  var updatedAt = stampUpdatedAt_(newRow);
 
   var poster = resolvePosterImage_(newRow, oldRow, payload.posterImageUpload, tid);
 
@@ -509,7 +516,11 @@ function actionSaveTournament_(payload) {
     tournamentId: tid,
     entries: entryRows.length,
     matches: matchRows.length,
-    addedUsers: ensured.added.length
+    addedUsers: ensured.added.length,
+    // クライアントが「サーバーはこの時刻の内容になった」と記録するために返す。
+    // これが無いと、GitHub Pagesへの反映が遅れている間に古い行を読んで
+    // 「サーバーが変わった」と誤検出し、保存内容が巻き戻る
+    updatedAt: updatedAt
   };
   if (poster.url) result.posterUrl = poster.url;
   if (poster.error) result.posterUploadError = poster.error;
@@ -556,6 +567,21 @@ function resolvePosterImage_(newRow, oldRow, posterImageUpload, tid) {
 }
 
 /**
+ * tournaments行に updatedAt(サーバー時刻)を打つ。端末間同期の基準時刻。
+ *
+ * ⚠️ クライアントから送られてきた updatedAt は使わず、必ずここで上書きする。
+ * 端末の時計がずれていると、クライアント側の「サーバーが自分の把握より新しいか」という
+ * 大小比較が壊れるため。doPostはLockServiceで直列化されているので、ここで打つ限り
+ * 「単一の書き手が単調増加の時刻を打つ」形になり、比較がサーバー時刻同士で閉じる。
+ *
+ * 戻り値: 打った時刻(呼び出し側がレスポンスへ含めてクライアントへ返すため)
+ */
+function stampUpdatedAt_(row) {
+  row.updatedAt = new Date().toISOString();
+  return row.updatedAt;
+}
+
+/**
  * action: updateTournamentMeta
  * payload = { tournamentRow, posterImageUpload }
  *
@@ -574,6 +600,7 @@ function actionUpdateTournamentMeta_(payload) {
   var oldRow = tournaments.filter(function (t) { return t.id === tid; })[0];
   var newRow = payload.tournamentRow;
   newRow.archived = oldRow ? oldRow.archived : false;
+  var updatedAt = stampUpdatedAt_(newRow);
 
   var poster = resolvePosterImage_(newRow, oldRow, payload.posterImageUpload, tid);
 
@@ -582,7 +609,7 @@ function actionUpdateTournamentMeta_(payload) {
   writeSheet_('tournaments', rest);
   exportTables_(['tournaments'], '大会情報を更新: ' + (newRow.title || tid));
 
-  var result = { tournamentId: tid, metaOnly: true };
+  var result = { tournamentId: tid, metaOnly: true, updatedAt: updatedAt };
   if (poster.url) result.posterUrl = poster.url;
   if (poster.error) result.posterUploadError = poster.error;
   return result;
@@ -597,14 +624,16 @@ function actionArchiveTournament_(payload) {
   var tid = payload.tournamentId;
 
   var tournaments = readSheet_('tournaments');
-  var found = false;
-  tournaments.forEach(function (t) { if (t.id === tid) { t.archived = true; found = true; } });
+  var found = false, updatedAt = null;
+  tournaments.forEach(function (t) {
+    if (t.id === tid) { t.archived = true; updatedAt = stampUpdatedAt_(t); found = true; }
+  });
   if (!found) throw new Error('大会が見つかりません: ' + tid);
 
   writeSheet_('tournaments', tournaments);
   exportTables_(['tournaments'], '大会をアーカイブ: ' + tid);
 
-  return { tournamentId: tid, archived: true };
+  return { tournamentId: tid, archived: true, updatedAt: updatedAt };
 }
 
 /* ============================================================

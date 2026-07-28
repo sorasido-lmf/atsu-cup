@@ -259,5 +259,52 @@ const AtsuCupData = (function(){
     return { roster, userRecDefaults, archivedUsers };
   }
 
-  return { toAppTournaments, fromAppTournament, tournamentRowOf, ensureUserIds, toAppRoster, deriveWinnerName, countWins };
+  /* ================= 同期用の署名(端末間同期の差分判定) ================= */
+
+  // キーの並び順に依存しない安定した文字列化。
+  // (アプリ側の生成順とtoAppTournamentsの生成順を人力で揃え続けるのは現実的でないため)
+  function stableStringify(v){
+    if(v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+    if(Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+    return '{' + Object.keys(v).sort().map(k=> JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
+  }
+
+  // 大会1件の「サーバーに保存されたときの中身」を表す署名文字列。
+  //
+  // ⚠️ アプリ内部の大会オブジェクトをそのままJSON.stringifyして比べてはいけない。
+  //    ローカルの大会オブジェクトと toAppTournaments() の出力は、内容が同じでも構造が一致しない:
+  //      ・everSyncedToServer のようなローカル専用フィールドが混ざる
+  //      ・state.remaining はローカルの作業用(resetDownstreamが参加者名で埋める)だが
+  //        toAppTournaments は常に空配列を返す
+  //      ・matchesの深さが、ローカルは組んだラウンド分だけ(advanceRoundが1つずつ追記)なのに対し
+  //        buildMatchGrid は参加人数から常に全ラウンド分の枠を生成する
+  //      ・2回戦以降のカードに、ローカル(advanceRound製)は bye キーを持たない
+  //    このため「意味は同じなのに文字列は必ず違う」状態になり、比較が常に不一致になる
+  //    (2026-07-27〜28に「他端末の保存が反映されない」不具合の真因として判明)。
+  //
+  //    そこで、実際にシートへ書かれる行(fromAppTournamentの出力)へ射影してから比べる。
+  //    「保存してもサーバーの内容が変わらない ⇔ 署名が一致する」という定義になるので、
+  //    ローカル専用フィールドが将来増えても壊れない(fromAppTournamentが見ないものは署名に入らない)。
+  function syncSignatureOf(t){
+    if(!t) return '';
+    const identity = {};
+    (t.people||[]).forEach(p=>{ if(p && p.name) identity[p.name] = p.name; });
+    const { tournamentRow, entryRows, matchRows } = fromAppTournament(t, identity);
+    // updatedAt/archived はサーバーが管理する列なので署名に含めない。
+    // posterImageUpload(まだアップロードしていないdata URL)も内容の同一性とは別軸なので含めない。
+    const row = { ...tournamentRow };
+    delete row.updatedAt; delete row.archived;
+    return stableStringify({ t: row, e: entryRows, m: matchRows });
+  }
+
+  // data/tournaments.json の生の行から {id: updatedAt} を作る。
+  // updatedAt をアプリの大会オブジェクトへ混ぜないための橋渡し(mergeRemoteTournamentsが使う)
+  function updatedAtMapOf(tournamentRows){
+    const m = {};
+    (tournamentRows||[]).forEach(r=>{ if(r && r.id) m[r.id] = r.updatedAt || ''; });
+    return m;
+  }
+
+  return { toAppTournaments, fromAppTournament, tournamentRowOf, ensureUserIds, toAppRoster, deriveWinnerName, countWins,
+           stableStringify, syncSignatureOf, updatedAtMapOf };
 })();
