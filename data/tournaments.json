@@ -118,5 +118,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-28T13:31:40.495Z"
+  },
+  {
+    "id": "t1785245717889z4ylq3",
+    "title": "第26回あつ杯～モン類:獣族杯～",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-11-21T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-28T13:35:19.968Z"
   }
 ]
