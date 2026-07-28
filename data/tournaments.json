@@ -70,5 +70,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-28T12:39:38.685Z"
+  },
+  {
+    "id": "t17852433145536nx3x0",
+    "title": "第30回あつ杯 ～もう1つのロードオブマスターズ⑨〜",
+    "detail": "",
+    "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t17852433145536nx3x0.jpg",
+    "heldAt": "2026-04-10T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-28T12:55:16.658Z"
   }
 ]
