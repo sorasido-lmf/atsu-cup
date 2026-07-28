@@ -358,5 +358,13 @@
     "archived": false,
     "createdAt": "2026-07-28T14:22:40.664Z",
     "note": ""
+  },
+  {
+    "id": "u0046",
+    "name": "Zimson",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T14:22:51.638Z",
+    "note": ""
   }
 ]
