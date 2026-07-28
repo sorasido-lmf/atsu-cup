@@ -318,5 +318,13 @@
     "archived": false,
     "createdAt": "2026-07-28T13:14:29.219Z",
     "note": ""
+  },
+  {
+    "id": "u0041",
+    "name": "うさぎ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T13:28:29.479Z",
+    "note": ""
   }
 ]
