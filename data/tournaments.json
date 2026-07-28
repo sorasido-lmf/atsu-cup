@@ -34,5 +34,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-28T11:56:04.014Z"
+  },
+  {
+    "id": "t1785239870017on2c25",
+    "title": "第33回あつ杯 ～もう1つのロードオブマスターズ⑪〜",
+    "detail": "",
+    "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t1785239870017on2c25.jpg",
+    "heldAt": "2026-05-29T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-28T11:57:52.957Z"
   }
 ]
