@@ -203,7 +203,7 @@
     "id": "u0026",
     "name": "ダミー",
     "recDefault": true,
-    "archived": false,
+    "archived": true,
     "createdAt": "2026-07-27T06:04:16.154Z",
     "note": ""
   },
