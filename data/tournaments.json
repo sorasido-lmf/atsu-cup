@@ -130,5 +130,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-28T14:30:00.000Z"
+  },
+  {
+    "id": "t17852467554351jazav",
+    "title": "第4回ゲリラあつ杯～ローマスの結果を占おう！",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-11-14T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": false,
+    "isRestricted": false,
+    "updatedAt": "2026-07-28T13:52:41.113Z"
   }
 ]
