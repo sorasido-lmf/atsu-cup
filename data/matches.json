@@ -15,6 +15,21 @@
     "playedAt": null
   },
   {
+    "id": "t1785150826872lhf6la_r1_m1",
+    "tournamentId": "t1785150826872lhf6la",
+    "round": 1,
+    "stage": "normal",
+    "matchIndex": 1,
+    "player1Id": null,
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": true,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
+    "videoUrl": "",
+    "playedAt": null
+  },
+  {
     "id": "t1785150826872lhf6la_r1_m2",
     "tournamentId": "t1785150826872lhf6la",
     "round": 1,
@@ -401,6 +416,51 @@
     "isBye": false,
     "player1SrcIndex": 6,
     "player2SrcIndex": 7,
+    "videoUrl": "",
+    "playedAt": null
+  },
+  {
+    "id": "t1785150826872lhf6la_r4_m0",
+    "tournamentId": "t1785150826872lhf6la",
+    "round": 4,
+    "stage": "normal",
+    "matchIndex": 0,
+    "player1Id": null,
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": false,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
+    "videoUrl": "",
+    "playedAt": null
+  },
+  {
+    "id": "t1785150826872lhf6la_r4_m1",
+    "tournamentId": "t1785150826872lhf6la",
+    "round": 4,
+    "stage": "normal",
+    "matchIndex": 1,
+    "player1Id": null,
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": false,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
+    "videoUrl": "",
+    "playedAt": null
+  },
+  {
+    "id": "t1785150826872lhf6la_r5_m0",
+    "tournamentId": "t1785150826872lhf6la",
+    "round": 5,
+    "stage": "normal",
+    "matchIndex": 0,
+    "player1Id": null,
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": false,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
     "videoUrl": "",
     "playedAt": null
   }
