@@ -310,5 +310,13 @@
     "archived": false,
     "createdAt": "2026-07-28T13:14:14.704Z",
     "note": ""
+  },
+  {
+    "id": "u0040",
+    "name": "タロ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-28T13:14:29.219Z",
+    "note": ""
   }
 ]
