@@ -846,5 +846,165 @@
     "placement": 1,
     "wins": 4,
     "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0018",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0018",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0009",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0009",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0011",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0011",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0015",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0015",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0030",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0030",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0038",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0038",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0006",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0006",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0014",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0014",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0004",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0004",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0001",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0003",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0003",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0005",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0005",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0010",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0010",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0039",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0039",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0002",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0002",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0008",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0008",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0040",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0040",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0007",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0007",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0029",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0029",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785244347303xb731l_u0013",
+    "tournamentId": "t1785244347303xb731l",
+    "userId": "u0013",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
   }
 ]
