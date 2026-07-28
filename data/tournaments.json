@@ -46,5 +46,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-28T12:22:20.564Z"
+  },
+  {
+    "id": "t17852415704474itgmd",
+    "title": "第32回あつ杯 ～モン類︰無機40000限定〜",
+    "detail": "",
+    "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t17852415704474itgmd.jpg",
+    "heldAt": "2026-05-29T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-28T12:26:13.523Z"
   }
 ]
