@@ -164,19 +164,12 @@
         <div id="deleteErrorArea"></div>
       </div>` : '';
     const syncErrorHtml = metaSyncError ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:#ff6a6a;">⚠️ サーバーへの反映に失敗しました(${escapeHtml(metaSyncError)})。内容はこの端末には保存済みです。時間をおいて編集画面を開き直すか、対戦表の「進行状況を保存」でも反映できます。</div>` : '';
-    // 終了後は下のリザルト枠(対戦表の上)に集約するので、ヘッダーには順位を出さない
-    const placementLines = finished ? '' : topPlacements().map(r=>
-      `<div class="cur-line ${r.place===1?'champ':''}">${medalOf(r.place)} ${escapeHtml(r.label)}: ${escapeHtml(r.name)}</div>`).join('');
-    // ⚠️ ローカル(ゲスト)大会にはそもそも保存ボタンが無いので案内を出さない
-    const finishedNote = finished && canManage() && !AtsuCup.isGuestMode()
-      ? `<p class="hint" style="margin:8px 0 0;">この大会は終了しました。サーバーへ反映するには、対戦表の下にある「💾 進行状況を保存」を押してください。</p>` : '';
     content.innerHTML = `
       ${statusBadge}
       ${meta.posterUrl?`<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">`:''}
       <div class="cur-title">${escapeHtml(meta.title)}</div>
       ${meta.details?`<div class="cur-details">${escapeHtml(meta.details)}</div>`:''}
       ${heldDateLine(meta.createdAt)}
-      ${placementLines}
       ${canManage() ? `<div class="row">
         ${finished
           ? `<button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>`
@@ -184,7 +177,6 @@
       </div>` : ''}
       ${confirmEndHtml}
       ${confirmDeleteHtml}
-      ${finishedNote}
       ${syncErrorHtml}`;
     if(!canManage()) return;
     if(finished){
@@ -196,10 +188,18 @@
     document.getElementById('endBtn').addEventListener('click', ()=>{ mode='confirmEnd'; renderLiveHeader(); });
     if(mode==='confirmEnd'){
       document.getElementById('cancelEndBtn').addEventListener('click', ()=>{ mode='view'; renderLiveHeader(); });
-      document.getElementById('confirmEndBtn').addEventListener('click', ()=>{
+      document.getElementById('confirmEndBtn').addEventListener('click', async ()=>{
         AtsuCup.endCurrentTournament();
         AtsuCup.setActive(id); // ⚠️ endCurrentTournamentがactiveIdを外すので、この画面用に張り直す
-        mode='view'; render();
+        mode='view'; metaSyncError=null; render();
+        // ⚠️ 終了はstatusの変更なので、タイトル編集と同じくこの場でサーバーへ送る。これを怠ると
+        // 「この端末だけ終了、サーバーと他の端末は永久にongoing」になる(2026-07-28修正)。
+        // entries/matchesには触れない専用経路なので、未保存の対戦表進行を巻き込まない
+        if(!isGuestTournament()){
+          try{ await AtsuCup.saveTournamentMetaToData(id); }
+          catch(e){ metaSyncError = (e && e.message) || String(e); }
+          renderLiveHeader();
+        }
       });
     }
   }

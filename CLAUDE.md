@@ -313,7 +313,7 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 | | 進行中 | 終了済み(`isFinished()`) |
 |---|---|---|
 | 編集UI(⚔️/🎫/➕/タップで選ぶ/D&D/進行ボタン/編集する/終了する) | 出る | **全部出ない**(`readOnly`) |
-| 1〜4位の表示場所 | ヘッダー(`.cur-line`、編集/終了ボタンの上) | **対戦表の直上のリザルト枠**(`#championArea`)。ヘッダーからは消す |
+| 1〜4位の表示 | **出さない**(優勝者決定バッジのみ) | **対戦表の直上のリザルト枠**(`#championArea`) |
 | 管理操作(💾進行状況を保存 / 🗑️削除) | 保存のみ | **どちらも出る**(`canManage()`) |
 
 対戦表と3位決定戦は**終了後も残る**(「あとから見たい」が要件)。
@@ -326,11 +326,26 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 
 ⚠️ **リザルト枠の描画(`renderResultBox()`)は`renderExtras()`から呼ばないこと。** `renderExtras()`は`round1HasEmpty()`で冒頭early returnし`#championArea`を空にするため、**組み合わせが埋まらないまま終了した大会でリザルトが消える**。`renderBracket()`から直接呼ぶ。
 
-**順位の取得は`topPlacements()`に集約**(ヘッダーとリザルト枠の共通ヘルパー)。⚠️ `computePlacements`が返す`label`は「🥇 優勝」のように**メダル絵文字込み**(4位だけ絵文字なし)なので、`medalOf(place)`を前置する側では`stripMedal()`で剥がさないと二重表示になる。また`participants`は`{name}`の**オブジェクト配列**であり文字列配列ではない。
+⚠️ **進行中に順位(1〜4位)を出さないこと。** 一度ヘッダー(編集/終了ボタンの上)に出したが、**終了していないのにリザルトが出ている**ようにしか見えず、同じ大会がトップページの「開催中」にも並ぶため齟齬になった(2026-07-28に撤去)。「優勝者と3位が確定 → 終了を押す → statusが変わる → ongoingでないならリザルト表示&編集不可」という一本道を崩さない。優勝者が決まったことは既存の`優勝者決定`バッジが示す。
+
+**順位の取得は`topPlacements()`に集約**(現在の唯一の利用者は`renderResultBox()`)。⚠️ `computePlacements`が返す`label`は「🥇 優勝」のように**メダル絵文字込み**(4位だけ絵文字なし)なので、`medalOf(place)`を前置する側では`stripMedal()`で剥がさないと二重表示になる。また`participants`は`{name}`の**オブジェクト配列**であり文字列配列ではない。
 
 **終了は実質不可逆**(「進行中に戻す」導線は要件として不要と判断)。そのため確認バナーで「組み合わせや勝敗の編集ができなくなります」と明示してから確定させる。優勝者が決まっていない状態で終了した場合は**リザルト枠に順位を出さず**、`results.html`へのリンクも出さない(リンク先が行き止まりになるため)。
 
 `endCurrentTournament()`は`state.activeId`を`null`にするので、呼び出し側で`AtsuCup.setActive(id)`を打ち直すこと(他ページへの影響を避けるためcore側は変更していない)。
+
+### 🔴 終了(status変更)は押した瞬間にサーバーへ送ること(2026-07-28修正)
+
+`endCurrentTournament()`は`t.status='completed'`を代入して`persist()`(localStorage)するだけで、**サーバーへは何も送らない**。しかも`renderPast`時代は終了すると💾保存ボタンごと画面から消えていたため、**終了した瞬間にstatusをサーバーへ送る手段が消滅していた**。結果、第33回(`t17852032535363ygjkd`)は「その端末だけcompleted、サーバーと他の端末は永久にongoing」という状態で残っていた(シートを手修正して復旧)。
+
+そのため`detail-view.js`の終了確定ハンドラで、タイトル編集と同じく**`AtsuCup.saveTournamentMetaToData(id)`をその場で呼ぶ**。
+
+- **`saveTournamentToData`ではなく`saveTournamentMetaToData`**。後者は`tournamentRowOf(t)`の1行だけを送り**entries/matchesに触れない**ので、未保存の対戦表進行を巻き込まない。`status`は`tournamentRowOf`に含まれている
+- **ゲスト(ローカル)大会では呼ばない**(`isGuestTournament()`で分岐。呼ぶと先頭で throw する)
+- **先に`render()`してから`await`する**。終了の見た目を通信の完了まで待たせない
+- **失敗しても終了は取り消さない**。ローカルには保存済みで、既存の`metaSyncError`バナーが「対戦表の『進行状況を保存』でも反映できます」と案内する
+
+⚠️ この経路で競合モーダルは出ない。`saveTournamentMetaToData`は`state.remoteMeta[id].updatedAt`だけを進めて`sig`を据え置くため、次回読み込みで`isRemoteNewer`がfalseになり`remoteChanged=false`で早期returnする(タイトル編集で実績のある経路)。
 
 なお終了直後の「サーバーへ反映するには💾進行状況を保存を押してください」の案内は`!AtsuCup.isGuestMode()`でも絞る。ローカル大会にはそもそも保存ボタンが無い。
 
