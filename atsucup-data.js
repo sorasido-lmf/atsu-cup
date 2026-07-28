@@ -25,10 +25,15 @@ const AtsuCupData = (function(){
   //
   // ⚠️ 枠数は「実際にエクスポートされた行の数」からではなく、参加人数(participantCount)から
   // nextPow2で本来あるべき形を先に組み立て、そこへ実データを重ねる(buildEmptyRound1と同じ考え方)。
-  // fromAppTournamentは「両者未定・勝者なしの完全に空の枠」を書き出さない設計のため、
-  // 行数だけから枠数を逆算すると、空欄のまま保存した枠が消えて対戦表が縮んでしまう
-  // (2026-07-26に実データで確認: 参加者3人・シード枠未選択のまま保存→再読み込みで
-  // シード枠が消滅し、決勝しか無いかのような表示になっていた)。
+  // 行数だけから枠数を逆算すると、旧データ(空枠を書き出していなかった頃のもの)を読んだ時に
+  // 対戦表が縮んでしまう(2026-07-26に実データで確認: 参加者3人・シード枠未選択のまま保存→
+  // 再読み込みでシード枠が消滅し、決勝しか無いかのような表示になっていた)。
+  //
+  // ⚠️ 下の「1回戦の末尾からbyeCount個をシードにする」既定値は、2026-07-28以降は
+  // **旧データ専用の後方互換フォールバック**。fromAppTournamentが全カードを書き出すように
+  // なったため、新しく保存されたデータでは必ず実データが上書きし、この推測は使われない。
+  // (この推測に頼っていた頃は、末尾以外の位置の空シードが消え、逆に末尾の空の通常枠が
+  //  勝手にシード化するという双方向の化けが起きていた)
   function buildMatchGrid(rows, nameOf, participantCount){
     const normal = rows.filter(r=> (r.stage||'normal') === 'normal');
 
@@ -202,8 +207,18 @@ const AtsuCupData = (function(){
     const matchRows = [];
     (t.matches||[]).forEach((round, rIdx)=>{
       round.forEach((m, mIdx)=>{
-        // 完全な空枠(両者未定・勝者なし)は書き出さない。読み込み時にBLANK_CARDで復元される。
-        if(!m.a && !m.b && !m.winner) return;
+        // ⚠️ 空枠も含めて全カードを書き出す(省略しない)。
+        //    以前は「両者未定・勝者なし」の枠を省いていたが、3つの不具合を生んでいた:
+        //     (a) 保持者なしの空シード枠(bye:trueだがa/b/winnerが全てnull)の行が消え、
+        //         読み込み側の「1回戦末尾からbyeCount個」という既定値では復元できない位置の
+        //         シードが失われる(2026-07-28に実データで発覚: 18人=32枠のmatchIndex 1)
+        //     (b) 逆に、末尾側にある bye:false の空枠が、その既定値で勝手にシード化する
+        //         (mergeSeedsIntoMatchがシード同士を対戦にした時に実際に作られる)
+        //     (c) 2回戦以降の「両者未定だがaSrc/bSrcは持つ」枠の行が消え、撮影不可回避で
+        //         入れ替えた対応関係が失われる。BLANK_CARDはaSrc/bSrcを持たないため復元できず、
+        //         SCHEMA.md記載のとおり後から前ラウンドをやり直すと勝者が誤った枠へ入る
+        //    枠数は最大でも参加者数程度(32人大会で31行)で、writeSheet_は毎回この大会の行を
+        //    全置換するためゴミも溜まらない。省略の最適化より往復のロスレス性を優先する。
         const row = {
           id: `${t.id}_r${rIdx+1}_m${mIdx}`,
           tournamentId: t.id,
@@ -261,6 +276,15 @@ const AtsuCupData = (function(){
 
   /* ================= 同期用の署名(端末間同期の差分判定) ================= */
 
+  // 署名の算出方法のバージョン印。fromAppTournamentの書き出し規則(どの枠を行にするか)を
+  // 変更したら必ずここを上げること。印が変わった基準値は AtsuCup.migrate() が破棄し、
+  // 次のloadFromDataで張り直される。
+  // ⚠️ 上げ忘れると、旧版で計算された基準値と新しい署名が「内容が変わった」と誤判定され、
+  //    全端末で競合モーダルが誤爆する(updatedAtが空の大会は内容比較経路に落ちるため、
+  //    「updatedAtがあるから大丈夫」とは言えない。2026-07-28にこの仕組みを導入)。
+  // v2: 空枠も含めて全カードを書き出すようにした(空シード枠とaSrc/bSrcが失われる不具合の修正)
+  const SIG_VERSION = 'v2';
+
   // キーの並び順に依存しない安定した文字列化。
   // (アプリ側の生成順とtoAppTournamentsの生成順を人力で揃え続けるのは現実的でないため)
   function stableStringify(v){
@@ -294,7 +318,12 @@ const AtsuCupData = (function(){
     // posterImageUpload(まだアップロードしていないdata URL)も内容の同一性とは別軸なので含めない。
     const row = { ...tournamentRow };
     delete row.updatedAt; delete row.archived;
-    return stableStringify({ t: row, e: entryRows, m: matchRows });
+    return SIG_VERSION + '|' + stableStringify({ t: row, e: entryRows, m: matchRows });
+  }
+
+  // その署名文字列が現行バージョンで計算されたものか(migrateが基準値を残すか捨てるかの判断に使う)
+  function isCurrentSigVersion(sig){
+    return typeof sig === 'string' && sig.indexOf(SIG_VERSION + '|') === 0;
   }
 
   // data/tournaments.json の生の行から {id: updatedAt} を作る。
@@ -306,5 +335,5 @@ const AtsuCupData = (function(){
   }
 
   return { toAppTournaments, fromAppTournament, tournamentRowOf, ensureUserIds, toAppRoster, deriveWinnerName, countWins,
-           stableStringify, syncSignatureOf, updatedAtMapOf };
+           stableStringify, syncSignatureOf, updatedAtMapOf, SIG_VERSION, isCurrentSigVersion };
 })();

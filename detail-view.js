@@ -91,16 +91,9 @@
           renderMatchup();
         }
       }
-      // ログイン中に一度でもトークンを持ったが期限切れになった場合は、
-      // 単なる未ログインと区別して再ログインを促すバナーを出す(2026-07-27追加)
-      if(readOnly && typeof GoogleAuth !== 'undefined' && GoogleAuth.sessionExpired()){
-        const banner = document.createElement('div');
-        banner.className = 'confirm-banner';
-        banner.style.marginBottom = '12px';
-        banner.innerHTML = `⚠️ ログインの有効期限が切れました。編集するには再度ログインしてください。<div class="row"><button class="btn btn-primary" id="sessionRelBtn">再ログイン</button></div>`;
-        content.insertBefore(banner, content.firstChild);
-        document.getElementById('sessionRelBtn').addEventListener('click', ()=>{ GoogleAuth.signIn().then(render).catch(()=>{}); });
-      }
+      // ⚠️ セッション切れの案内はここでは出さない(2026-07-28に共通化)。
+      // atsucup-core.jsのinitSessionExpiredBannerが全ページ・全分岐で画面下部に固定表示するため、
+      // ここで出すと同じ内容が同一画面に二重に出てしまう
       return;
     }
     const h = findHistory();

@@ -53,6 +53,28 @@ a.back-link:active{ transform:scale(.93); }
 }
 .atsucup-update-banner button:active{ transform:scale(.95); }
 @keyframes atsucupPulse { 0%,100%{opacity:1;} 50%{opacity:.75;} }
+
+/* セッション切れバナー(全ページ共通・画面下部固定)。上部固定の更新通知バナーと対になる。
+   ⚠️ 上部だと対戦表が縦に長い大会で下までスクロールした時に気づけないため下部に置く
+   (2026-07-28にユーザーから指摘)。z-indexは競合モーダル(9999)・resyncトースト(9998)より
+   下にして、モーダル表示中はその下に隠れるようにする。 */
+.atsucup-session-banner{
+  position:fixed; left:0; right:0; bottom:0; z-index:9997; display:none;
+  align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom)); /* iPhoneのホームインジケータを避ける */
+  background:linear-gradient(180deg,rgba(21,15,34,.97),rgba(10,7,18,.99));
+  border-top:1.5px solid var(--gold-dim,#8a6d2f); box-shadow:0 -8px 24px rgba(0,0,0,.5);
+  font-size:12px; line-height:1.6; color:#f5efe0; font-family:'Noto Sans JP',sans-serif;
+}
+.atsucup-session-banner.is-on{ display:flex; }
+.atsucup-session-banner button{
+  font-family:inherit; font-size:12px; font-weight:800; padding:8px 14px; border-radius:999px;
+  border:none; background:linear-gradient(90deg,var(--gold),var(--ember2)); color:#1a1208; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; flex-shrink:0;
+}
+.atsucup-session-banner button:active{ transform:scale(.95); }
+/* ページ末尾のコンテンツがバーの下に隠れないよう、表示中だけ本文に余白を足す */
+body.atsucup-has-session-banner{ padding-bottom:var(--atsucup-bottom-bar,0px); }
 header.top{padding:22px 6px 14px; text-align:center; position:relative;}
 .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
 h1{

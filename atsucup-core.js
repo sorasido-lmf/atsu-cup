@@ -446,7 +446,9 @@ const AtsuCup = (function(){
 
     const style = document.createElement('style');
     style.textContent = `
-      .atsucup-resync-toast{ position:fixed; left:14px; right:14px; bottom:14px; z-index:9998;
+      .atsucup-resync-toast{ position:fixed; left:14px; right:14px; z-index:9998;
+        /* セッション切れバナー(下部固定)が出ている時はその上に重ねる。出ていなければ0pxで従来通り */
+        bottom:calc(14px + var(--atsucup-bottom-bar, 0px));
         max-width:460px; margin:0 auto; background:#150f22; border:1.5px solid var(--gold-dim,#8a6d2f);
         border-radius:14px; padding:14px 16px; color:#f5efe0; font-family:'Noto Sans JP',sans-serif;
         box-shadow:0 10px 30px rgba(0,0,0,.5); }
@@ -790,11 +792,22 @@ const AtsuCup = (function(){
       // 導入前から残っていた「サーバー側では既に削除済みの孤立キャッシュ」もpruneTournamentsGoneFromServer
       // の対象として正しく扱われるようになる
       state.tournaments = data.tournaments.map(t=> t.everSyncedToServer===undefined ? {...t, everSyncedToServer:true} : t);
-      // remoteMeta導入(2026-07-28)より前のキャッシュには旧 remoteSnapshots(生JSON文字列)しか無い。
-      // 旧スナップショットは新しい署名方式(syncSignatureOf)とは比較できない形式なので引き継がず捨てる。
-      // 捨てても実害は無い: 次のloadFromDataで「基準値なし」のフォールバック判定が一度だけ走り、
-      // そこで各大会の基準値が張り直される(その間ローカルの進行状況は保守的に保護される)
-      state.remoteMeta = data.remoteMeta || {};
+      // 基準値(remoteMeta)は、署名の算出方法が変わったら引き継げない。
+      // ・remoteMeta導入(2026-07-28)より前のキャッシュには旧 remoteSnapshots(生JSON文字列)しか無い
+      // ・署名の算出方法を変えた場合(AtsuCupData.SIG_VERSIONを上げた場合)も、旧版の署名は
+      //   新しい署名と比較できない。そのまま残すと「ローカルもサーバーも変わった」と誤判定され、
+      //   全端末で競合モーダルが誤爆する
+      // どちらの場合も該当分を捨てる。捨てても実害は無い: 次のloadFromDataで「基準値なし」の
+      // フォールバック判定が一度だけ走って張り直される(その間ローカルの進行状況は保守的に保護される)。
+      // ⚠️ AtsuCupDataが未読み込みなら判定できないので、安全側(捨てる)に倒す
+      const savedMeta = data.remoteMeta || {};
+      state.remoteMeta = {};
+      if(typeof AtsuCupData !== 'undefined'){
+        Object.keys(savedMeta).forEach(tid=>{
+          const m = savedMeta[tid];
+          if(m && AtsuCupData.isCurrentSigVersion(m.sig)) state.remoteMeta[tid] = m;
+        });
+      }
       state.activeId = data.activeId || null;
       state.activePool = data.activePool || 'auth';
       return;
@@ -1414,7 +1427,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-28 01:00";
+  const BUILD_DATE = "2026-07-28 02:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1445,9 +1458,47 @@ const AtsuCup = (function(){
     document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') checkVersion(); });
     setInterval(checkVersion, 5 * 60 * 1000);
   }
+  /* ---------- セッション切れバナー(全ページ共通・画面下部固定) ---------- */
+  // ⚠️ 以前は大会詳細の一部の分岐でだけ、しかもページ上部に出していた。対戦表が縦に長い大会では
+  //    下までスクロールすると気づけず、「編集したのに保存できない」状態に陥っていた
+  //    (2026-07-28にユーザーから指摘)。全ページで、スクロールしても常に見える下部固定にする。
+  //    上部固定の更新通知バナー(.atsucup-update-banner)とは位置が競合しない。
+  function initSessionExpiredBanner(){
+    if(typeof document === 'undefined' || !document.body) return;
+    if(document.getElementById('atsucupSessionBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'atsucupSessionBanner';
+    banner.className = 'atsucup-session-banner';
+    banner.innerHTML = '<span>⚠️ ログインの有効期限が切れました。編集するには再ログインしてください。</span>'
+      + '<button type="button" id="atsucupSessionReloginBtn">再ログイン</button>';
+    document.body.appendChild(banner);
+    document.getElementById('atsucupSessionReloginBtn').addEventListener('click', ()=>{
+      // coreには再描画の購読機構が無いため、他の同種UI(showGuestWipeBanner/showSyncConflictModal)と
+      // 同じくリロードで画面全体を揃える
+      if(typeof GoogleAuth !== 'undefined') GoogleAuth.signIn().then(()=> location.reload()).catch(()=>{});
+    });
+
+    function update(){
+      const show = (typeof GoogleAuth !== 'undefined') && GoogleAuth.sessionExpired();
+      banner.classList.toggle('is-on', show);
+      document.body.classList.toggle('atsucup-has-session-banner', show);
+      // 下部トースト(.atsucup-resync-toast)がこのバーに重ならないよう、実測の高さを共有する
+      // (文言が2行に折り返す端末でも自動で追従する)
+      document.documentElement.style.setProperty('--atsucup-bottom-bar', show ? banner.offsetHeight + 'px' : '0px');
+    }
+    update();
+    // トークンは時間経過で切れる(約1時間)。切れた瞬間の通知は無いので、開きっぱなしでも
+    // 気づけるよう定期確認する。sessionExpired()はgetIdToken()が期限切れトークンを毎回
+    // 破棄する作りなので、呼べば常に正しい状態が返る
+    setInterval(update, 60 * 1000);
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') update(); });
+    if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(update); // 再ログイン/ログアウトに追従
+  }
+
   if(typeof document !== 'undefined'){
-    if(document.body) initUpdateBanner();
-    else document.addEventListener('DOMContentLoaded', initUpdateBanner);
+    const bootBanners = ()=>{ initUpdateBanner(); initSessionExpiredBanner(); };
+    if(document.body) bootBanners();
+    else document.addEventListener('DOMContentLoaded', bootBanners);
   }
 
   // 保険: 各画面がpersist()を呼び忘れているケースがあっても、画面を離れる瞬間に必ず保存する
