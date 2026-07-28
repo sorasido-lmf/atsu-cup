@@ -1,149 +1,5 @@
 [
   {
-    "id": "t1785150826872lhf6la_u0004",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0004",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0009",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0009",
-    "placement": null,
-    "wins": 1,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0002",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0002",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0003",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0003",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0012",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0012",
-    "placement": null,
-    "wins": 2,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0007",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0007",
-    "placement": null,
-    "wins": 2,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0005",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0005",
-    "placement": null,
-    "wins": 2,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0008",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0008",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0013",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0013",
-    "placement": null,
-    "wins": 1,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0010",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0010",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0011",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0011",
-    "placement": null,
-    "wins": 2,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0006",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0006",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0014",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0014",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0015",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0015",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0016",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0016",
-    "placement": null,
-    "wins": 2,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0017",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0017",
-    "placement": null,
-    "wins": 2,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0018",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0018",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785150826872lhf6la_u0001",
-    "tournamentId": "t1785150826872lhf6la",
-    "userId": "u0001",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
     "id": "t17852032535363ygjkd_u0011",
     "tournamentId": "t17852032535363ygjkd",
     "userId": "u0011",
@@ -293,6 +149,150 @@
     "userId": "u0012",
     "placement": 4,
     "wins": 2,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0004",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0004",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0009",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0009",
+    "placement": null,
+    "wins": 1,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0002",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0002",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0003",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0003",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0012",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0012",
+    "placement": 4,
+    "wins": 2,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0007",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0007",
+    "placement": 3,
+    "wins": 3,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0005",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0005",
+    "placement": 1,
+    "wins": 4,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0008",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0008",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0013",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0013",
+    "placement": null,
+    "wins": 1,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0010",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0010",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0011",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0011",
+    "placement": null,
+    "wins": 2,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0006",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0006",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0014",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0014",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0015",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0015",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0016",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0016",
+    "placement": null,
+    "wins": 2,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0017",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0017",
+    "placement": 2,
+    "wins": 3,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0018",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0018",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785150826872lhf6la_u0001",
+    "tournamentId": "t1785150826872lhf6la",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
     "recAtEntry": true
   }
 ]
