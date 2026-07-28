@@ -279,12 +279,18 @@
 
 
   /* ================= 組み合わせ決定(matchup) ================= */
-  let matchupMode = 'view'; // 'view'|'confirmReset'
+  let matchupMode = 'view'; // 'view'|'confirmReset'|'confirmAuto'
   function renderMatchup(){
     const hasPeople = state.people.length>0;
+    // ⚠️ 自動抽選もリセットと同じく確認を挟む。ワンタップで組み合わせごと作り直すため、
+    //    誤タップするとそこまでの勝敗入力が消える(実際に事故が起きた)
     const confirmHtml = matchupMode==='confirmReset' ? `
       <div class="advance-warn">組み合わせをリセットしていいですか？(入力済みの勝敗もすべて消えます)
         <div class="row"><button class="btn btn-primary" id="confirmResetBtn">リセットする</button><button class="btn btn-ghost" id="cancelResetBtn">キャンセル</button></div>
+      </div>`
+      : matchupMode==='confirmAuto' ? `
+      <div class="advance-warn">組み合わせを自動抽選していいですか？(入力済みの勝敗もすべて消えます)
+        <div class="row"><button class="btn btn-primary" id="confirmAutoBtn">自動抽選する</button><button class="btn btn-ghost" id="cancelAutoBtn">キャンセル</button></div>
       </div>` : '';
     matchupSection.innerHTML = `
       <h2>組み合わせを決める</h2>
@@ -299,14 +305,19 @@
       ` : ''}`;
 
     if(hasPeople){
-      document.getElementById('instantAutoBtn').addEventListener('click', ()=>{
-        if(!state.people.length) return;
-        state.matches = [AtsuCup.buildRound1(state.people.map(p=>p.name))];
-        state.thirdPlaceMatch = null; state.winnerName = '';
-        AtsuCup.persist();
-        render();
-      });
+      document.getElementById('instantAutoBtn').addEventListener('click', ()=>{ matchupMode='confirmAuto'; renderMatchup(); });
       document.getElementById('resetOrderBtn').addEventListener('click', ()=>{ matchupMode='confirmReset'; renderMatchup(); });
+      if(matchupMode==='confirmAuto'){
+        document.getElementById('cancelAutoBtn').addEventListener('click', ()=>{ matchupMode='view'; renderMatchup(); });
+        document.getElementById('confirmAutoBtn').addEventListener('click', ()=>{
+          matchupMode='view';
+          if(!state.people.length) return;
+          state.matches = [AtsuCup.buildRound1(state.people.map(p=>p.name))];
+          state.thirdPlaceMatch = null; state.winnerName = '';
+          AtsuCup.persist();
+          render();
+        });
+      }
       if(matchupMode==='confirmReset'){
         document.getElementById('cancelResetBtn').addEventListener('click', ()=>{ matchupMode='view'; renderMatchup(); });
         document.getElementById('confirmResetBtn').addEventListener('click', ()=>{ matchupMode='view'; AtsuCup.resetDownstream(); render(); });
