@@ -338,14 +338,21 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 
 `endCurrentTournament()`は`t.status='completed'`を代入して`persist()`(localStorage)するだけで、**サーバーへは何も送らない**。しかも`renderPast`時代は終了すると💾保存ボタンごと画面から消えていたため、**終了した瞬間にstatusをサーバーへ送る手段が消滅していた**。結果、第33回(`t17852032535363ygjkd`)は「その端末だけcompleted、サーバーと他の端末は永久にongoing」という状態で残っていた(シートを手修正して復旧)。
 
-そのため`detail-view.js`の終了確定ハンドラで、タイトル編集と同じく**`AtsuCup.saveTournamentMetaToData(id)`をその場で呼ぶ**。
+そのため`detail-view.js`の終了確定ハンドラで、**保存ボタンと同じ`saveTournamentToGitHub(id)`をその場で呼び、大会情報・エントリー・対戦表をまとめて送る**。
 
-- **`saveTournamentToData`ではなく`saveTournamentMetaToData`**。後者は`tournamentRowOf(t)`の1行だけを送り**entries/matchesに触れない**ので、未保存の対戦表進行を巻き込まない。`status`は`tournamentRowOf`に含まれている
-- **ゲスト(ローカル)大会では呼ばない**(`isGuestTournament()`で分岐。呼ぶと先頭で throw する)
+- **`saveTournamentMetaToData`(メタだけ)では足りない。** statusしか送らないと、決勝を入力してすぐ終了を押した場合に**対戦結果がこの端末から出られなくなる**(第33回で実際に起きた詰みと同じ形)
+- 保存ボタンと同じ関数を通すので、**他の端末との競合確認(`confirmOverwriteIfRemoteNewer`)もそのまま働く**
+- **ゲスト(ローカル)大会では呼ばない**(`isGuestTournament()`で分岐)
 - **先に`render()`してから`await`する**。終了の見た目を通信の完了まで待たせない
-- **失敗しても終了は取り消さない**。ローカルには保存済みで、既存の`metaSyncError`バナーが「対戦表の『進行状況を保存』でも反映できます」と案内する
+- **失敗しても終了は取り消さない**。ローカルには保存済みで、保存ボタンが残るので再送できる
 
-⚠️ この経路で競合モーダルは出ない。`saveTournamentMetaToData`は`state.remoteMeta[id].updatedAt`だけを進めて`sig`を据え置くため、次回読み込みで`isRemoteNewer`がfalseになり`remoteChanged=false`で早期returnする(タイトル編集で実績のある経路)。
+### 終了後の「💾 進行状況を保存」は、送るものが無い時だけ隠す
+
+⚠️ **`finished`だけで無条件に隠さないこと。** 送信に失敗した(オフライン・セッション切れ等)場合、そのボタンが**唯一の再送手段**になる。`saveButtonHtml()`は`finished && !hasUnsyncedChanges()`の時だけ空文字を返す。
+
+`hasUnsyncedChanges()`は`AtsuCupData.syncSignatureOf(t)`と`state.remoteMeta[id].sig`(＝前回サーバーに送った内容の署名)を突き合わせる。基準値が無い＝一度も送れていないので「未反映」に倒す。
+
+保存成功時は`renderBracket()`で描き直してボタンを消す。⚠️ そのため`saveTournamentToGitHub`内の**DOM参照(`#dataSaveStatus`/`#saveToDataBtn`)は毎回取り直すこと**。関数の先頭で掴んだノードは再描画後に死んでいる。
 
 なお終了直後の「サーバーへ反映するには💾進行状況を保存を押してください」の案内は`!AtsuCup.isGuestMode()`でも絞る。ローカル大会にはそもそも保存ボタンが無い。
 

@@ -192,14 +192,10 @@
         AtsuCup.endCurrentTournament();
         AtsuCup.setActive(id); // ⚠️ endCurrentTournamentがactiveIdを外すので、この画面用に張り直す
         mode='view'; metaSyncError=null; render();
-        // ⚠️ 終了はstatusの変更なので、タイトル編集と同じくこの場でサーバーへ送る。これを怠ると
-        // 「この端末だけ終了、サーバーと他の端末は永久にongoing」になる(2026-07-28修正)。
-        // entries/matchesには触れない専用経路なので、未保存の対戦表進行を巻き込まない
-        if(!isGuestTournament()){
-          try{ await AtsuCup.saveTournamentMetaToData(id); }
-          catch(e){ metaSyncError = (e && e.message) || String(e); }
-          renderLiveHeader();
-        }
+        // ⚠️ 終了時は大会情報・エントリー・対戦表を「まとめて」サーバーへ送る。statusだけ送ると
+        // 決勝を入力してすぐ終了した場合に対戦結果がこの端末から出られなくなる(第33回で実際に
+        // 起きた詰み)。保存ボタンと同じ関数を通すので、他の端末との競合確認もそのまま働く
+        if(!isGuestTournament()) await saveTournamentToGitHub(id);
       });
     }
   }
@@ -770,6 +766,16 @@
     renderResultBox(); renderTree(); renderExtras();
   }
 
+  // サーバーへまだ送っていない変更があるか。remoteMetaの基準値(=前回サーバーに送った内容の署名)と
+  // 今のローカル内容を突き合わせる。基準値が無い＝一度も送れていないので「未反映」と見なす
+  function hasUnsyncedChanges(){
+    const t = AtsuCup.activeT();
+    if(!t) return false;
+    const known = state.remoteMeta && state.remoteMeta[t.id];
+    if(!known || !known.sig) return true;
+    return AtsuCupData.syncSignatureOf(t) !== known.sig;
+  }
+
   function medalOf(place){ return {1:'🥇',2:'🥈',3:'🥉',4:'🎖️'}[place] || ''; }
   function stripMedal(label){ return String(label||'').replace(/^[🥇🥈🥉🎖️]+\s*/,''); }
   // 決まっている1〜4位を [{place, name, label}] で返す(未確定は含まない)。
@@ -812,9 +818,11 @@
 
   // ゲスト(練習用)大会はサーバーに保存できないため、ボタンの代わりに案内文を出す
   function saveButtonHtml(){
-    return AtsuCup.isGuestMode()
-      ? '<p class="hint" style="margin:0; color:var(--muted);">ローカル大会のため、サーバーへの保存はできません。</p>'
-      : '<button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>';
+    if(AtsuCup.isGuestMode()) return '<p class="hint" style="margin:0; color:var(--muted);">ローカル大会のため、サーバーへの保存はできません。</p>';
+    // 終了時にまとめて送っているので、終了済みで未反映の変更が無ければ押すものが無い。
+    // ⚠️ 無条件に隠さないこと。送信に失敗した(オフライン等)場合はここが唯一の再送手段になる
+    if(finished && !hasUnsyncedChanges()) return '';
+    return '<button class="btn btn-gold" id="saveToDataBtn">💾 進行状況を保存</button>';
   }
   function wireSaveButton(tid){
     const btn = document.getElementById('saveToDataBtn');
@@ -824,25 +832,33 @@
   // 大会の内容を data/*.json(GitHub) へ保存する。対戦表は勝敗入力のたびに変わるため自動保存はせず、
   // 明示的なボタン操作でのみ書き込む(コミットの乱発と競合を避けるため)。
   async function saveTournamentToGitHub(tid){
-    const box = document.getElementById('dataSaveStatus');
-    const btn = document.getElementById('saveToDataBtn');
-    const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
+    // ⚠️ 保存に成功すると終了済み大会では保存ボタンごと描き直すので、DOM参照は毎回取り直す
+    const show = (msg, color)=>{
+      const box = document.getElementById('dataSaveStatus');
+      if(box) box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : '';
+    };
+    const setBtn = (disabled, label)=>{
+      const btn = document.getElementById('saveToDataBtn');
+      if(btn){ btn.disabled = disabled; btn.textContent = label; }
+    };
     if(!GasDB.canWrite()){ show('ログインが必要です。「設定」画面からGoogleログインしてください。', '#ff6a6a'); return; }
     const id = tid || (state.tournamentMeta && state.tournamentMeta.id);
     // 保存前に、他の端末が先に更新していないか確認する(検知しても「上書き」は常に選べる)
     const choice = await AtsuCup.confirmOverwriteIfRemoteNewer(id);
     if(choice === 'cancel'){ show('保存をやめました。', '#ffcf6a'); return; }
     if(choice === 'reload'){ location.reload(); return; }
-    btn.disabled = true; btn.textContent = '保存中...';
+    setBtn(true, '保存中...');
     show('保存中...(参加者・大会・対戦結果をスプレッドシートへ反映します)');
     try{
       const r = await AtsuCup.saveTournamentToData(id);
       const posterNote = r.posterUploadError ? `⚠️ ポスター画像のアップロードに失敗しました(${r.posterUploadError})。` : '';
+      // 未反映の変更が無くなったので、終了済みなら保存ボタンを引っ込めるために描き直す
+      if(finished) renderBracket();
       show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})${posterNote?' '+posterNote:''}`, r.posterUploadError ? '#ffcf6a' : '#7cffb0');
     }catch(e){
       show('保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a');
     }finally{
-      btn.disabled = false; btn.textContent = '💾 進行状況を保存';
+      setBtn(false, '💾 進行状況を保存');
     }
   }
 

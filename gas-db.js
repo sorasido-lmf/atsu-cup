@@ -48,7 +48,10 @@ const GasDB = (function(){
 
     if(!data.ok){
       // 認証・権限エラーは呼び出し側で再ログイン導線に使えるよう印を付ける
-      const err = new Error(data.error || '保存に失敗しました。');
+      // ⚠️ GASがerrorを返さないケースが実際にあり、「保存に失敗しました」としか出ずに
+      //    原因を追えなくなった(2026-07-28)。手掛かりになる値を必ず文言に混ぜる
+      const detail = data.error || `原因不明(HTTP ${res.status} / code=${data.code || 'なし'} / action=${action})`;
+      const err = new Error(detail);
       err.code = data.code || 'ERROR';
       if(err.code === 'FORBIDDEN') err.needsAuth = true;
       throw err;
