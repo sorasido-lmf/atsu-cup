@@ -491,8 +491,8 @@
     "id": "t1785242146292bc9qgs_u0006",
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0006",
-    "placement": null,
-    "wins": 0,
+    "placement": 2,
+    "wins": 3,
     "recAtEntry": true
   },
   {
@@ -516,7 +516,7 @@
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0002",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -524,7 +524,7 @@
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0012",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -547,16 +547,16 @@
     "id": "t1785242146292bc9qgs_u0010",
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0010",
-    "placement": null,
-    "wins": 0,
+    "placement": 4,
+    "wins": 2,
     "recAtEntry": true
   },
   {
     "id": "t1785242146292bc9qgs_u0018",
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0018",
-    "placement": null,
-    "wins": 0,
+    "placement": 1,
+    "wins": 4,
     "recAtEntry": true
   },
   {
@@ -572,7 +572,7 @@
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0015",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -596,15 +596,15 @@
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0028",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
     "id": "t1785242146292bc9qgs_u0008",
     "tournamentId": "t1785242146292bc9qgs",
     "userId": "u0008",
-    "placement": null,
-    "wins": 0,
+    "placement": 3,
+    "wins": 3,
     "recAtEntry": true
   },
   {
