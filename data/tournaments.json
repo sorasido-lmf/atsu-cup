@@ -358,5 +358,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T12:48:45.280Z"
+  },
+  {
+    "id": "t1785329404784rnqv9d",
+    "title": "第6回あつ杯〜ウンディーネ部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-04-18T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T12:50:06.779Z"
   }
 ]
