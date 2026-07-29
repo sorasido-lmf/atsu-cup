@@ -190,5 +190,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T03:44:48.913Z"
+  },
+  {
+    "id": "t1785310238369ehn4km",
+    "title": "第22回あつ杯〜ライガー部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-08-15T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T07:30:40.810Z"
   }
 ]
