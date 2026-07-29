@@ -394,5 +394,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T13:09:33.521Z"
+  },
+  {
+    "id": "t1785331004895ecrba1",
+    "title": "第3回あつ杯〜ヒノトリ部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-03-21T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T13:16:46.808Z"
   }
 ]
