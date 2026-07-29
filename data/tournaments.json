@@ -250,5 +250,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-29T08:32:04.254Z"
+  },
+  {
+    "id": "t1785322615206slbkff",
+    "title": "第15回あつ杯〜ピクシー部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2026-07-28T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T10:56:59.468Z"
   }
 ]
