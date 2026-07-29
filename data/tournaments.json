@@ -238,5 +238,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T08:25:49.948Z"
+  },
+  {
+    "id": "t1785313597080s6m9a8",
+    "title": "第16回あつ杯〜もう1つのロードオブマスターズ①〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-07-11T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-29T08:26:39.933Z"
   }
 ]
