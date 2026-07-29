@@ -414,5 +414,13 @@
     "archived": false,
     "createdAt": "2026-07-29T08:28:13.184Z",
     "note": ""
+  },
+  {
+    "id": "u0053",
+    "name": "ピョン吉",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-29T12:03:18.662Z",
+    "note": ""
   }
 ]
