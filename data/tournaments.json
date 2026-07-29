@@ -370,5 +370,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T12:53:10.736Z"
+  },
+  {
+    "id": "t1785329634979xtf89g",
+    "title": "第5回あつ杯〜ニャー部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-04-11T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T12:53:57.731Z"
   }
 ]
