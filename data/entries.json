@@ -2396,7 +2396,7 @@
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0051",
     "placement": null,
-    "wins": 0,
+    "wins": 2,
     "recAtEntry": true
   },
   {
@@ -2419,8 +2419,8 @@
     "id": "t1785313597080s6m9a8_u0030",
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0030",
-    "placement": null,
-    "wins": 0,
+    "placement": 3,
+    "wins": 4,
     "recAtEntry": true
   },
   {
@@ -2444,7 +2444,7 @@
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0009",
     "placement": null,
-    "wins": 0,
+    "wins": 2,
     "recAtEntry": true
   },
   {
@@ -2475,8 +2475,8 @@
     "id": "t1785313597080s6m9a8_u0003",
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0003",
-    "placement": null,
-    "wins": 0,
+    "placement": 1,
+    "wins": 5,
     "recAtEntry": true
   },
   {
@@ -2492,15 +2492,15 @@
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0052",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
     "id": "t1785313597080s6m9a8_u0011",
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0011",
-    "placement": null,
-    "wins": 0,
+    "placement": 2,
+    "wins": 3,
     "recAtEntry": true
   },
   {
@@ -2516,7 +2516,7 @@
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0015",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -2524,7 +2524,7 @@
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0049",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -2532,7 +2532,7 @@
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0012",
     "placement": null,
-    "wins": 0,
+    "wins": 2,
     "recAtEntry": true
   },
   {
@@ -2564,15 +2564,15 @@
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0028",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
     "id": "t1785313597080s6m9a8_u0046",
     "tournamentId": "t1785313597080s6m9a8",
     "userId": "u0046",
-    "placement": null,
-    "wins": 0,
+    "placement": 4,
+    "wins": 2,
     "recAtEntry": true
   }
 ]
