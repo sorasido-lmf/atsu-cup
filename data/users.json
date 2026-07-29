@@ -374,5 +374,13 @@
     "archived": false,
     "createdAt": "2026-07-28T14:23:22.625Z",
     "note": ""
+  },
+  {
+    "id": "u0048",
+    "name": "セフィロス",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-29T03:35:14.126Z",
+    "note": ""
   }
 ]
