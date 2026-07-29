@@ -202,5 +202,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T07:35:51.495Z"
+  },
+  {
+    "id": "t178531083825993fczk",
+    "title": "第19回あつ杯～もう1つのロードオブマスターズ②～",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-08-08T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-07-29T07:40:40.473Z"
   }
 ]
