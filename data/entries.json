@@ -2211,8 +2211,8 @@
     "id": "t1785312757236twdvbo_u0004",
     "tournamentId": "t1785312757236twdvbo",
     "userId": "u0004",
-    "placement": null,
-    "wins": 0,
+    "placement": 1,
+    "wins": 3,
     "recAtEntry": true
   },
   {
@@ -2227,8 +2227,8 @@
     "id": "t1785312757236twdvbo_u0032",
     "tournamentId": "t1785312757236twdvbo",
     "userId": "u0032",
-    "placement": null,
-    "wins": 0,
+    "placement": 3,
+    "wins": 3,
     "recAtEntry": true
   },
   {
@@ -2252,7 +2252,7 @@
     "tournamentId": "t1785312757236twdvbo",
     "userId": "u0009",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true
   },
   {
@@ -2267,8 +2267,8 @@
     "id": "t1785312757236twdvbo_u0011",
     "tournamentId": "t1785312757236twdvbo",
     "userId": "u0011",
-    "placement": null,
-    "wins": 0,
+    "placement": 2,
+    "wins": 2,
     "recAtEntry": true
   },
   {
@@ -2291,8 +2291,8 @@
     "id": "t1785312757236twdvbo_u0030",
     "tournamentId": "t1785312757236twdvbo",
     "userId": "u0030",
-    "placement": null,
-    "wins": 0,
+    "placement": 4,
+    "wins": 2,
     "recAtEntry": true
   }
 ]
