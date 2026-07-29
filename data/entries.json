@@ -3022,5 +3022,29 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true
+  },
+  {
+    "id": "t1785327600422b9w8kw_u0001",
+    "tournamentId": "t1785327600422b9w8kw",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785327600422b9w8kw_u0003",
+    "tournamentId": "t1785327600422b9w8kw",
+    "userId": "u0003",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785327600422b9w8kw_u0002",
+    "tournamentId": "t1785327600422b9w8kw",
+    "userId": "u0002",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
   }
 ]
