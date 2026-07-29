@@ -382,5 +382,13 @@
     "archived": false,
     "createdAt": "2026-07-29T03:35:14.126Z",
     "note": ""
+  },
+  {
+    "id": "u0049",
+    "name": "カミノ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-29T07:48:26.475Z",
+    "note": ""
   }
 ]
