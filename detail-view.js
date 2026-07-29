@@ -352,24 +352,62 @@
     (state.matches[0]||[]).forEach(m=>{ if(m.a) placed.add(m.a); if(m.b) placed.add(m.b); });
     return state.people.map(p=>p.name).filter(n=>!placed.has(n));
   }
-  // 指定の枠に対する候補リストを、撮影不可の偏りを避ける方向に絞り込んで返す。
-  // (pairWithConstraintと同じ「可能な限り混ぜる、足りない時だけ同士」をその場で適用する)
+  // 1回戦の中で、実際に対戦になる(=シードでない)カードの撮影不可同士の組数
+  function nonRecClashCount(round1, recMap){
+    return round1.filter(m=> !m.bye && m.a && m.b && !recMap[m.a] && !recMap[m.b]).length;
+  }
+  // 残っている空き枠と未配置者で「撮影不可同士ゼロ」を作り切れるかの余裕度。0以上なら作れる。
+  //   ・相方が撮影不可の片側空き(A)には撮影可しか入れられない
+  //   ・両側とも空き(B)には最低1人は撮影可が要る(もう片方は撮影不可でよい)
+  //   ・シードの空き(S)は対戦にならないので、撮影不可を優先的にここへ逃がせる
+  //     (撮影不可で埋めきれない分だけ撮影可を消費する)
+  function nonRecSlack(round1, unplaced, recMap){
+    const un = unplaced.filter(n=>!recMap[n]).length;
+    const ur = unplaced.filter(n=> recMap[n]).length;
+    let seedOpen=0, oneSideVsNonRec=0, bothSides=0;
+    round1.forEach(m=>{
+      if(m.bye){ if(m.a===null) seedOpen++; return; }
+      const aEmpty = m.a===null, bEmpty = m.b===null;
+      if(aEmpty && bEmpty) bothSides++;
+      else if(aEmpty || bEmpty){
+        const other = aEmpty ? m.b : m.a;
+        if(!recMap[other]) oneSideVsNonRec++;
+      }
+    });
+    return (ur - Math.max(0, seedOpen - un)) - (oneSideVsNonRec + bothSides);
+  }
+  // 指定の枠に対する候補リストを、撮影不可同士の対戦が生まれない方向へ絞り込んで返す。
+  // ⚠️ 「今から埋める枠の相方」だけを見ると足りない。撮影可の人を撮影不可の相方として
+  //    温存できず、あとから「相方が撮影不可なのに撮影可が枯渇した枠」が残るため。
+  //    自動抽選(buildRound1)なら0にできる条件でも、1枠ずつ埋めると不可同士が生まれていた。
+  //    そこで候補ごとに「入れた後、残りも不可同士ゼロで組み切れるか」まで見て3段階で絞る。
   function candidatesFor(m, side){
-    const unplaced = unplacedEntrants();
     const recMap = AtsuCup.recMapOf();
-    const match = state.matches[0][m];
+    const round1 = state.matches[0];
+    const match = round1[m];
+    let unplaced = unplacedEntrants();
+    // シード枠は対戦にならないので、まず撮影不可を優先的にここへ逃がす(従来からの方針)
     if(match.bye){
-      // シード枠: 未配置に撮影不可の人がいれば優先的に候補にする(撮影不可を先に安全な不戦勝へ逃がす)
       const nonRec = unplaced.filter(n=>!recMap[n]);
-      return nonRec.length ? nonRec : unplaced;
+      if(nonRec.length) unplaced = nonRec;
     }
-    const otherSide = side==='a' ? match.b : match.a;
-    if(otherSide && !recMap[otherSide]){
-      // 相方が撮影不可確定済み: 撮影可能な人が残っていれば、強制ペアを避けるためそちらのみ候補にする
-      const rec = unplaced.filter(n=>recMap[n]);
-      if(rec.length) return rec;
-    }
-    return unplaced;
+    const base = nonRecClashCount(round1, recMap);
+    const evaluated = unplaced.map(name=>{
+      const after = round1.map(c=>({...c}));
+      if(after[m].bye) after[m].a = name; else after[m][side] = name;
+      const rest = unplaced.filter(n=>n!==name);
+      return {
+        name,
+        grew: nonRecClashCount(after, recMap) > base,      // その場で不可同士を作ってしまう
+        solvable: nonRecSlack(after, rest, recMap) >= 0     // 残りも不可同士ゼロで組み切れる
+      };
+    });
+    // ⚠️ 2段目を必ず挟むこと。1段目だけにして「該当なしなら全員」にすると、撮影不可が
+    //    多すぎて解が存在しない大会で無制約のランダムに落ち、従来より悪化する(実測済み)
+    let pool = evaluated.filter(x=> !x.grew && x.solvable);
+    if(!pool.length) pool = evaluated.filter(x=> !x.grew);
+    if(!pool.length) pool = evaluated;                      // 最終手段
+    return pool.map(x=>x.name);
   }
 
   let slotPickerEl=null;
