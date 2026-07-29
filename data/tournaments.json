@@ -334,5 +334,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T12:41:37.500Z"
+  },
+  {
+    "id": "t17853289779901i3kvq",
+    "title": "第8回あつ杯〜ガリ部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-05-09T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T12:43:00.333Z"
   }
 ]
