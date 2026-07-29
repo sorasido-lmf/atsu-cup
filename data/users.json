@@ -438,5 +438,13 @@
     "archived": false,
     "createdAt": "2026-07-29T13:07:34.190Z",
     "note": ""
+  },
+  {
+    "id": "u0056",
+    "name": "アポロ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-29T13:17:01.153Z",
+    "note": ""
   }
 ]
