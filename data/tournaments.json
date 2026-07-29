@@ -178,5 +178,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-29T03:38:42.563Z"
+  },
+  {
+    "id": "t1785296526783nm2hkx",
+    "title": "第22回あつ杯〜ディノ部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-09-05T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T03:42:09.351Z"
   }
 ]
