@@ -226,5 +226,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T08:22:40.217Z"
+  },
+  {
+    "id": "t17853134101434z4ppi",
+    "title": "第17回あつ杯〜ジョーカー部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-07-25T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T08:23:31.970Z"
   }
 ]
