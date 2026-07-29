@@ -346,5 +346,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T12:45:06.928Z"
+  },
+  {
+    "id": "t178532915800527de4d",
+    "title": "第7回あつ杯〜カワズモー部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-04-25T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T12:46:00.658Z"
   }
 ]
