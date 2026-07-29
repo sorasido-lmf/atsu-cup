@@ -2294,5 +2294,93 @@
     "placement": 4,
     "wins": 2,
     "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0012",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0012",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0004",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0004",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0041",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0041",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0015",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0015",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0010",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0010",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0003",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0003",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0005",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0005",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0014",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0014",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0007",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0007",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0050",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0050",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t17853134101434z4ppi_u0032",
+    "tournamentId": "t17853134101434z4ppi",
+    "userId": "u0032",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
   }
 ]
