@@ -214,5 +214,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-07-29T08:04:09.297Z"
+  },
+  {
+    "id": "t1785312757236twdvbo",
+    "title": "第18回あつ杯〜ドラゴン部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-08-01T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T08:12:39.406Z"
   }
 ]
