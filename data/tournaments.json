@@ -310,5 +310,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T12:32:00.253Z"
+  },
+  {
+    "id": "t1785328445238w3bmnb",
+    "title": "第10回あつ杯〜ケンタウロス部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-05-23T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T12:34:07.169Z"
   }
 ]
