@@ -382,5 +382,17 @@
     "isOfficial": true,
     "isRestricted": true,
     "updatedAt": "2026-07-29T13:01:33.577Z"
+  },
+  {
+    "id": "t1785330428185hsjci0",
+    "title": "第4回あつ杯〜スエゾー部門〜",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2025-03-28T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": true,
+    "updatedAt": "2026-07-29T13:07:10.762Z"
   }
 ]
