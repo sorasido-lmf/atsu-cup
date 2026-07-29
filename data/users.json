@@ -398,5 +398,13 @@
     "archived": false,
     "createdAt": "2026-07-29T08:24:22.146Z",
     "note": ""
+  },
+  {
+    "id": "u0051",
+    "name": "カルボナラ",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-29T08:27:23.774Z",
+    "note": ""
   }
 ]
