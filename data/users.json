@@ -422,5 +422,13 @@
     "archived": false,
     "createdAt": "2026-07-29T12:03:18.662Z",
     "note": ""
+  },
+  {
+    "id": "u0054",
+    "name": "桃菜",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-29T12:50:44.391Z",
+    "note": ""
   }
 ]
