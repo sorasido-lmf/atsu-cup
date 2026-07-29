@@ -390,5 +390,13 @@
     "archived": false,
     "createdAt": "2026-07-29T07:48:26.475Z",
     "note": ""
+  },
+  {
+    "id": "u0050",
+    "name": "Dior",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-07-29T08:24:22.146Z",
+    "note": ""
   }
 ]
