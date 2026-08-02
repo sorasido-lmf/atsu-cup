@@ -495,7 +495,7 @@ state = {
 
 各ページは `const P = AtsuCup.pool();` を **render/handler関数の内側で毎回呼ぶ**(トップレベルでキャッシュしない)。ログイン中は認証プール、未ログインはゲストプールを指す`{roster, userRecDefaults, archivedUsers, tournaments}`の生きた参照が返る。`AtsuCup.isGuestMode()`/`AtsuCup.authPool()`/`AtsuCup.guestPool()`/`AtsuCup.poolKindOfTournamentId(id)`も利用可能。
 
-`activeT()`/`setActive()`/`state.people`/`state.matches`等の既存のgetter/setterプロキシは無変更のまま、`state.activePool`経由で両プールに対応済み。**集計関数(`computeAllTimeStats`/`allFinishedEntries`/`championEntries`)は無変更** — 認証プール(`state.roster`/`state.tournaments`)のみを読むため、ゲストデータは原理的に混ざらない。
+`activeT()`/`setActive()`/`state.people`/`state.matches`等の既存のgetter/setterプロキシは無変更のまま、`state.activePool`経由で両プールに対応済み。**集計関数(`computeAllTimeStats`/`allFinishedEntries`)はプール分岐を持たない** — 認証プール(`state.roster`/`state.tournaments`)のみを読むため、ゲストデータは原理的に混ざらない。
 
 ### プールを跨いだ閲覧のガード(2026-07-27 修正: 方向によって扱いが異なる)
 
@@ -522,6 +522,28 @@ state = {
 テスト環境（Claude Browserペイン）や一部のスマホ内蔵ブラウザ（WebView）ではネイティブダイアログが抑制され、`confirm()` が常に `false` を返しうる。「ボタンを押しても何も起きない」というバグの原因になった。
 
 破壊的操作の確認は**自前のインラインUI**で実装すること（例: `users.html` のアーカイブ確認行、`detail-view.js` の `.advance-warn` バナー）。
+
+### 🔴 戦績の集計対象は「公式大会のみ」(2026-07-29に変更)
+
+`record.html` / `record-detail.html` は **`🏅公式大会` フラグが立った大会だけ**を集計する。その中を3つに絞り込める。
+
+| ボタン | `scope` | 条件 |
+|---|---|---|
+| 🏅 全て(既定) | `official` | `isOfficial` |
+| 🔒 制限杯のみ | `restricted` | `isOfficial && isRestricted` |
+| 🏅 制限杯をのぞく | `nonRestricted` | `isOfficial && !isRestricted` |
+
+⚠️ **今後作る大会も「🏅公式大会」をONにしないと戦績に入らない**(`newBlankTournament` の既定は `false`)。非公式大会(ゲリラ等)は戦績・ランキングから完全に外れる。これは意図した仕様。
+
+**`allFinishedEntries(opts)` は引数を省略すると従来通り全大会を返す。** 絞り込みは呼び出し側が `opts` を渡した時だけ効く。`scope` の3値はいずれも `isOfficial` を織り込んであるので、呼び出し側が公式判定を別途書く必要はない。`computeAllTimeStats(opts)` はそのまま素通しする。
+
+⚠️ **期間の比較は `dateInputValueOf()` で `YYYY-MM-DD` に落としてから文字列比較すること。** `createdAt`(=シートの `heldAt`)は **JSTのその日の0時をUTCで表した値**(例: 6/27開催 → `2026-06-26T15:00:00.000Z`)。`Date` の数値で比較すると境界日が1日ずれる。
+
+⚠️ **絞り込み状態はURLクエリ(`scope`/`from`/`to`)で持ち回る。** 一覧→個人ページの遷移でも引き継ぎ、戻るリンクにも付ける。これをしないと**ランキングのPと個人ページの通算Pが食い違う**。手打ちURL対策として、未知の `scope` は `'official'` に倒し、`YYYY-MM-DD` 形式でない日付は空として捨てる(捨てないと「常に0件」の詰みになる)。
+
+絞り込みボタンは大会一覧のバッジと同じ `.flag-toggle-btn official/restricted` の `on`/`off` を流用しており、**このために新規CSSは書いていない**。
+
+(2026-07-29に `hall.html`(歴代優勝者)を削除。`championEntries()` も専用だったので撤去した。**カード描画一式(`generateAndSaveCard`/`drawCard`/`themeForTitle`/`THEMES`)は `results.html` の「優勝カードを作る」がまだ使うので残してある**)
 
 ### 撮影可否（rec）の制約
 
@@ -578,7 +600,8 @@ state = {
 | `tournament-detail.html` + `detail-view.js` | 大会詳細。組み合わせ決定・対戦表・勝敗入力を統合。**終了済みも同じ描画パス**(編集ロック+リザルト枠を足すだけ) |
 | `tournament-entry.html` | 大会ごとの参加者選出 |
 | `users.html` | ユーザーマスタ管理（新規登録・撮影可否・アーカイブ/復元） |
-| `hall.html` / `record.html` / `record-detail.html` / `results.html` | 戦績・優勝者(認証プールのみ集計。無変更) |
+| `record.html` / `record-detail.html` | 戦績ランキングと個人の戦績(認証プールのみ集計)。**公式大会に限定＋制限杯/期間の絞り込みあり** |
+| `results.html` | 大会の最終結果。「優勝カードを作る」もここ |
 | `settings.html` | Googleログイン・接続確認 |
 | `atsucup-core.js` | 共通のstate管理・データロジック・`data/`の読み書き（全ページ共有） |
 | `atsucup-data.js` | `data/*.json`(IDキー) ↔ アプリ内部(名前キー) の構造変換層 |

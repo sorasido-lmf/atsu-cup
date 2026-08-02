@@ -1297,15 +1297,16 @@ const AtsuCup = (function(){
     return points;
   }
 
-  // 登録者全員(まだ大会に出ていない人も含む)を対象に、通算ポイント・優勝/準優勝/3位/4位の回数を集計する
-  function computeAllTimeStats(){
+  // 登録者全員(まだ大会に出ていない人も含む)を対象に、通算ポイント・優勝/準優勝/3位/4位の回数を集計する。
+  // optsはallFinishedEntriesにそのまま渡す(省略時は従来通り全大会)
+  function computeAllTimeStats(opts){
     const stats = {};
     const ensure = name=>{
       if(!stats[name]) stats[name] = {name, points:0, p1:0, p2:0, p3:0, p4:0, played:0};
       return stats[name];
     };
     state.roster.forEach(name=> ensure(name));
-    allFinishedEntries().forEach(entry=>{
+    allFinishedEntries(opts).forEach(entry=>{
       const pts = computeTournamentPoints(entry);
       const placements = computePlacements(entry);
       (entry.participants||[]).forEach(p=>{
@@ -1319,12 +1320,40 @@ const AtsuCup = (function(){
     return Object.values(stats);
   }
 
-  // 過去の大会(state.history)に加え、優勝が決まった今回の大会もあわせて集計対象にする
-  // 戦績集計の対象: 優勝が決まっている全大会(終了済み・進行中を問わない)
-  function allFinishedEntries(){
+  // 戦績集計の対象: 優勝が決まっている全大会(終了済み・進行中を問わない)。
+  // ⚠️ optsを省略した時の結果は従来と完全に同じにすること(既存の呼び出しを壊さないため)。
+  //   opts.scope … 'official'(公式すべて) | 'restricted'(公式かつ制限杯) | 'nonRestricted'(公式かつ制限杯以外)
+  //                いずれも isOfficial を含む。「公式のみ」を各値に織り込んであるので、
+  //                呼び出し側が2つの条件を組み合わせる必要はない
+  //   opts.from / opts.to … 'YYYY-MM-DD'。開催日がその日ちょうどの大会も含む(内包)
+  function allFinishedEntries(opts){
+    const scope = opts && opts.scope;
+    const from = (opts && opts.from) || '';
+    const to   = (opts && opts.to)   || '';
     return state.tournaments
       .filter(t=> t.status==='completed' || t.winnerName)
-      .map(t=>({ title:t.title, championName:t.winnerName||null, matches:t.matches, thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people }));
+      .filter(t=>{
+        if(!scope) return true;
+        if(!t.isOfficial) return false;
+        if(scope==='restricted')    return !!t.isRestricted;
+        if(scope==='nonRestricted') return !t.isRestricted;
+        return true; // 'official'
+      })
+      .filter(t=>{
+        if(!from && !to) return true;
+        // ⚠️ Dateの数値比較にしないこと。createdAtはUTCのISO文字列なので、時差で境界日が
+        //    前後にずれる。表示と同じ「YYYY-MM-DD」に落としてから文字列比較する
+        const d = dateInputValueOf(t.createdAt);
+        if(!d) return false;
+        if(from && d < from) return false;
+        if(to   && d > to)   return false;
+        return true;
+      })
+      .map(t=>({
+        id:t.id, title:t.title, championName:t.winnerName||null, matches:t.matches,
+        thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people,
+        isOfficial:!!t.isOfficial, isRestricted:!!t.isRestricted, createdAt:t.createdAt
+      }));
   }
 
   /* ---------- 大会のライフサイクル ---------- */
@@ -1405,14 +1434,6 @@ const AtsuCup = (function(){
     link.href = canvas.toDataURL("image/png");
     link.click();
   }
-  // 優勝が確定した大会だけを、新しい順に一覧表示する(終了済み・進行中を問わない)
-  function championEntries(){
-    return state.tournaments.filter(t=>t.winnerName).map(t=>({
-      id:t.id, title:t.title, details:t.details, posterUrl:t.posterUrl, createdAt:t.createdAt,
-      championName:t.winnerName, matches:t.matches, thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people
-    })).reverse();
-  }
-
   /* ---------- 対戦動画 ---------- */
   function ytId(url){
     const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{6,})/);
@@ -1437,7 +1458,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-29 00:20";
+  const BUILD_DATE = "2026-07-29 01:40";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1533,7 +1554,8 @@ const AtsuCup = (function(){
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
     setActive, activeT,
     isGuestMode, pool, authPool, guestPool, poolKindOfTournamentId, guestPoolHasData,
-    THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
+    // カード描画は results.html の「優勝カードを作る」がまだ使う(歴代優勝者ページ廃止後も残す)
+    THEMES, themeForTitle, drawCard, generateAndSaveCard,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable
   };
 })();

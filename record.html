@@ -47,6 +47,7 @@
     <h2><span class="num">01</span> 戦績ランキング</h2>
     <p class="hint">名前をタップすると、詳細画面でこれまでの大会での成績を確認できます。</p>
     <div class="points-hint">🏆 ポイントは大会ごとに加算されます: 対戦に1勝で1P / 4位3P / 3位5P / 準優勝7P / 優勝10P</div>
+    <div id="filterArea"></div>
     <div class="sort-tabs" id="sortTabs"></div>
     <div id="rankList"></div>
   </section>
@@ -68,6 +69,56 @@
   AtsuCup.restore();
 
   let sortMode = 'ranking'; // 'ranking' | 'name'
+
+  /* ---- 集計範囲の絞り込み ----
+     戦績は「公式大会のみ」を土台にし、その中を 全て/制限杯のみ/制限杯をのぞく で切り替える。
+     状態はURLクエリに持ち、record-detail.htmlへそのまま引き継ぐ(ランキングのPと
+     個人ページの通算Pが食い違わないようにするため) */
+  const SCOPES = ['official','restricted','nonRestricted'];
+  const qs = new URLSearchParams(location.search);
+  // ⚠️ 手打ちURLで壊れないよう、未知の値は捨てる。日付は形式まで見ないと、
+  //    でたらめな文字列がそのまま比較に使われて「常に0件」の詰みになる
+  const validDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : '';
+  const filter = {
+    scope: SCOPES.includes(qs.get('scope')) ? qs.get('scope') : 'official',
+    from: validDate(qs.get('from')),
+    to: validDate(qs.get('to'))
+  };
+  function filterQuery(extra){
+    const p = new URLSearchParams(extra||{});
+    p.set('scope', filter.scope);
+    if(filter.from) p.set('from', filter.from);
+    if(filter.to) p.set('to', filter.to);
+    return p.toString();
+  }
+  function syncUrl(){
+    // リロードせずURLだけ更新する(戻ってきた時に絞り込みが保たれる)
+    history.replaceState(null, '', location.pathname + '?' + filterQuery());
+  }
+  function renderFilter(){
+    const btn = (key,label,cls)=>
+      `<button type="button" class="flag-toggle-btn ${cls} ${filter.scope===key?'on':'off'}" data-scope="${key}">${label}</button>`;
+    const count = AtsuCup.allFinishedEntries(filter).length;
+    document.getElementById('filterArea').innerHTML = `
+      <div style="margin-bottom:10px;">
+        ${btn('official','🏅 全て','official')}
+        ${btn('restricted','🔒 制限杯のみ','restricted')}
+        ${btn('nonRestricted','🏅 制限杯をのぞく','official')}
+      </div>
+      <div class="row" style="gap:8px; margin-bottom:8px;">
+        <div class="field" style="flex:1; margin-bottom:0;"><label>開始日</label><input type="date" id="fFrom" value="${filter.from}"></div>
+        <div class="field" style="flex:1; margin-bottom:0;"><label>終了日</label><input type="date" id="fTo" value="${filter.to}"></div>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <button class="btn btn-ghost" id="fClear" style="width:100%;">期間をクリア</button>
+      </div>
+      <p class="hint" style="margin:0 0 12px;">公式大会 ${count}件を集計中${filter.from||filter.to?`(${filter.from||'最初'} 〜 ${filter.to||'最新'})`:''}</p>`;
+    document.querySelectorAll('#filterArea [data-scope]').forEach(b=>
+      b.addEventListener('click', ()=>{ filter.scope = b.dataset.scope; syncUrl(); renderAll(); }));
+    document.getElementById('fFrom').addEventListener('change', e=>{ filter.from = e.target.value; syncUrl(); renderAll(); });
+    document.getElementById('fTo').addEventListener('change', e=>{ filter.to = e.target.value; syncUrl(); renderAll(); });
+    document.getElementById('fClear').addEventListener('click', ()=>{ filter.from=''; filter.to=''; syncUrl(); renderAll(); });
+  }
 
   function renderSortTabs(){
     document.getElementById('sortTabs').innerHTML = `
@@ -91,9 +142,13 @@
 
   function renderRankList(){
     const list = document.getElementById('rankList');
-    let stats = AtsuCup.computeAllTimeStats();
+    let stats = AtsuCup.computeAllTimeStats(filter);
     if(!stats.length){
       list.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「参加者登録」から登録してください。</div>`;
+      return;
+    }
+    if(!AtsuCup.allFinishedEntries(filter).length){
+      list.innerHTML = `<div class="empty-state" style="padding:14px 4px;">条件に合う公式大会がありません。<br>絞り込みを変えてみてください。</div>`;
       return;
     }
     if(sortMode==='ranking'){
@@ -114,15 +169,17 @@
     }).join('');
     list.querySelectorAll('.rank-row').forEach(row=>{
       row.addEventListener('click', ()=>{
-        location.href = 'record-detail.html?name=' + encodeURIComponent(row.dataset.name);
+        // 絞り込みも一緒に渡す(個人ページの通算Pをこの一覧のPと一致させるため)
+        location.href = 'record-detail.html?' + filterQuery({name: row.dataset.name});
       });
     });
   }
 
-  renderSortTabs();
-  renderRankList();
+  function renderAll(){ renderFilter(); renderSortTabs(); renderRankList(); }
+
+  renderAll();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
-  AtsuCup.ready.then(()=>{ renderSortTabs(); renderRankList(); });
+  AtsuCup.ready.then(renderAll);
 })();
 </script>
 </body>

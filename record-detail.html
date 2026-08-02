@@ -30,7 +30,7 @@
 </style>
 </head>
 <body>
-<a class="back-link" href="record.html">‹ 戦績一覧へ</a>
+<a class="back-link" href="record.html" id="backToList">‹ 戦績一覧へ</a>
 <div class="wrap">
   <header class="top">
     <div class="crown-mark">🎖️</div>
@@ -40,7 +40,8 @@
 
   <section class="panel">
     <h2><span class="num">01</span> 通算成績</h2>
-    <div id="summaryArea"></div>
+    <div id="filterArea"></div>
+    <div id="summaryArea" style="margin-top:12px;"></div>
   </section>
 
   <section class="panel">
@@ -64,8 +65,56 @@
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
 
-  const targetName = new URLSearchParams(location.search).get('name') || '';
+  const qs = new URLSearchParams(location.search);
+  const targetName = qs.get('name') || '';
   let expandedEntryIdx = null;
+
+  /* ---- 集計範囲の絞り込み(record.htmlと同じ仕様。一覧から引き継いで表示する) ---- */
+  const SCOPES = ['official','restricted','nonRestricted'];
+  // ⚠️ 手打ちURLで壊れないよう、未知の値は捨てる。日付は形式まで見ないと、
+  //    でたらめな文字列がそのまま比較に使われて「常に0件」の詰みになる
+  const validDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : '';
+  const filter = {
+    scope: SCOPES.includes(qs.get('scope')) ? qs.get('scope') : 'official',
+    from: validDate(qs.get('from')),
+    to: validDate(qs.get('to'))
+  };
+  function filterQuery(extra){
+    const p = new URLSearchParams(extra||{});
+    p.set('scope', filter.scope);
+    if(filter.from) p.set('from', filter.from);
+    if(filter.to) p.set('to', filter.to);
+    return p.toString();
+  }
+  function syncUrl(){
+    // リロードせずURLだけ更新する(戻った時に一覧側の絞り込みが保たれる)
+    history.replaceState(null, '', location.pathname + '?' + filterQuery({name: targetName}));
+    document.getElementById('backToList').href = 'record.html?' + filterQuery();
+  }
+  function renderFilter(){
+    const btn = (key,label,cls)=>
+      `<button type="button" class="flag-toggle-btn ${cls} ${filter.scope===key?'on':'off'}" data-scope="${key}">${label}</button>`;
+    const count = AtsuCup.allFinishedEntries(filter).length;
+    document.getElementById('filterArea').innerHTML = `
+      <div style="margin-bottom:10px;">
+        ${btn('official','🏅 全て','official')}
+        ${btn('restricted','🔒 制限杯のみ','restricted')}
+        ${btn('nonRestricted','🏅 制限杯をのぞく','official')}
+      </div>
+      <div class="row" style="gap:8px; margin-bottom:8px;">
+        <div class="field" style="flex:1; margin-bottom:0;"><label>開始日</label><input type="date" id="fFrom" value="${filter.from}"></div>
+        <div class="field" style="flex:1; margin-bottom:0;"><label>終了日</label><input type="date" id="fTo" value="${filter.to}"></div>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <button class="btn btn-ghost" id="fClear" style="width:100%;">期間をクリア</button>
+      </div>
+      <p class="hint" style="margin:0;">公式大会 ${count}件を集計中${filter.from||filter.to?`(${filter.from||'最初'} 〜 ${filter.to||'最新'})`:''}</p>`;
+    document.querySelectorAll('#filterArea [data-scope]').forEach(b=>
+      b.addEventListener('click', ()=>{ filter.scope = b.dataset.scope; expandedEntryIdx=null; syncUrl(); renderAll(); }));
+    document.getElementById('fFrom').addEventListener('change', e=>{ filter.from = e.target.value; expandedEntryIdx=null; syncUrl(); renderAll(); });
+    document.getElementById('fTo').addEventListener('change', e=>{ filter.to = e.target.value; expandedEntryIdx=null; syncUrl(); renderAll(); });
+    document.getElementById('fClear').addEventListener('click', ()=>{ filter.from=''; filter.to=''; expandedEntryIdx=null; syncUrl(); renderAll(); });
+  }
 
   // 指定の大会(entry)で、その人が各ラウンドで誰と対戦してどうなったかを時系列で並べる
   function computeParticipantPath(entry, name){
@@ -114,9 +163,9 @@
       entryListArea.innerHTML = '';
       return;
     }
-    const entries = AtsuCup.allFinishedEntries().filter(e => (e.participants||[]).some(p=>p.name===targetName));
+    const entries = AtsuCup.allFinishedEntries(filter).filter(e => (e.participants||[]).some(p=>p.name===targetName));
     if(!entries.length){
-      summaryArea.innerHTML = `<div class="empty-state" style="padding:16px 10px;">「${escapeHtml(targetName)}」がまだ参加した大会の結果がありません。</div>`;
+      summaryArea.innerHTML = `<div class="empty-state" style="padding:16px 10px;">この集計範囲では「${escapeHtml(targetName)}」が参加した大会がありません。<br>絞り込みを変えてみてください。</div>`;
       entryListArea.innerHTML = '';
       return;
     }
@@ -168,9 +217,12 @@
     });
   }
 
-  render();
+  function renderAll(){ renderFilter(); render(); }
+
+  syncUrl();
+  renderAll();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
-  AtsuCup.ready.then(()=>{ render(); });
+  AtsuCup.ready.then(renderAll);
 })();
 </script>
 </body>
