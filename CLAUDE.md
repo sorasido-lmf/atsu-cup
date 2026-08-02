@@ -625,6 +625,16 @@ state = {
 
 ---
 
+## ローカルでの動作確認
+
+`.claude/launch.json` をリポジトリに含めている（2026-08-03 コミット）。`python3 -m http.server 8765` で静的配信するだけの設定で、ビルドは不要。
+
+⚠️ **`--directory` は `.`（相対パス）にすること。** 絶対パス（`/Users/sora/claude/atsu_cup`）を書くと、その環境以外でプレビューが起動しない。コミットして共有する以上、特定端末のパスを含めない。
+
+`file://` で直接開くと `loadFromData()` の `fetch('data/users.json')` がCORSで失敗し、localStorageのキャッシュだけで動く（＝実データの確認にならない）ため、必ずHTTPサーバー経由で確認する。
+
+---
+
 ## 未対応・今後の課題（TODO）
 
 - GASの `role` は現状 `admin` の1種類のみ運用。`editor`（大会のみ可・ユーザーマスタ不可）等の細分化は未着手
