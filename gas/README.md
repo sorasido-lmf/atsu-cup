@@ -151,7 +151,42 @@
 
 **2026-07-28の`tournaments`への追加**: `updatedAt`を`isRestricted`の後ろ（最終列）に追加。端末間同期で「サーバー側が更新されたか」を時刻の大小で判定するために使う。
 
-⚠️ **`updatedAt`は手で編集しないこと。** GASが書き込みのたびにサーバー時刻で自動的に打つ列で、アプリ側はこの値を「自分が最後に把握したサーバーの状態」と比較して、他の端末の更新を取り込むかどうかを判断している。未来の日付を手で入れると、以後その大会の更新が全端末で「古いもの」と判定され、**他の端末に一切反映されなくなる**。シートを手で直した場合は、その大会をアプリから一度保存し直すか、`updatedAt`のセルを空欄にすること（空欄なら内容比較にフォールバックする）。
+⚠️ **`updatedAt`は手で編集しないこと。** GASが書き込みのたびにサーバー時刻で自動的に打つ列で、アプリ側はこの値を「自分が最後に把握したサーバーの状態」と比較して、他の端末の更新を取り込むかどうかを判断している。未来の日付を手で入れると、以後その大会の更新が全端末で「古いもの」と判定され、**他の端末に一切反映されなくなる**。手で直した内容をアプリへ届けたい場合は、下の「手編集をアプリへ反映する」の手順に従うこと（`updatedAt`は`pushSheetChangesToGitHub()`が自動で打つ）。
+
+---
+
+## 🔴 手編集をアプリへ反映する（シート → GitHub → アプリ）
+
+**シートを手で直しただけでは、GitHubにもアプリにも一切反映されない。** 必ず下の2ステップを踏む。
+
+### 手順
+
+1. **`previewSheetChangesToGitHub()`** を実行（変更なし・確認のみ）
+   反映すると内容が変わる大会が一覧で出る。**自分が直した大会と一致することを確かめる**
+   （身に覚えのない大会が並ぶ場合、シートとGitHubがずれている。先に `compareWithGitHub()` を見ること）
+2. **`pushSheetChangesToGitHub()`** を実行
+   1で挙がった大会の `updatedAt` だけを進めてから、`tournaments`/`entries`/`matches` をGitHubへ書き出す
+
+GASエディタにはインラインの確認UIが作れないため、**手順1が破壊的操作の確認ステップにあたる**。飛ばさないこと。
+
+### なぜ `updatedAt` を進める必要があるのか
+
+アプリ側の `mergeRemoteTournaments()` は「サーバー側が変わったか」を**内容比較ではなく `updatedAt` の時刻の大小**で判定している。`updatedAt` が据え置きのままGitHubだけ更新すると、アプリは「サーバーは前回把握した状態のまま」と見なして早期returnし、**手編集の内容が全端末へ永久に届かない**（2026-08-03まで実際にこの状態で、`updatedAt` を手で進めて回避していた）。
+
+### なぜ「全大会に一律で打つ」ではないのか
+
+同期の署名（`AtsuCupData.syncSignatureOf`）は `updatedAt` と `archived` を含まない。そのため無関係な大会にまで `updatedAt` を打つと、**未保存の進行状況を持っている端末で「ローカルも変わった・サーバーも変わった」＝競合と判定され、競合モーダルが全大会で誤爆する**。だから `pushSheetChangesToGitHub()` はGitHubの現行 `data/*.json` と突き合わせ、**実際に内容が変わる大会だけ**に打つ。
+
+`entries`/`matches` の行を直した場合も、その大会の `tournaments` 行の `updatedAt` が打たれる（アプリは大会単位で `entries`/`matches` ごと取り込むため）。
+
+### 反映されるまでの時間
+
+`pushSheetChangesToGitHub()` → GitHubへコミット → GitHub Pagesへ反映、の間に数十秒〜数分かかる。押した直後にアプリを開いても古いままのことがあるので、少し待ってから確認すること。
+
+### 対象外
+
+- **`users` シートは書き出されない。** ユーザーマスタの修正はアプリの「ユーザー管理」から行うこと
+- **シートから行ごと削除した大会**は `updatedAt` を打てない（行が無いため）。この場合はアプリ側の `pruneTournamentsGoneFromServer()` が各端末のキャッシュから自動で取り除くので、対応は不要。`previewSheetChangesToGitHub()` では別枠で報告される
 
 ---
 
@@ -160,7 +195,10 @@
 | 関数 | 用途 |
 |---|---|
 | `checkConfig()` | Script Properties の不足・シート・admins・GitHub到達性をまとめて検査 |
-| `compareWithGitHub()` | **変更なし。** シートとGitHubの差分を報告する |
+| `compareWithGitHub()` | **変更なし。** シートとGitHubのid集合の差分を報告する |
+| `previewSheetChangesToGitHub()` | **変更なし。** 手編集を反映するとどの大会の内容が変わるかを報告する（`pushSheetChangesToGitHub()` の前に必ず実行する確認ステップ） |
+| `pushSheetChangesToGitHub()` | 手編集をGitHubへ反映する。内容が変わる大会の `updatedAt` だけを進めてから書き出す |
+| `forcePushSheetChangesToGitHub()` | ⚠️ **破壊的。** シートが空でも安全装置を無視して書き出す（ゴミデータの一括削除専用。通常は使わない） |
 | `importFromGitHub()` | GitHubの `data/*.json` でシートを上書きする（移行・復旧用） |
 | `initSheets()` | 6シートを作成し、ヘッダと書式を設定（初回のみ） |
 | `seedUsers()` | 既存の15人を `users` へ投入（初回のみ・`importFromGitHub()` を使うなら不要） |

@@ -78,7 +78,7 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 | 大会の作成・タイトル/詳細/開催日/公式大会・制限杯フラグ/ポスター画像の編集 | `tournament-create.html`での作成、大会詳細の「編集する」→「更新する」 | **操作の都度、即時**。entries/matchesには一切触れない専用の保存経路(下記コラム参照)。失敗してもローカルの保存は維持し、インライン警告のみ表示 | `tournament-create.html`、`detail-view.js`の`renderEditForm()` → `AtsuCup.saveTournamentMetaToData()` |
 | 参加者の選出・組み合わせ・勝敗入力・ラウンド進行など、大会の進行に関する変更 | 大会詳細画面での各種操作 | **反映されない。「💾 GitHubに保存」ボタンを押した時のみ** | `detail-view.js`の`saveTournamentToGitHub()` |
 | 大会エントリー画面での参加者の選出・撮影可否変更 | `tournament-entry.html`での各種操作 | **反映されない。画面から退出(「‹ 戻る」「大会詳細に戻る」)する時に変更があれば自動保存**（2026-07-27追加。以前はエントリー画面だけでは一切サーバーへ反映されず、対戦表ページで別途保存ボタンを押す必要があった） | `tournament-entry.html`の`syncAndGo()` → `AtsuCup.saveTournamentToData()`(フル保存) |
-| スプレッドシートの手編集 | 人がシートを直接編集 | **反映されない。`gas/Code.gs`の`pushSheetChangesToGitHub()`をGASエディタから手動実行するまでGitHubへは伝わらない** | `gas/README.md` |
+| スプレッドシートの手編集 | 人がシートを直接編集 | **反映されない。`gas/Code.gs`の`previewSheetChangesToGitHub()`で確認 → `pushSheetChangesToGitHub()`をGASエディタから手動実行するまでGitHubへは伝わらない**(後者が`updatedAt`も自動で打つ。下記参照) | `gas/README.md` |
 | GitHub上の`data/*.json` → 開発者のローカル | 上記いずれかでGitHubが更新された後 | **反映されない。`git update-index --no-skip-worktree`→`git checkout data`→`--skip-worktree`の手動取り込みが必要** | 前節「データ管理方針」 |
 
 大会データが「保存ボタンを押すまで一切外に出ない」設計は意図的（対戦表は入力の都度変化するため、自動保存だとコミットが乱発・競合する）。ユーザーには「保存ボタンを押し忘れると反映されない」ことを案内すること。
@@ -188,6 +188,22 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 ⚠️ **`fromAppTournament`の書き出し規則(どの枠を行にするか)を変更したら、必ず`atsucup-data.js`の`SIG_VERSION`を上げること。** 上げ忘れが誤爆の再発リスクの本体。なお「`updatedAt`があるから時刻比較で守られる」とは**言えない** — 列追加前に保存された行は`updatedAt`が空で、内容比較経路に落ちるため。実際に導入時点の本番データは全大会が`updatedAt`空だった。
 
 基準値を捨てた直後は`mergeRemoteTournaments`の「基準値なし」フォールバックを1回通る。この分岐は`conflicts.push`に到達しないので**競合モーダルは構造上発火せず**、ローカルに進行状況があれば保護される。ただし**その1回だけ、他端末の未取り込みの変更がスキップされる**(全端末でリロードし、最新を持つ端末で1回保存し直せば揃う)。
+
+### 🔴 シートの手編集をアプリへ届ける(`pushSheetChangesToGitHub`, 2026-08-03修正)
+
+スプレッドシートを人が手で直した後に`pushSheetChangesToGitHub()`を実行しても、GitHubの`data/*.json`は更新されるのに`tournaments`行の`updatedAt`は据え置きだった。クライアントの`mergeRemoteTournaments()`は「サーバー側が変わったか」を`isRemoteNewer()`の**時刻の大小**で判定するため、`remoteChanged=false`で早期returnし、**手編集の内容が全端末へ永久に届かなかった**。`updatedAt`が空の行だけは内容比較へフォールバックするが、**実データは34大会すべて充填済み**でフォールバックは1件も効いていなかった(それまでは`updatedAt`セルを手で進めて回避していた)。
+
+⚠️ **修正として「全`tournaments`行に一律で`updatedAt`を打つ」をやってはいけない。** 署名(`syncSignatureOf`)は`updatedAt`/`archived`を含まないため、無関係な大会にまで打つと**未保存の進行状況を持つ端末で「ローカルも変わった・サーバーも変わった」＝競合と判定され、競合モーダルが全大会で誤爆する**(上の`SIG_VERSION`の節が警告しているのと同じ事故)。
+
+現在は**GitHubの現行`data/*.json`とシートを突き合わせ、実際に内容が変わる大会だけ**に打つ:
+
+- `changedTournamentIds_()` … `tournaments`/`entries`/`matches`の3テーブルを`id`で突き合わせ、差がある行の大会idを集める。**`updatedAt`列は比較から除外する**(自分が前回打った値なので、除外しないと毎回全行が差分になる)。`archived`は含める。行の並び順には依存しない
+- `stampUpdatedAtInSheet_(ids)` … 該当行の`updatedAt`**セルだけ**を書く。⚠️ `writeSheet_('tournaments', rows)`は使わない(ヘッダ以外を`getLastColumn()`の幅で`clearContent`するため、SCHEMA外の運用メモ列まで消える)
+- `previewSheetChangesToGitHub()` … 読み取り専用の確認用。GASエディタにはインライン確認UIが作れないので、**これが「破壊的操作の確認は自前UIで」の代替**にあたる
+
+⚠️ **シートへの書き戻しは必須。** GitHubにだけ新しい`updatedAt`を書いてシートを据え置くと、次回の反映でシートの古い値がGitHubへ戻り`updatedAt`が巻き戻る。順序は stamp → export(`exportTables_`がシートを読み直す)。exportが失敗しても次回が同じ差分を再検出して打ち直すので自己修復する。
+
+`entries`/`matches`だけを直した場合も、その大会の`tournaments`行に打つ(アプリは大会単位で取り込むため)。シートから**行ごと削除**した大会は打てないが、`pruneTournamentsGoneFromServer()`が`updatedAt`を使わずに処理するので対応不要。`users`シートは対象外のまま(ユーザー修正はアプリから行う)。
 
 ### セッション切れバナーの共通化(2026-07-28)
 
@@ -638,7 +654,7 @@ state = {
 ## 未対応・今後の課題（TODO）
 
 - GASの `role` は現状 `admin` の1種類のみ運用。`editor`（大会のみ可・ユーザーマスタ不可）等の細分化は未着手
-- スプレッドシートの手編集からアプリへの双方向同期は無い（シートは閲覧・緊急修正用。手編集後は `gas/Code.gs` の関数でGitHubへ反映が必要。`gas/README.md` 参照）
+- スプレッドシートの手編集がアプリへ自動で伝わることは無い（シートは閲覧・緊急修正用。手編集後は `previewSheetChangesToGitHub()` → `pushSheetChangesToGitHub()` の手動実行が必要。`gas/README.md` 参照）
 
 ---
 

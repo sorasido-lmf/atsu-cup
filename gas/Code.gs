@@ -888,16 +888,210 @@ function dumpUsersJson() {
   return json;
 }
 
+/* ------------------------------------------------------------
+ * 手編集の反映(シート → GitHub)
+ *
+ * 🔴 updatedAt を進めないと、手編集の内容はアプリへ永久に届かない。
+ *    クライアントの mergeRemoteTournaments() は「サーバー側が変わったか」を updatedAt の
+ *    時刻の大小(isRemoteNewer)で判定する。値が据え置かれていると「サーバーは前回把握した
+ *    状態のまま」と見なして早期returnし、内容が変わっていても一切取り込まない。
+ *    (updatedAtが空の旧行だけは内容比較へフォールバックするが、現行データは全大会が充填済み)
+ *
+ * 🔴 だからといって全行を一律に stamp してはいけない。
+ *    署名(AtsuCupData.syncSignatureOf)は updatedAt/archived を含まないため、一律に打つと
+ *    未保存の進行状況を持つ端末で「ローカルも変わった・サーバーも変わった」＝競合と判定され、
+ *    競合モーダルが全大会で誤爆する(CLAUDE.mdのSIG_VERSIONの節が警告している事故と同じ形)。
+ *
+ * そこで GitHub の現行 data/*.json と突き合わせ、
+ * 「反映するとクライアントから見て中身が変わる大会」だけに updatedAt を打つ。
+ * ------------------------------------------------------------ */
+
+/**
+ * SCHEMAの列順で行を1本の文字列に落とす(比較用の正規形)。
+ * シート側は readSheet_、GitHub側も過去の readSheet_ の出力なので、同じ正規化を通っている。
+ * skipKeys に指定した列は比較から外す。
+ */
+function rowSignature_(name, row, skipKeys) {
+  var skip = skipKeys || {};
+  var vals = SCHEMA[name]
+    .filter(function (c) { return !skip[c.k]; })
+    .map(function (c) { return (row && row[c.k] !== undefined) ? row[c.k] : null; });
+  return JSON.stringify(vals);
+}
+
+/**
+ * シート側とGitHub側の行配列を id で突き合わせ、差がある行の「大会id」を onDiff へ渡す。
+ * 追加・削除・変更のいずれも検出する(行の並び順には依存しない)。
+ * onlyInGitHub には、シートから消えている行の大会idを渡す。
+ */
+function eachChangedRow_(name, sheetRows, ghRows, tidOf, skipKeys, onDiff, onlyInGitHub) {
+  var bySheet = {}, byGh = {};
+  sheetRows.forEach(function (r) { bySheet[r.id] = r; });
+  ghRows.forEach(function (r) { if (r && r.id) byGh[r.id] = r; });
+
+  Object.keys(bySheet).forEach(function (id) {
+    var g = byGh[id];
+    if (!g || rowSignature_(name, bySheet[id], skipKeys) !== rowSignature_(name, g, skipKeys)) {
+      onDiff(tidOf(bySheet[id]));
+    }
+  });
+  Object.keys(byGh).forEach(function (id) {
+    if (!bySheet[id]) onlyInGitHub(tidOf(byGh[id]));
+  });
+}
+
+/**
+ * シートとGitHubを突き合わせ、内容が変わる大会を洗い出す。GitHubへの書き込みは行わない。
+ *
+ * 戻り値: {
+ *   stampIds : updatedAtを打つべき大会id(シートに実在するものだけ)
+ *   goneIds  : シートから行ごと消えている大会id(stamp不可。クライアント側は
+ *              pruneTournamentsGoneFromServer()がupdatedAtを使わずに処理するので対応不要)
+ *   counts   : { 大会id: {t,e,m} } テーブルごとの差分行数(ログ用)
+ *   titles   : { 大会id: タイトル } (ログ用)
+ * }
+ */
+function changedTournamentIds_() {
+  var sheetT = readSheet_('tournaments');
+  var sheetE = readSheet_('entries');
+  var sheetM = readSheet_('matches');
+  var ghT = readJsonFromGitHub_('data/tournaments.json');
+  var ghE = readJsonFromGitHub_('data/entries.json');
+  var ghM = readJsonFromGitHub_('data/matches.json');
+
+  var inSheet = {}, titles = {};
+  sheetT.forEach(function (t) { inSheet[t.id] = true; titles[t.id] = t.title; });
+  ghT.forEach(function (t) { if (titles[t.id] === undefined) titles[t.id] = t.title; });
+
+  var counts = {}, gone = {};
+  function bump(tid, key) {
+    if (!tid) return;
+    if (!counts[tid]) counts[tid] = { t: 0, e: 0, m: 0 };
+    counts[tid][key]++;
+  }
+  function markGone(tid) { if (tid) gone[tid] = true; }
+
+  var byId  = function (r) { return r.id; };
+  var byTid = function (r) { return r.tournamentId; };
+
+  // updatedAtは「自分が前回打った値」なので比較から外す(外さないと毎回全行が差分になる)。
+  // archivedは含めてよい(手でアーカイブした場合もクライアントへ伝えたい)。
+  eachChangedRow_('tournaments', sheetT, ghT, byId, { updatedAt: true },
+    function (tid) { bump(tid, 't'); }, markGone);
+  // entries/matchesの行が消えた場合は、その大会がシートに残っているならstamp対象
+  // (大会ごと消えている場合は下の filter で除かれる)
+  eachChangedRow_('entries', sheetE, ghE, byTid, null,
+    function (tid) { bump(tid, 'e'); }, function (tid) { bump(tid, 'e'); });
+  eachChangedRow_('matches', sheetM, ghM, byTid, null,
+    function (tid) { bump(tid, 'm'); }, function (tid) { bump(tid, 'm'); });
+
+  var stampIds = Object.keys(counts).filter(function (tid) { return inSheet[tid]; });
+  var goneIds  = Object.keys(gone);
+  return { stampIds: stampIds, goneIds: goneIds, counts: counts, titles: titles };
+}
+
+/**
+ * tournamentsシートの、指定した大会の updatedAt セルだけへサーバー時刻を書く。
+ *
+ * ⚠️ writeSheet_('tournaments', rows) は使わないこと。あちらはヘッダ以外を
+ *    getLastColumn() の幅で clearContent してから書き直すため、SCHEMA外の列(運用メモ等)まで
+ *    巻き込んで消してしまう。ここは1セルずつの更新で足りる。
+ *
+ * ⚠️ シートへの書き戻しは必須。GitHub側にだけ新しい updatedAt を書いてシートを据え置くと、
+ *    次回の反映でシートの古い値がGitHubへ戻り、updatedAtが巻き戻ってさらに壊れる。
+ *
+ * 戻り値: 実際に打った行数
+ */
+function stampUpdatedAtInSheet_(ids) {
+  if (!ids || !ids.length) return 0;
+  var want = {};
+  ids.forEach(function (id) { want[id] = true; });
+
+  var sh = sheet_('tournaments');
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return 0;
+
+  // readSheet_ と同じく、列の並び順は信用せず列名でヘッダを引き当てる
+  var header = values[0].map(function (h) { return String(h).trim(); });
+  var idCol = header.indexOf('id');
+  var upCol = header.indexOf('updatedAt');
+  if (idCol === -1 || upCol === -1) {
+    throw new Error('tournamentsシートに「id」または「updatedAt」列がありません。');
+  }
+
+  var stamp = new Date().toISOString();
+  var n = 0;
+  for (var r = 1; r < values.length; r++) {
+    var id = String(values[r][idCol]).trim();
+    if (!id || !want[id]) continue;
+    sh.getRange(r + 1, upCol + 1).setValue(stamp);
+    n++;
+  }
+  return n;
+}
+
+/** changedTournamentIds_() の結果を人が読める形にする */
+function formatSheetDiffLog_(diff, stampedCount) {
+  var lines = [];
+  if (!diff.stampIds.length && !diff.goneIds.length) {
+    lines.push('✅ シートとGitHubに差はありません(反映すべき手編集はありません)。');
+  } else {
+    lines.push('内容が変わる大会: ' + diff.stampIds.length + '件');
+    diff.stampIds.forEach(function (tid) {
+      var c = diff.counts[tid];
+      lines.push('  ・' + tid + ' ' + (diff.titles[tid] || '') +
+                 '  (tournaments:' + c.t + ' entries:' + c.e + ' matches:' + c.m + ')');
+    });
+    if (diff.goneIds.length) {
+      lines.push('シートから行ごと消えている大会: ' + diff.goneIds.length + '件' +
+                 ' (updatedAtは打てないが、アプリ側は各端末のキャッシュから自動で取り除く)');
+      diff.goneIds.forEach(function (tid) {
+        lines.push('  ・' + tid + ' ' + (diff.titles[tid] || ''));
+      });
+    }
+  }
+  if (stampedCount !== null && stampedCount !== undefined) {
+    lines.push('updatedAtを打った行: ' + stampedCount + '件');
+    lines.push('GitHubへの反映が完了しました。');
+  } else {
+    lines.push('※ これは確認のみで、シートにもGitHubにも書き込んでいません。');
+    lines.push('※ 反映するには pushSheetChangesToGitHub() を実行してください。');
+  }
+  return lines.join('\n');
+}
+
+/**
+ * 【変更なし・確認のみ】手編集を反映すると、どの大会の内容が変わるかを報告する。
+ *
+ * GASエディタにはインラインの確認UIが作れないため、これが破壊的操作の確認ステップにあたる。
+ * pushSheetChangesToGitHub() の前に必ず実行し、挙がった大会が自分で直したものと
+ * 一致することを確かめること(身に覚えのない大会が並ぶ場合、シートとGitHubがずれている)。
+ */
+function previewSheetChangesToGitHub() {
+  var diff = changedTournamentIds_();
+  Logger.log(formatSheetDiffLog_(diff, null));
+  return diff;
+}
+
 /**
  * 手作業でシートを直接編集した後に、GitHub側へ反映させるための実行用関数。
  * (シートを手で直しても、書き込みAPIを経由しない限りGitHub側は自動更新されないため)
+ *
+ * 内容が変わる大会の updatedAt だけを進めてから書き出すので、
+ * 手編集がアプリの各端末へ届く。無関係な大会には触らないため競合モーダルも誤爆しない。
  *
  * 事故防止のガードが働くため、対象テーブルが全部空だと中断される。
  * その場合は先に importFromGitHub() を実行して現状を取り込むこと。
  */
 function pushSheetChangesToGitHub() {
+  var diff = changedTournamentIds_();
+  // stamp → export の順。exportTables_ はシートを読み直すので、打った時刻がそのまま書き出される。
+  // export が失敗してもシート側の updatedAt が進んだだけの状態で終わり、
+  // 次回の実行が同じ差分を再検出して打ち直すので自己修復する。
+  var stamped = stampUpdatedAtInSheet_(diff.stampIds);
   exportTables_(['tournaments', 'entries', 'matches'], '手動編集をGitHubへ反映');
-  Logger.log('GitHubへの反映が完了しました。');
+  Logger.log(formatSheetDiffLog_(diff, stamped));
+  return diff;
 }
 
 /**
