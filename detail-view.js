@@ -834,14 +834,17 @@
       participants: state.people, championName: state.winnerName,
       matches: state.matches, thirdPlaceMatch: state.thirdPlaceMatch
     });
-    const byPlace = {};
+    // ⚠️ 順位→1人 の辞書にしないこと。3位決定戦をやらなかった大会は同率3位が2人いるので、
+    //    上書きすると片方が画面から消える(2026-07-29修正)
+    const byPlace = {1:[], 2:[], 3:[], 4:[]};
     Object.keys(placements).forEach(name=>{
       const info = placements[name];
       // ⚠️ computePlacementsのlabelは「🥇 優勝」のようにメダル絵文字込み(4位だけ絵文字なし)。
       // こちらでmedalOf()を前置するので、絵文字は剥がしておかないと二重表示になる
-      if(info.place && info.place<=4) byPlace[info.place] = { name, label: stripMedal(info.label) };
+      if(info.place && info.place<=4) byPlace[info.place].push({ name, label: stripMedal(info.label) });
     });
-    return [1,2,3,4].filter(p=>byPlace[p]).map(p=>({ place:p, name:byPlace[p].name, label:byPlace[p].label }));
+    return [1,2,3,4].reduce((rows,p)=>
+      rows.concat(byPlace[p].map(x=>({ place:p, name:x.name, label:x.label }))), []);
   }
 
   // 終了した大会のリザルト(1位〜4位)。対戦表の上に出す。

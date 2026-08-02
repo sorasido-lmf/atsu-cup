@@ -115,11 +115,13 @@
     };
     const placements = AtsuCup.computePlacements(entry);
 
-    const top = {1:null, 2:null, 3:null, 4:null};
+    // ⚠️ 順位→1人 の辞書にしないこと。3位決定戦をやらなかった大会は同率3位が2人いるので、
+    //    上書きすると片方が画面から消える(2026-07-29修正)
+    const top = {1:[], 2:[], 3:[], 4:[]};
     const restByRound = {};
     Object.entries(placements).forEach(([name, info])=>{
       if(info.place && info.place<=4){
-        top[info.place] = name;
+        top[info.place].push(name);
       }else if(info.roundIdx>=0){
         if(!restByRound[info.roundIdx]) restByRound[info.roundIdx] = [];
         restByRound[info.roundIdx].push(name);
@@ -130,15 +132,15 @@
     const rankLabelText = {1:'CHAMPION', 2:'2ND PLACE', 3:'3RD PLACE', 4:'4TH PLACE'};
     let topHtml = '';
     [1,2,3,4].forEach(place=>{
-      const name = top[place];
-      if(!name) return;
-      topHtml += `<div class="place-card p${place}">
-        <div class="medal">${medalEmoji[place]}</div>
-        <div class="info">
-          <div class="rank-label">${rankLabelText[place]}</div>
-          <div class="nm">${escapeHtml(name)}</div>
-        </div>
-      </div>`;
+      top[place].forEach(name=>{
+        topHtml += `<div class="place-card p${place}">
+          <div class="medal">${medalEmoji[place]}</div>
+          <div class="info">
+            <div class="rank-label">${rankLabelText[place]}</div>
+            <div class="nm">${escapeHtml(name)}</div>
+          </div>
+        </div>`;
+      });
     });
     if(topHtml){
       document.getElementById('topSection').style.display = 'block';

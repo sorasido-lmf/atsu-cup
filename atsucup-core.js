@@ -1261,12 +1261,24 @@ const AtsuCup = (function(){
     const runnerUp = (champion && finalRound && finalRound.length===1 && finalRound[0]) ? finalRound[0].loser : null;
     const thirdName = entry.thirdPlaceMatch ? entry.thirdPlaceMatch.winner : null;
     const fourthName = (entry.thirdPlaceMatch && thirdName) ? (entry.thirdPlaceMatch.a===thirdName ? entry.thirdPlaceMatch.b : entry.thirdPlaceMatch.a) : null;
+    // 3位決定戦をやらなかった大会は、準決勝の敗者2人を「同率3位」にする(2026-07-29追加)。
+    // 以前は3位も4位も決まらず2人とも順位なし=順位ボーナス0Pで、1回戦敗退と同じ扱いだった。
+    // ⚠️ 優勝者が確定している大会に限ること。準決勝が終わった直後(これから3位決定戦をやる)の
+    //    進行中の大会で順位を確定させてしまうと、画面に誤った3位が出る。
+    // ⚠️ thirdPlaceMatchのa/bではなく準決勝の敗者から導く。不戦勝で決着した対戦はloserがnullに
+    //    なるため、2人そろわなければ従来通り「順位なし」に倒す
+    const semiRound = matches.length >= 2 ? matches[matches.length-2] : null;
+    const tiedThird = (!thirdName && champion && finalRound && finalRound.length===1
+                       && semiRound && semiRound.length===2)
+      ? semiRound.map(m=>m.loser).filter(Boolean) : [];
+    const isTiedThird = (name)=> tiedThird.length===2 && tiedThird.indexOf(name)>=0;
     (entry.participants||[]).forEach(p=>{
       let place=null, label='参加(結果未確定)', roundIdx=-1;
       if(champion && p.name===champion){ place=1; label='🥇 優勝'; }
       else if(runnerUp && p.name===runnerUp){ place=2; label='🥈 準優勝'; }
       else if(thirdName && p.name===thirdName){ place=3; label='🥉 3位'; }
       else if(fourthName && p.name===fourthName){ place=4; label='4位'; }
+      else if(isTiedThird(p.name)){ place=3; label='🥉 3位'; }
       else{
         matches.forEach((round,r)=>{ round.forEach(m=>{ if(m.loser===p.name) roundIdx=Math.max(roundIdx,r); }); });
         if(roundIdx>=0){ label = roundLabel(matches[roundIdx].length)+'敗退'; }
@@ -1458,7 +1470,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-29 01:40";
+  const BUILD_DATE = "2026-07-29 02:30";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
