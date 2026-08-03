@@ -146,10 +146,44 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
 }
 /* iOS Safariの日付入力(input[type=date])は、ネイティブのカレンダーUI描画が
    width:100%を無視して枠からはみ出すことがある(実機のみで再現)。
-   appearance:noneでネイティブ装飾をリセットし、box-sizing/幅計算をCSS通りに戻す */
+   appearance:noneでネイティブ装飾をリセットし、box-sizing/幅計算をCSS通りに戻す。
+   🔴 これは外さないこと。外すと上記の実機バグが再発する。 */
 .field input[type="date"]{
   -webkit-appearance:none; appearance:none;
 }
+/* 日付欄(戦績の期間絞り込み)。record.html / record-detail.html で共有する。
+   ⚠️ appearance:none のせいでネイティブのカレンダーアイコンが消えており、空欄だと
+      「何の欄か」「タップできるのか」が分からない。自前のアイコンを重ねて解決する
+      (ネイティブ装飾には頼らない = 上のバグ対策を維持したまま見た目を足せる)。 */
+.date-field-row{ display:flex; flex-direction:column; gap:10px; }
+.date-input{ position:relative; }
+.date-input input[type="date"]{ padding-right:34px; }
+.date-input .date-icon{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  font-size:14px; opacity:.65; pointer-events:none; /* タップは下のinputへ通す */
+}
+/* 自前アイコンと二重に出さない。デスクトップChromeではこれで
+   カレンダーを開く導線が消えるため、JS側で showPicker() を呼んでいる */
+.date-input input[type="date"]::-webkit-calendar-picker-indicator{
+  -webkit-appearance:none; appearance:none; display:none;
+}
+
+/* 戦績の絞り込みアコーディオン */
+.filter-acc{
+  background:#0d0a14; border:1px solid var(--line); border-radius:10px; margin-bottom:12px; overflow:hidden;
+}
+.filter-acc > summary{
+  list-style:none; cursor:pointer; padding:10px 12px; font-size:12px; color:var(--cream);
+  display:flex; align-items:center; gap:6px;
+}
+.filter-acc > summary::-webkit-details-marker{ display:none; }
+.filter-acc > summary::after{ content:'▼'; margin-left:auto; font-size:10px; color:var(--muted); }
+.filter-acc[open] > summary::after{ content:'▲'; }
+.filter-acc > summary .acc-state{ color:var(--muted); font-size:11px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.filter-acc .acc-body{ padding:0 12px 12px; border-top:1px solid var(--line); }
+.filter-acc .acc-label{ font-size:11px; color:var(--muted); letter-spacing:.05em; margin:12px 0 6px; }
+.filter-acc .acc-btns{ display:flex; flex-wrap:wrap; gap:6px; }
+.filter-acc .acc-btns .btn{ margin-top:0; width:auto; flex:1 1 auto; min-width:88px; padding:8px 10px; font-size:12px; }
 .empty-state{text-align:center; padding:34px 10px; color:var(--muted); font-size:13px; line-height:1.9;}
 .empty-state .big{font-size:30px; display:block; margin-bottom:8px;}
 .count-badge{

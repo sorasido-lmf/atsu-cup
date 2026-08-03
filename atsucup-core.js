@@ -1409,7 +1409,7 @@ const AtsuCup = (function(){
   function computeAllTimeStats(opts){
     const stats = {};
     const ensure = name=>{
-      if(!stats[name]) stats[name] = {name, points:0, p1:0, p2:0, p3:0, p4:0, played:0};
+      if(!stats[name]) stats[name] = {name, points:0, p1:0, p2:0, p3:0, p4:0, played:0, wins:0, games:0};
       return stats[name];
     };
     state.roster.forEach(name=> ensure(name));
@@ -1423,6 +1423,21 @@ const AtsuCup = (function(){
         const place = placements[p.name] ? placements[p.name].place : null;
         if(place===1) s.p1++; else if(place===2) s.p2++; else if(place===3) s.p3++; else if(place===4) s.p4++;
       });
+      // 勝率(wins/games)用の実戦カウント。
+      // 🔴 判定は computeTournamentPoints の「実戦勝利1P」と完全に同じ条件にすること。
+      //    atsucup-data.js の countWins()(= entries.wins列) は !bye を見ておらず、
+      //    pickWinnerAsSeed(両者そろった状態での不戦勝)が使われるとPと勝率が食い違う。
+      //    現データでは一致しているが、それは同機能の実使用がまだ無いだけ。
+      const countGame = (a, b, winner)=>{
+        ensure(a).games++; ensure(b).games++;
+        if(winner) ensure(winner).wins++;
+      };
+      (entry.matches||[]).forEach(round=>{
+        round.forEach(m=>{ if(m.a && m.b && m.winner && !m.bye) countGame(m.a, m.b, m.winner); });
+      });
+      // 3位決定戦は entry.matches の外にある(computeTournamentPointsと同じく別途加算する)
+      const tp = entry.thirdPlaceMatch;
+      if(tp && tp.a && tp.b && tp.winner) countGame(tp.a, tp.b, tp.winner);
     });
     return Object.values(stats).filter(s=> !state.archivedUsers[s.name]);
   }
@@ -1565,7 +1580,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-08-03 11:20";
+  const BUILD_DATE = "2026-08-03 14:01";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;

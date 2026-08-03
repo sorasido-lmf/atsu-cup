@@ -79,11 +79,16 @@
     from: validDate(qs.get('from')),
     to: validDate(qs.get('to'))
   };
+  // 一覧の並び替え・最低出場回数は個人ページでは使わないが、
+  // 戻った時に一覧の見え方を復元するためそのまま持ち回る
+  const passthrough = { sort: qs.get('sort') || '', min: qs.get('min') || '' };
   function filterQuery(extra){
     const p = new URLSearchParams(extra||{});
     p.set('scope', filter.scope);
     if(filter.from) p.set('from', filter.from);
     if(filter.to) p.set('to', filter.to);
+    if(passthrough.sort) p.set('sort', passthrough.sort);
+    if(passthrough.min) p.set('min', passthrough.min);
     return p.toString();
   }
   function syncUrl(){
@@ -101,12 +106,12 @@
         ${btn('restricted','🔒 制限杯のみ','restricted')}
         ${btn('nonRestricted','🏅 制限杯をのぞく','official')}
       </div>
-      <div class="row" style="gap:8px; margin-bottom:8px;">
-        <div class="field" style="flex:1; margin-bottom:0;"><label>開始日</label><input type="date" id="fFrom" value="${filter.from}"></div>
-        <div class="field" style="flex:1; margin-bottom:0;"><label>終了日</label><input type="date" id="fTo" value="${filter.to}"></div>
-      </div>
-      <div class="row" style="margin-bottom:12px;">
-        <button class="btn btn-ghost" id="fClear" style="width:100%;">期間をクリア</button>
+      <div class="date-field-row" style="margin-bottom:12px;">
+        <div class="field" style="margin-bottom:0;"><label>開始日</label>
+          <div class="date-input"><input type="date" id="fFrom" value="${filter.from}"><span class="date-icon">📅</span></div></div>
+        <div class="field" style="margin-bottom:0;"><label>終了日</label>
+          <div class="date-input"><input type="date" id="fTo" value="${filter.to}"><span class="date-icon">📅</span></div></div>
+        <button class="btn btn-ghost" id="fClear" style="width:100%; margin-top:2px;">期間をクリア(全期間)</button>
       </div>
       <p class="hint" style="margin:0;">公式大会 ${count}件を集計中${filter.from||filter.to?`(${filter.from||'最初'} 〜 ${filter.to||'最新'})`:''}</p>`;
     document.querySelectorAll('#filterArea [data-scope]').forEach(b=>
@@ -114,6 +119,10 @@
     document.getElementById('fFrom').addEventListener('change', e=>{ filter.from = e.target.value; expandedEntryIdx=null; syncUrl(); renderAll(); });
     document.getElementById('fTo').addEventListener('change', e=>{ filter.to = e.target.value; expandedEntryIdx=null; syncUrl(); renderAll(); });
     document.getElementById('fClear').addEventListener('click', ()=>{ filter.from=''; filter.to=''; expandedEntryIdx=null; syncUrl(); renderAll(); });
+    // ネイティブのカレンダーアイコンを消しているので、開く導線をJSで補う(未対応なら何もしない)
+    document.querySelectorAll('#filterArea .date-input').forEach(w=>{
+      w.addEventListener('click', ()=>{ const i = w.querySelector('input'); try{ i.showPicker(); }catch(e){} });
+    });
   }
 
   // 指定の大会(entry)で、その人が各ラウンドで誰と対戦してどうなったかを時系列で並べる
@@ -170,21 +179,39 @@
       return;
     }
 
-    let p1=0, p2=0, p3=0, p4=0, totalPoints=0;
+    let p1=0, p2=0, p3=0, p4=0, totalPoints=0, wins=0, games=0;
     const rows = entries.map((e,i)=>{
       const pl = AtsuCup.computePlacements(e)[targetName] || {place:null, label:'参加'};
       const pts = AtsuCup.computeTournamentPoints(e)[targetName] || 0;
       totalPoints += pts;
       if(pl.place===1) p1++; else if(pl.place===2) p2++; else if(pl.place===3) p3++; else if(pl.place===4) p4++;
+      // 🔴 勝率の実戦カウントは computeTournamentPoints の「実戦勝利1P」と同じ条件にすること
+      //    (entries.wins列 = countWins() は !bye を見ておらず、不戦勝シードでPと食い違う)
+      const tally = (m, checkBye)=>{
+        if(!(m && m.a && m.b && m.winner)) return;
+        if(checkBye && m.bye) return;
+        if(m.a !== targetName && m.b !== targetName) return;
+        games++; if(m.winner === targetName) wins++;
+      };
+      (e.matches||[]).forEach(round=> round.forEach(m=> tally(m, true)));
+      tally(e.thirdPlaceMatch, false); // 3位決定戦は既存実装に合わせて bye を見ない
       return { idx:i, entry:e, title: e.title, label: pl.label, place: pl.place, pts };
     });
 
+    const top4 = p1+p2+p3+p4;
+    // 分母0は率が定義できない。0%にすると「まだ戦っていない」が「全敗」と同じ見え方になる
+    const pct = (num, den)=> den > 0 ? (num/den*100).toFixed(1).replace(/\.0$/,'') + '%' : '—';
     summaryArea.innerHTML = `
       <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="stat-box"><div class="v">${p1}</div><div class="l">優勝</div></div>
         <div class="stat-box"><div class="v">${p2}</div><div class="l">準優勝</div></div>
         <div class="stat-box"><div class="v">${p3}</div><div class="l">3位</div></div>
         <div class="stat-box"><div class="v">${p4}</div><div class="l">4位</div></div>
+      </div>
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-box"><div class="v">${pct(wins, games)}</div><div class="l">勝率 ${wins}勝/${games}戦</div></div>
+        <div class="stat-box"><div class="v">${pct(p1, entries.length)}</div><div class="l">優勝率 ${p1}/${entries.length}回</div></div>
+        <div class="stat-box"><div class="v">${pct(top4, entries.length)}</div><div class="l">4強率 ${top4}/${entries.length}回</div></div>
       </div>
       <div class="stat-grid" style="grid-template-columns:1fr;">
         <div class="stat-box"><div class="v">${totalPoints}P</div><div class="l">通算ポイント</div></div>

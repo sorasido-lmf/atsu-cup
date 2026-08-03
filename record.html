@@ -8,8 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
 <style>
-  .sort-tabs{display:flex; gap:8px; margin-bottom:14px;}
-  .sort-tabs button{flex:1; margin-top:0;}
   .rank-row{
     display:flex; align-items:center; gap:10px; background:#0d0a14; border:1px solid var(--line);
     border-radius:10px; padding:10px 12px; margin-bottom:7px; cursor:pointer;
@@ -24,6 +22,12 @@
   .rank-row .rr-main{flex:1; min-width:0;}
   .rank-row .rr-name{font-size:14.5px; font-weight:700; color:var(--cream); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .rank-row .rr-sub{font-size:10.5px; color:var(--muted); margin-top:3px;}
+  /* しきい値に満たない人。順位番号を付けず、参考記録だと分かるように落とす */
+  .rank-row-dim{ opacity:.5; }
+  .rank-tail-label{
+    margin:14px 0 7px; font-size:11px; color:var(--muted); letter-spacing:.05em;
+    border-top:1px solid var(--line); padding-top:10px;
+  }
   .rank-row .rr-points{
     flex-shrink:0; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:900; color:var(--gold); font-size:16px;
   }
@@ -48,7 +52,6 @@
     <p class="hint">名前をタップすると、詳細画面でこれまでの大会での成績を確認できます。</p>
     <div class="points-hint">🏆 ポイントは大会ごとに加算されます: 対戦に1勝で1P / 4位3P / 3位5P / 準優勝7P / 優勝10P</div>
     <div id="filterArea"></div>
-    <div class="sort-tabs" id="sortTabs"></div>
     <div id="rankList"></div>
   </section>
 
@@ -68,7 +71,23 @@
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
 
-  let sortMode = 'ranking'; // 'ranking' | 'name'
+  /* ---- 並び替え ----
+     Pt順が既定(従来の「🏆ランキング順」の改称)。率の3つは1試合あたりの強さを見るための軸。
+     ⚠️ 率は同値が多発する(特に優勝率は0%が大半)。tie-breakを必ず入れること */
+  const SORTS = {
+    points:  { label:'🏆 Pt順',    value:s=> s.points },
+    winRate: { label:'⚔️ 勝率順',  value:s=> rateOf(s.wins, s.games) },
+    champRate:{ label:'👑 優勝率順', value:s=> rateOf(s.p1, s.played) },
+    top4Rate:{ label:'🏅 4強率順',  value:s=> rateOf(top4Of(s), s.played) },
+    name:    { label:'🔤 名前順',   value:null }
+  };
+  const MINS = [0, 5, 10]; // 最低出場回数。0 = 制限なし(既定＝従来の見え方のまま)
+
+  const top4Of = s => s.p1 + s.p2 + s.p3 + s.p4;
+  // 分母0は率が定義できない。0%として並べると「まだ戦っていない人」が
+  // 「全敗した人」と同じ扱いになるため、nullを返して表示・並びで区別する
+  const rateOf = (num, den) => den > 0 ? num / den : null;
+  const pct = r => r === null ? '—' : (r*100).toFixed(1).replace(/\.0$/,'') + '%';
 
   /* ---- 集計範囲の絞り込み ----
      戦績は「公式大会のみ」を土台にし、その中を 全て/制限杯のみ/制限杯をのぞく で切り替える。
@@ -84,65 +103,112 @@
     from: validDate(qs.get('from')),
     to: validDate(qs.get('to'))
   };
+  let sortMode = Object.prototype.hasOwnProperty.call(SORTS, qs.get('sort')) ? qs.get('sort') : 'points';
+  let minPlayed = MINS.includes(Number(qs.get('min'))) ? Number(qs.get('min')) : 0;
   function filterQuery(extra){
     const p = new URLSearchParams(extra||{});
     p.set('scope', filter.scope);
     if(filter.from) p.set('from', filter.from);
     if(filter.to) p.set('to', filter.to);
+    if(sortMode !== 'points') p.set('sort', sortMode);
+    if(minPlayed) p.set('min', String(minPlayed));
     return p.toString();
   }
   function syncUrl(){
     // リロードせずURLだけ更新する(戻ってきた時に絞り込みが保たれる)
     history.replaceState(null, '', location.pathname + '?' + filterQuery());
   }
+  // 閉じている時もヘッダに出す現在の状態(開かないと何順か分からない、を防ぐ)
+  function accSummaryText(){
+    const scopeLabel = {official:'🏅 全て', restricted:'🔒 制限杯のみ', nonRestricted:'🏅 制限杯をのぞく'}[filter.scope];
+    const parts = [SORTS[sortMode].label.replace(/^\S+\s/,''), scopeLabel];
+    if(minPlayed) parts.push(`出場${minPlayed}回以上`);
+    if(filter.from || filter.to) parts.push(`${filter.from||'最初'}〜${filter.to||'最新'}`);
+    return parts.join(' ・ ');
+  }
+
   function renderFilter(){
-    const btn = (key,label,cls)=>
+    const scopeBtn = (key,label,cls)=>
       `<button type="button" class="flag-toggle-btn ${cls} ${filter.scope===key?'on':'off'}" data-scope="${key}">${label}</button>`;
+    const sortBtn = (key)=>
+      `<button type="button" class="btn ${sortMode===key?'btn-gold':'btn-ghost'}" data-sort="${key}">${SORTS[key].label}</button>`;
+    const minBtn = (v,label)=>
+      `<button type="button" class="btn ${minPlayed===v?'btn-gold':'btn-ghost'}" data-min="${v}">${label}</button>`;
     const count = AtsuCup.allFinishedEntries(filter).length;
+    // ⚠️ open属性を毎回付け直すと、操作のたびにアコーディオンが開閉して跳ねる。
+    //    現在の開閉状態を引き継ぐ
+    const wasOpen = document.querySelector('.filter-acc') ? document.querySelector('.filter-acc').open : false;
     document.getElementById('filterArea').innerHTML = `
-      <div style="margin-bottom:10px;">
-        ${btn('official','🏅 全て','official')}
-        ${btn('restricted','🔒 制限杯のみ','restricted')}
-        ${btn('nonRestricted','🏅 制限杯をのぞく','official')}
-      </div>
-      <div class="row" style="gap:8px; margin-bottom:8px;">
-        <div class="field" style="flex:1; margin-bottom:0;"><label>開始日</label><input type="date" id="fFrom" value="${filter.from}"></div>
-        <div class="field" style="flex:1; margin-bottom:0;"><label>終了日</label><input type="date" id="fTo" value="${filter.to}"></div>
-      </div>
-      <div class="row" style="margin-bottom:12px;">
-        <button class="btn btn-ghost" id="fClear" style="width:100%;">期間をクリア</button>
-      </div>
+      <details class="filter-acc"${wasOpen?' open':''}>
+        <summary>⚙️ 並び替え・絞り込み <span class="acc-state">${escapeHtml(accSummaryText())}</span></summary>
+        <div class="acc-body">
+          <div class="acc-label">並び替え</div>
+          <div class="acc-btns">${Object.keys(SORTS).map(sortBtn).join('')}</div>
+          <div class="acc-label">対象の大会</div>
+          <div class="acc-btns">
+            ${scopeBtn('official','🏅 全て','official')}
+            ${scopeBtn('restricted','🔒 制限杯のみ','restricted')}
+            ${scopeBtn('nonRestricted','🏅 制限杯をのぞく','official')}
+          </div>
+          <div class="acc-label">最低出場回数<span style="text-transform:none;"> ― 率で並べるときに、出場が少ない人を末尾へまとめます</span></div>
+          <div class="acc-btns">${minBtn(0,'制限なし')}${minBtn(5,'出場5回以上')}${minBtn(10,'出場10回以上')}</div>
+          <div class="acc-label">期間</div>
+          <div class="date-field-row">
+            <div class="field" style="margin-bottom:0;"><label>開始日</label>
+              <div class="date-input"><input type="date" id="fFrom" value="${filter.from}"><span class="date-icon">📅</span></div></div>
+            <div class="field" style="margin-bottom:0;"><label>終了日</label>
+              <div class="date-input"><input type="date" id="fTo" value="${filter.to}"><span class="date-icon">📅</span></div></div>
+            <button class="btn btn-ghost" id="fClear" style="width:100%; margin-top:2px;">期間をクリア(全期間)</button>
+          </div>
+        </div>
+      </details>
       <p class="hint" style="margin:0 0 12px;">公式大会 ${count}件を集計中${filter.from||filter.to?`(${filter.from||'最初'} 〜 ${filter.to||'最新'})`:''}</p>`;
+
     document.querySelectorAll('#filterArea [data-scope]').forEach(b=>
       b.addEventListener('click', ()=>{ filter.scope = b.dataset.scope; syncUrl(); renderAll(); }));
+    document.querySelectorAll('#filterArea [data-sort]').forEach(b=>
+      b.addEventListener('click', ()=>{ sortMode = b.dataset.sort; syncUrl(); renderAll(); }));
+    document.querySelectorAll('#filterArea [data-min]').forEach(b=>
+      b.addEventListener('click', ()=>{ minPlayed = Number(b.dataset.min); syncUrl(); renderAll(); }));
     document.getElementById('fFrom').addEventListener('change', e=>{ filter.from = e.target.value; syncUrl(); renderAll(); });
     document.getElementById('fTo').addEventListener('change', e=>{ filter.to = e.target.value; syncUrl(); renderAll(); });
     document.getElementById('fClear').addEventListener('click', ()=>{ filter.from=''; filter.to=''; syncUrl(); renderAll(); });
+    // ネイティブのカレンダーアイコンを消しているため、デスクトップでは
+    // これが無いとカレンダーを開く手段が無くなる(未対応ブラウザでは何もしない=従来通り)
+    document.querySelectorAll('#filterArea .date-input').forEach(w=>{
+      w.addEventListener('click', ()=>{ const i = w.querySelector('input'); try{ i.showPicker(); }catch(e){} });
+    });
   }
 
-  function renderSortTabs(){
-    document.getElementById('sortTabs').innerHTML = `
-      <button class="btn ${sortMode==='ranking'?'btn-gold':'btn-ghost'}" id="sortRankingBtn">🏆 ランキング順</button>
-      <button class="btn ${sortMode==='name'?'btn-gold':'btn-ghost'}" id="sortNameBtn">🔤 名前順</button>
-    `;
-    document.getElementById('sortRankingBtn').addEventListener('click', ()=>{ sortMode='ranking'; renderSortTabs(); renderRankList(); });
-    document.getElementById('sortNameBtn').addEventListener('click', ()=>{ sortMode='name'; renderSortTabs(); renderRankList(); });
-  }
-
+  // 🥇🥈🥉はPt順のときだけ。他の並びで金メダルを出すと「優勝者」と誤解される
   function rankBadgeClass(rank){
-    if(sortMode!=='ranking') return '';
+    if(sortMode!=='points') return '';
     if(rank===1) return 'top1'; if(rank===2) return 'top2'; if(rank===3) return 'top3';
     return '';
   }
   function rankLabel(rank){
-    if(sortMode!=='ranking') return '';
+    if(sortMode==='name') return '';
+    if(sortMode!=='points') return String(rank);
     if(rank===1) return '🥇'; if(rank===2) return '🥈'; if(rank===3) return '🥉';
     return String(rank);
   }
 
+  function rowHtml(s, rank, dim){
+    const wr = rateOf(s.wins, s.games), cr = rateOf(s.p1, s.played), t4 = rateOf(top4Of(s), s.played);
+    return `<div class="rank-row${dim?' rank-row-dim':''}" data-name="${escapeHtml(s.name)}">
+      <div class="rank ${dim?'':rankBadgeClass(rank)}">${dim?'':rankLabel(rank)}</div>
+      <div class="rr-main">
+        <div class="rr-name">${escapeHtml(s.name)}</div>
+        <div class="rr-sub">🥇${s.p1} 🥈${s.p2} 🥉${s.p3} 4位${s.p4} ・ 4強${top4Of(s)}回 ・ 出場${s.played}回</div>
+        <div class="rr-sub">勝率${pct(wr)} ・ 優勝率${pct(cr)} ・ 4強率${pct(t4)}</div>
+      </div>
+      <div class="rr-points">${s.points}<span class="u">P</span></div>
+    </div>`;
+  }
+
   function renderRankList(){
     const list = document.getElementById('rankList');
-    let stats = AtsuCup.computeAllTimeStats(filter);
+    const stats = AtsuCup.computeAllTimeStats(filter);
     if(!stats.length){
       list.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「参加者登録」から登録してください。</div>`;
       return;
@@ -151,22 +217,35 @@
       list.innerHTML = `<div class="empty-state" style="padding:14px 4px;">条件に合う公式大会がありません。<br>絞り込みを変えてみてください。</div>`;
       return;
     }
-    if(sortMode==='ranking'){
-      stats = stats.slice().sort((a,b)=> b.points-a.points || a.name.localeCompare(b.name,'ja'));
-    }else{
-      stats = stats.slice().sort((a,b)=> a.name.localeCompare(b.name,'ja'));
+    // 🔴 しきい値の判定は「期間の絞り込みを無視した出場回数」で行う。
+    //    期間内の出場回数で判定すると、直近数ヶ月に絞った瞬間に該当者0人になり一覧が空になる
+    //    (実データ: 直近3ヶ月=4大会では「期間内5回以上」が0人)。scopeは尊重する
+    let qualifies = ()=> true;
+    if(minPlayed){
+      const allTime = {};
+      AtsuCup.computeAllTimeStats({ scope: filter.scope }).forEach(s=>{ allTime[s.name] = s.played; });
+      // 絞り込み後に1試合もしていない人も末尾へ回す(勝率が「—」のままランク内に並ぶのを防ぐ)
+      qualifies = s => (allTime[s.name]||0) >= minPlayed && s.games > 0;
     }
-    list.innerHTML = stats.map((s,i)=>{
-      const rank = i+1;
-      return `<div class="rank-row" data-name="${escapeHtml(s.name)}">
-        <div class="rank ${rankBadgeClass(rank)}">${rankLabel(rank)}</div>
-        <div class="rr-main">
-          <div class="rr-name">${escapeHtml(s.name)}</div>
-          <div class="rr-sub">🥇${s.p1} 🥈${s.p2} 🥉${s.p3} 4位${s.p4} ・ 出場${s.played}回</div>
-        </div>
-        <div class="rr-points">${s.points}<span class="u">P</span></div>
-      </div>`;
-    }).join('');
+
+    const byName = (a,b)=> a.name.localeCompare(b.name,'ja');
+    let sorted;
+    if(sortMode==='name'){
+      sorted = stats.slice().sort(byName);
+    }else{
+      const val = SORTS[sortMode].value;
+      // ⚠️ tie-breakを必ず入れること。優勝率は0%が大半で、これが無いと並びが不定になる
+      sorted = stats.slice().sort((a,b)=> (val(b)||0)-(val(a)||0) || b.points-a.points || byName(a,b));
+    }
+    const ranked = sorted.filter(qualifies);
+    const tail   = sorted.filter(s=> !qualifies(s));
+
+    let html = ranked.map((s,i)=> rowHtml(s, i+1, false)).join('');
+    if(tail.length){
+      html += `<div class="rank-tail-label">出場${minPlayed}回未満（参考）</div>`
+            + tail.map(s=> rowHtml(s, 0, true)).join('');
+    }
+    list.innerHTML = html;
     list.querySelectorAll('.rank-row').forEach(row=>{
       row.addEventListener('click', ()=>{
         // 絞り込みも一緒に渡す(個人ページの通算Pをこの一覧のPと一致させるため)
@@ -175,7 +254,7 @@
     });
   }
 
-  function renderAll(){ renderFilter(); renderSortTabs(); renderRankList(); }
+  function renderAll(){ renderFilter(); renderRankList(); }
 
   renderAll();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
