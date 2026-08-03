@@ -1,0 +1,28 @@
+# 🔴 data/ は絶対にここへ追加しないこと。
+#    data/*.json は「GitHub上に存在させる」ことが要件で、ローカルの変更だけを
+#    push しないために git update-index --skip-worktree で運用している。
+#    gitignore すると GitHub 上からファイル自体が消えて要件を満たせなくなる
+#    (過去に2回この誤りを犯して data/ を消している)。
+#    詳細は docs/operations.md の「skip-worktree」節を参照。
+
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+
+# Claude Code のローカル生成物(共有しない個人設定)
+.claude/settings.local.json
+.claude/*.local.json
+
+# Codex のローカル生成物
+.codex/
+*.codex-local.*
+
+# 一時ファイル
+*.log
+*.tmp
+node_modules/
