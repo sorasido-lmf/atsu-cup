@@ -25,17 +25,22 @@
 上記の非対称性は `git update-index --skip-worktree` で実現している。設定済み（2026-07-26）。
 
 ```bash
-# 設定状況の確認（先頭が S なら skip-worktree 有効）
+# 設定状況の確認（実データ4つが S、SCHEMA.md が H なら正しい）
 git ls-files -v data
 
 # GitHub側の更新をローカルへ取り込む（一時解除 → 取得 → 再設定）
-git update-index --no-skip-worktree data/*.json data/SCHEMA.md
-git checkout data
-git update-index --skip-worktree data/*.json data/SCHEMA.md
+git update-index --no-skip-worktree data/users.json data/tournaments.json data/entries.json data/matches.json
+git checkout data/users.json data/tournaments.json data/entries.json data/matches.json
+git update-index --skip-worktree data/users.json data/tournaments.json data/entries.json data/matches.json
 ```
 
 なお `data/SCHEMA.md` は**データではなく設計ドキュメント**のため skip-worktree を外して通常追跡している。
 実データの4つのJSONのみ skip-worktree 対象。
+
+⚠️ **この手順で `data/SCHEMA.md` を対象に含めないこと。** 含めると SCHEMA.md まで skip-worktree になり、
+以後この設計ドキュメントの変更が `git status` に出なくなる（＝更新しても push できなくなる）。
+同じ理由で `git checkout data`（ディレクトリ指定）も使わない。SCHEMA.md のローカル変更を巻き込むため、
+**必ず4ファイルを明示する**。
 
 ---
 

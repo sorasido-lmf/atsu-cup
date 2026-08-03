@@ -23,7 +23,7 @@ LINE モンスターファーム のコミュニティ大会「あつ杯」を�
 | フロントエンド | 素の HTML / CSS / JS（依存ライブラリなし） |
 | 認証 | Google Identity Services（IDトークンの検証は必ずサーバー側） |
 | バックエンド | Google Apps Script（`gas/Code.gs`） |
-| データの正本 | Google スプレッドシート |
+| データの正本 | Google スプレッドシート（GitHub の `data/*.json` はその書き出し先。詳細は [`docs/data-sync.md`](docs/data-sync.md) の「「正本」は層によって違う」） |
 | 配信 | GitHub Pages（`data/*.json` を静的配信） |
 
 ---
