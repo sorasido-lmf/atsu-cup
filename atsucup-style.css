@@ -157,13 +157,18 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
       (ネイティブ装飾には頼らない = 上のバグ対策を維持したまま見た目を足せる)。 */
 .date-field-row{ display:flex; flex-direction:column; gap:10px; }
 .date-input{ position:relative; }
-.date-input input[type="date"]{ padding-right:34px; }
+/* ⚠️ min-height/line-height は必須。iOS Safariでは appearance:none のうえ値が空だと
+   input の中身が何も描画されず、高さが padding 分だけ(≒20px)に潰れる
+   (2026-08-03に実機で発覚)。デスクトップChromeは "----/--/--" を描くので気づけない。 */
+.date-input input[type="date"]{ padding-right:38px; min-height:44px; line-height:24px; }
 .date-input .date-icon{
-  position:absolute; right:10px; top:50%; transform:translateY(-50%);
-  font-size:14px; opacity:.65; pointer-events:none; /* タップは下のinputへ通す */
+  position:absolute; right:2px; top:50%; transform:translateY(-50%);
+  font-size:15px; opacity:.75; cursor:pointer; padding:8px; line-height:1;
+  /* ⚠️ pointer-events:none にしないこと。inputへタップを通すと、
+     ネイティブのピッカーと showPicker() が二重に走る(iOSで実害あり) */
 }
 /* 自前アイコンと二重に出さない。デスクトップChromeではこれで
-   カレンダーを開く導線が消えるため、JS側で showPicker() を呼んでいる */
+   カレンダーを開く導線が消えるため、アイコンのclickで showPicker() を呼んでいる */
 .date-input input[type="date"]::-webkit-calendar-picker-indicator{
   -webkit-appearance:none; appearance:none; display:none;
 }

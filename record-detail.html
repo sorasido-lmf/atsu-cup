@@ -96,10 +96,21 @@
     history.replaceState(null, '', location.pathname + '?' + filterQuery({name: targetName}));
     document.getElementById('backToList').href = 'record.html?' + filterQuery();
   }
+  function hintText(){
+    const count = AtsuCup.allFinishedEntries(filter).length;
+    return `公式大会 ${count}件を集計中${filter.from||filter.to?`(${filter.from||'最初'} 〜 ${filter.to||'最新'})`:''}`;
+  }
+  /* 🔴 期間を変えた時に renderFilter() を呼び直してはいけない(record.htmlと同じ理由)。
+     inputごと作り直すと、開いているネイティブの日付ピッカーが閉じてしまい、
+     iOSでは2回タップしないと目的の日付を選べなくなる。件数表示だけその場で書き換える。 */
+  function refreshAfterFilterChange(){
+    const hint = document.getElementById('filterHint');
+    if(hint) hint.textContent = hintText();
+    render();
+  }
   function renderFilter(){
     const btn = (key,label,cls)=>
       `<button type="button" class="flag-toggle-btn ${cls} ${filter.scope===key?'on':'off'}" data-scope="${key}">${label}</button>`;
-    const count = AtsuCup.allFinishedEntries(filter).length;
     document.getElementById('filterArea').innerHTML = `
       <div style="margin-bottom:10px;">
         ${btn('official','🏅 全て','official')}
@@ -113,15 +124,23 @@
           <div class="date-input"><input type="date" id="fTo" value="${filter.to}"><span class="date-icon">📅</span></div></div>
         <button class="btn btn-ghost" id="fClear" style="width:100%; margin-top:2px;">期間をクリア(全期間)</button>
       </div>
-      <p class="hint" style="margin:0;">公式大会 ${count}件を集計中${filter.from||filter.to?`(${filter.from||'最初'} 〜 ${filter.to||'最新'})`:''}</p>`;
+      <p class="hint" id="filterHint" style="margin:0;">${hintText()}</p>`;
     document.querySelectorAll('#filterArea [data-scope]').forEach(b=>
       b.addEventListener('click', ()=>{ filter.scope = b.dataset.scope; expandedEntryIdx=null; syncUrl(); renderAll(); }));
-    document.getElementById('fFrom').addEventListener('change', e=>{ filter.from = e.target.value; expandedEntryIdx=null; syncUrl(); renderAll(); });
-    document.getElementById('fTo').addEventListener('change', e=>{ filter.to = e.target.value; expandedEntryIdx=null; syncUrl(); renderAll(); });
-    document.getElementById('fClear').addEventListener('click', ()=>{ filter.from=''; filter.to=''; expandedEntryIdx=null; syncUrl(); renderAll(); });
-    // ネイティブのカレンダーアイコンを消しているので、開く導線をJSで補う(未対応なら何もしない)
-    document.querySelectorAll('#filterArea .date-input').forEach(w=>{
-      w.addEventListener('click', ()=>{ const i = w.querySelector('input'); try{ i.showPicker(); }catch(e){} });
+    document.getElementById('fFrom').addEventListener('change', e=>{ filter.from = e.target.value; expandedEntryIdx=null; syncUrl(); refreshAfterFilterChange(); });
+    document.getElementById('fTo').addEventListener('change', e=>{ filter.to = e.target.value; expandedEntryIdx=null; syncUrl(); refreshAfterFilterChange(); });
+    document.getElementById('fClear').addEventListener('click', ()=>{
+      filter.from=''; filter.to=''; expandedEntryIdx=null;
+      document.getElementById('fFrom').value=''; document.getElementById('fTo').value='';
+      syncUrl(); refreshAfterFilterChange();
+    });
+    // ⚠️ input本体ではなくアイコンにだけ付けること(inputに付けるとネイティブの
+    //    ピッカーと showPicker() が二重に走り、iOSで意図しない日付が入る)
+    document.querySelectorAll('#filterArea .date-icon').forEach(ic=>{
+      ic.addEventListener('click', ()=>{
+        const i = ic.parentNode.querySelector('input');
+        try{ i.showPicker(); }catch(e){ i.focus(); }
+      });
     });
   }
 
