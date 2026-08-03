@@ -22,6 +22,7 @@
 | `record.html` / `record-detail.html` | 戦績ランキングと個人の戦績(認証プールのみ集計)。**公式大会に限定＋制限杯/期間の絞り込みあり** |
 | `results.html` | 大会の最終結果。「優勝カードを作る」もここ |
 | `settings.html` | Googleログイン・接続確認 |
+| `gas-test.html` | GAS連携の動作確認ページ（通常運用では使わない）。接続と権限の確認(`ping`)、**トークン無し・改ざんトークンでの書き込みが拒否されることの実地検証**、ユーザー/大会の保存テストができる |
 | `atsucup-core.js` | 共通のstate管理・データロジック・`data/`の読み書き（全ページ共有） |
 | `atsucup-data.js` | `data/*.json`(IDキー) ↔ アプリ内部(名前キー) の構造変換層 |
 | `google-auth.js` / `gas-db.js` / `gas-config.js` | GAS連携（Googleログイン・API呼び出し・設定値） |
@@ -60,7 +61,7 @@ GASのWebアプリは「実行するユーザー: 自分」でデプロイして
 | `google-auth.js` | Google Identity Servicesのラッパー。トークン取得のみ、**検証は必ずGAS側** |
 | `gas-db.js` | GAS呼び出し。`text/plain`でCORS preflightを回避。GASは常に200を返すため本文の`ok`で成否判定 |
 | `gas-config.js` | `GAS_URL` / `OAUTH_CLIENT_ID`。公開前提の値でリポジトリにコミットしてよい |
-| `gas-test.html` | Phase2検証用ページ。未認証・改ざんトークンでの拒否を実際に試せる |
+| `gas-test.html` | GAS連携の動作確認ページ。未認証・改ざんトークンでの拒否を実際に試せる（防御線が生きていることの確認に使う） |
 
 **GitHub PATはGASのScript Properties(サーバ側)にのみ存在し、クライアントからは一切到達できない。**
 
