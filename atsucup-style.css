@@ -75,6 +75,23 @@ a.back-link:active{ transform:scale(.93); }
 .atsucup-session-banner button:active{ transform:scale(.95); }
 /* ページ末尾のコンテンツがバーの下に隠れないよう、表示中だけ本文に余白を足す */
 body.atsucup-has-session-banner{ padding-bottom:var(--atsucup-bottom-bar,0px); }
+
+/* ユーザー管理の「未保存の変更」バー。
+   bottomに --atsucup-bottom-bar を足すことで、セッション切れバナー(z-index:9997)の
+   **上に**積み上がる。z-indexはその1つ下(9996)。
+   ⚠️ body余白のルールは .atsucup-has-session-banner より後ろに置くこと。両方付いた時に
+      こちら(2つの高さの合計)が勝つ必要がある(セレクタの詳細度が同じなので後勝ち)。 */
+.atsucup-save-bar{
+  position:fixed; left:0; right:0; bottom:var(--atsucup-bottom-bar,0px); z-index:9996; display:none;
+  align-items:center; gap:10px;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(26,16,38,.97),rgba(12,7,20,.99));
+  border-top:1.5px solid var(--ember2); box-shadow:0 -8px 24px rgba(0,0,0,.5);
+}
+.atsucup-save-bar.is-on{ display:flex; }
+.atsucup-save-bar .sb-msg{ flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--cream); line-height:1.4; }
+.atsucup-save-bar button{ flex-shrink:0; margin-top:0; width:auto; padding:9px 16px; font-size:13px; }
+body.atsucup-has-save-bar{ padding-bottom:calc(var(--atsucup-bottom-bar,0px) + var(--atsucup-save-bar,0px)); }
 header.top{padding:22px 6px 14px; text-align:center; position:relative;}
 .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
 h1{

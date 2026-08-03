@@ -128,7 +128,7 @@ const AtsuCupData = (function(){
       if(!name || idByName[name]) return;
       const existingIds = new Set(list.map(u=>u.id));
       const id = genId('u', existingIds);
-      const nu = { id, name, recDefault: true, archived: false, createdAt: new Date().toISOString(), note: "" };
+      const nu = { id, name, recDefault: true, archived: false, createdAt: new Date().toISOString(), note: "", sortOrder: 0 };
       list.push(nu);
       idByName[name] = id;
       added.push(nu);
@@ -262,16 +262,19 @@ const AtsuCupData = (function(){
 
   /* ================= users.json ↔ 端末のroster ================= */
 
-  // users.json(ID付き) から、アプリが使う名前キーの3つのマップを作る
+  // users.json(ID付き) から、アプリが使う名前キーのマップを作る。
+  // sortOrderは列を追加する前に保存された行だと欠けているので 0 に倒す
+  // (全員0なら並べ替えは安定ソートで行順のまま=従来と同じ並びになる)。
   function toAppRoster(users){
-    const roster = [], userRecDefaults = {}, archivedUsers = {};
+    const roster = [], userRecDefaults = {}, archivedUsers = {}, userSortOrder = {};
     (users||[]).forEach(u=>{
       if(!u || !u.name) return;
       roster.push(u.name);
       userRecDefaults[u.name] = u.recDefault !== false;
       archivedUsers[u.name] = !!u.archived;
+      userSortOrder[u.name] = Number(u.sortOrder) || 0;
     });
-    return { roster, userRecDefaults, archivedUsers };
+    return { roster, userRecDefaults, archivedUsers, userSortOrder };
   }
 
   /* ================= 同期用の署名(端末間同期の差分判定) ================= */

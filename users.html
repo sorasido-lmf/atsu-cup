@@ -25,6 +25,16 @@
   .roster-row.confirming .confirm-actions .btn{ flex:1; padding:6px 10px; font-size:12.5px; }
   .archived-toggle{ background:none; border:none; color:var(--muted); font-size:12.5px; text-decoration:underline; cursor:pointer; padding:6px 0; }
   .archived-row .nm{ color:var(--muted); text-decoration:line-through; }
+  /* ドラッグは専用ハンドルだけで受ける(行全体にすると📹/📦のタップと取り合いになる)。
+     touch-action:none はスクロールに取られないようにするため。 */
+  .roster-row .drag-handle{
+    flex-shrink:0; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none;
+    background:none; border:none; color:#6b5f82; font-size:16px; line-height:1; padding:4px 6px;
+  }
+  .roster-row .drag-handle:active{ cursor:grabbing; color:var(--ember2); }
+  .roster-row.dragging{ opacity:.55; border-color:var(--ember2); background:linear-gradient(180deg,rgba(255,145,69,.16),rgba(255,106,43,.05)); }
+  .roster-row .cam-static{ flex-shrink:0; font-size:13px; opacity:.75; padding:0 4px; }
+  .order-num{ flex-shrink:0; min-width:22px; text-align:right; font-size:11px; color:#6b5f82; font-variant-numeric:tabular-nums; }
 </style>
 </head>
 <body>
@@ -42,6 +52,7 @@
     <div class="row">
       <button class="btn btn-primary" id="openRegisterBtn">➕ 新規ユーザー登録</button>
     </div>
+    <div id="roleNotice" style="margin-top:10px;"></div>
     <div id="syncStatus" style="margin-top:10px;"></div>
     <div id="countBadges" style="margin-top:16px;"></div>
     <div id="rosterList" class="roster-list" style="margin-top:12px;"></div>
@@ -77,28 +88,129 @@
   function recOf(P, name){ return P.userRecDefaults[name] !== false; }
   function isArchived(P, name){ return !!P.archivedUsers[name]; }
 
+  // ユーザーマスタを編集できるか。
+  // 練習モード(未ログイン)はゲストプール＝この端末だけのデータなので、権限の概念そのものが無い。
+  // ログイン中は role が admin の時だけ。判定の実体はGAS側(canManageUsers_)にあり、ここは目隠し。
+  function canManage(){ return AtsuCup.isGuestMode() || AtsuCup.isAdmin(); }
+
+  const roleNotice = document.getElementById("roleNotice");
   const syncStatus = document.getElementById("syncStatus");
   function setSyncStatus(msg, type){
     syncStatus.innerHTML = msg
       ? `<div class="empty-state" style="padding:9px 12px; font-size:12.5px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>`
       : '';
   }
-  // 端末側は即時に反映済み。そのうえで data/users.json(GitHub) にも書き戻す。
-  // 未ログイン(練習モード)ではサーバーへは一切反映せず、この端末にのみ保存する。
-  async function syncToGitHub(){
-    if(AtsuCup.isGuestMode()){ setSyncStatus('練習モードです。この端末にのみ保存しました(ログインするとサーバーに反映できます)。', ''); return; }
-    if(!GasDB.canWrite()){ setSyncStatus('この端末にのみ保存しました(GitHubへ反映するには「設定」でGoogleログインしてください)', ''); return; }
-    setSyncStatus('GitHubへ保存中...', '');
-    try{
-      const n = await AtsuCup.saveUsersToData();
-      setSyncStatus(`GitHubへ保存しました(登録者${n}人)`, 'ok');
-    }catch(e){
-      setSyncStatus('GitHubへの保存に失敗しました: ' + ((e && e.message) || e), 'error');
-    }
+
+  /* ---------- 未保存の変更バー ----------
+     以前は操作の都度サーバーへ送っていたが、D&Dの並べ替えは1操作ごとに送ると
+     GAS実行とGitHubコミットが乱発するため、保存ボタン方式に統一した。
+     各操作は AtsuCup.persist() でこの端末には即座に残るので、画面を離れても消えない
+     (サーバーに出ていないだけ)。 */
+  const saveBar = document.createElement('div');
+  saveBar.className = 'atsucup-save-bar';
+  saveBar.innerHTML = '<span class="sb-msg" id="saveBarMsg"></span>'
+    + '<button type="button" class="btn btn-primary" id="saveUsersBtn">💾 保存</button>';
+  document.body.appendChild(saveBar);
+  const saveBarMsg = document.getElementById('saveBarMsg');
+  const saveUsersBtn = document.getElementById('saveUsersBtn');
+
+  function updateSaveBar(){
+    // 練習モードはサーバーへ出さないので、そもそも保存の概念が無い
+    const show = !AtsuCup.isGuestMode() && AtsuCup.hasUnsavedUserChanges();
+    saveBar.classList.toggle('is-on', show);
+    document.body.classList.toggle('atsucup-has-save-bar', show);
+    // 実測の高さを共有し、リストの末尾がバーに隠れないようにする(セッション切れバナーと同じ流儀)
+    document.documentElement.style.setProperty('--atsucup-save-bar', show ? saveBar.offsetHeight + 'px' : '0px');
+    if(show) saveBarMsg.textContent = 'サーバーへ未反映の変更があります';
   }
 
-  function makeRow(P, name, { archived }){
+  async function saveUsers(){
+    if(AtsuCup.isGuestMode()) return;
+    if(!GasDB.canWrite()){ setSyncStatus('保存するには「設定」でGoogleログインしてください。', 'error'); return; }
+    saveUsersBtn.disabled = true;
+    saveBarMsg.textContent = 'サーバーへ保存中...';
+    try{
+      const n = await AtsuCup.saveUsersToData();
+      setSyncStatus(`サーバーへ保存しました(登録者${n}人)`, 'ok');
+    }catch(e){
+      setSyncStatus('保存に失敗しました: ' + ((e && e.message) || e), 'error');
+    }finally{
+      saveUsersBtn.disabled = false;
+      renderAll(); // 保存に成功していればバーが消える。失敗時は残るので再送できる
+    }
+  }
+  saveUsersBtn.addEventListener('click', saveUsers);
+
+  /* ---------- 並べ替え(ドラッグ&ドロップ) ---------- */
+  let autoScrollTimer = null, autoScrollY = 0;
+  function startAutoScroll(){
+    if(autoScrollTimer) return;
+    // 47人規模の縦長リストでは、画面外へ動かせないと端から端へ移動できない
+    autoScrollTimer = setInterval(()=>{
+      const margin = 90;
+      if(autoScrollY < margin) window.scrollBy(0, -14);
+      else if(autoScrollY > window.innerHeight - margin) window.scrollBy(0, 14);
+    }, 16);
+  }
+  function stopAutoScroll(){ if(autoScrollTimer){ clearInterval(autoScrollTimer); autoScrollTimer = null; } }
+
+  // DOMの並び = 新しい並び順として確定する。
+  // アーカイブ済みはアクティブの後ろに続けて振り、復元したときに先頭へ飛ばないようにする。
+  function commitOrderFromDom(){
+    const P = AtsuCup.pool();
+    const names = Array.from(rosterList.querySelectorAll('[data-name]')).map(el=>el.dataset.name);
+    names.forEach((n,i)=>{ P.userSortOrder[n] = i+1; });
+    let next = names.length + 1;
+    P.roster.filter(n=>isArchived(P,n)).forEach(n=>{ P.userSortOrder[n] = next++; });
+    AtsuCup.persist();
+    renderAll();
+  }
+
+  function attachDrag(handle, row){
+    handle.addEventListener('pointerdown', (ev)=>{
+      if(ev.button !== undefined && ev.button !== 0) return;
+      // ⚠️ ここで preventDefault() を呼ばないこと。Pointer Events仕様上、タッチ端末では
+      //    以降のclickイベント一式が抑制され、他のボタンが反応しなくなる(2026-07-27の既存事故)。
+      //    スクロール抑止は CSS の touch-action:none に任せる。
+      const startY = ev.clientY;
+      let dragging = false;
+      const move = (e)=>{
+        if(!dragging){
+          if(Math.abs(e.clientY - startY) < 6) return; // 単なるタップと区別する
+          dragging = true;
+          row.classList.add('dragging');
+          try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+          startAutoScroll();
+        }
+        e.preventDefault(); // ドラッグが確定してからだけ抑止する
+        autoScrollY = e.clientY;
+        // ポインタが越えた行の手前へ実際にDOMを差し替える(プレースホルダ無しで見た目が確定する)
+        const rows = Array.from(rosterList.querySelectorAll('.roster-row'));
+        for(const other of rows){
+          if(other === row) continue;
+          const r = other.getBoundingClientRect();
+          if(e.clientY < r.top + r.height/2){ rosterList.insertBefore(row, other); return; }
+        }
+        rosterList.appendChild(row);
+      };
+      const up = ()=>{
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        stopAutoScroll();
+        if(!dragging) return;
+        row.classList.remove('dragging');
+        commitOrderFromDom();
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    });
+  }
+
+  function makeRow(P, name, { archived, index }){
     const row = document.createElement('div');
+    row.dataset.name = name;
     if(confirmingName === name){
       row.className = 'roster-row confirming';
       row.innerHTML = `
@@ -112,27 +224,39 @@
       return row;
     }
     row.className = 'roster-row' + (archived ? ' archived-row' : '');
+    const manage = canManage();
     if(archived){
       row.innerHTML = `
         <span class="nm">${escapeHtml(name)}</span>
-        <button class="rm" data-restore="${escapeHtml(name)}" title="復元">♻️ 復元</button>
+        ${manage ? `<button class="rm" data-restore="${escapeHtml(name)}" title="復元">♻️ 復元</button>` : ''}
       `;
-    }else{
-      const isRec = recOf(P, name);
-      row.innerHTML = `
-        <span class="nm">${escapeHtml(name)}</span>
-        <button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>
-        <button class="rm" data-archive="${escapeHtml(name)}" title="アーカイブ">📦</button>
-      `;
+      return row;
     }
+    const isRec = recOf(P, name);
+    row.innerHTML = `
+      ${manage ? `<button class="drag-handle" data-drag="${escapeHtml(name)}" title="ドラッグして並べ替え" aria-label="並べ替え">☰</button>` : ''}
+      <span class="order-num">${index+1}</span>
+      <span class="nm">${escapeHtml(name)}</span>
+      ${manage
+        ? `<button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>
+           <button class="rm" data-archive="${escapeHtml(name)}" title="アーカイブ">📦</button>`
+        : `<span class="cam-static">${isRec?'📹':'🚫'}</span>`}
+    `;
     return row;
   }
 
   function renderAll(){
     const P = AtsuCup.pool();
+    const manage = canManage();
     if(panelHeading) panelHeading.textContent = AtsuCup.isGuestMode() ? '登録済みユーザー(ローカル・この端末のみ)' : '登録済みユーザー';
-    const activeNames = P.roster.filter(n=>!isArchived(P, n));
+
+    // 並び順(sortOrder)で表示する。全員0(列を追加する前のデータ)なら従来と同じ並びになる
+    const activeNames = AtsuCup.orderedRoster(P);
     const archivedNames = P.roster.filter(n=>isArchived(P, n));
+
+    roleNotice.innerHTML = manage
+      ? (AtsuCup.isGuestMode() ? '' : '<p class="hint" style="margin:0;">☰ をドラッグすると並び順を変更できます。変更は「💾 保存」を押すまでサーバーへ反映されません。</p>')
+      : '<p class="hint" style="margin:0;">🔒 並び替え・撮影可否の変更・アーカイブは管理者のみ行えます。新規ユーザーの登録はできます。</p>';
 
     const rec = activeNames.filter(n=>recOf(P, n)).length;
     countBadges.innerHTML = `
@@ -144,31 +268,34 @@
     if(!activeNames.length){
       rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「新規ユーザー登録」から名前を登録してください。</div>`;
     }else{
-      activeNames.forEach(name=> rosterList.appendChild(makeRow(P, name, { archived:false })));
+      activeNames.forEach((name,i)=> rosterList.appendChild(makeRow(P, name, { archived:false, index:i })));
     }
 
+    // アーカイブ済みの閲覧・復元は管理者のみ
+    archivedToggle.style.display = manage ? '' : 'none';
     archivedToggle.textContent = showArchived
       ? `▲ アーカイブ済みを隠す(${archivedNames.length}人)`
       : `▼ アーカイブ済みを表示(${archivedNames.length}人)`;
-    archivedList.style.display = showArchived ? 'flex' : 'none';
+    const showArchivedList = manage && showArchived;
+    archivedList.style.display = showArchivedList ? 'flex' : 'none';
     archivedList.style.flexDirection = 'column';
     archivedList.style.gap = '8px';
     archivedList.innerHTML = "";
-    if(showArchived){
+    if(showArchivedList){
       if(!archivedNames.length){
         archivedList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">アーカイブ済みのユーザーはいません。</div>`;
       }else{
-        archivedNames.forEach(name=> archivedList.appendChild(makeRow(P, name, { archived:true })));
+        archivedNames.forEach((name,i)=> archivedList.appendChild(makeRow(P, name, { archived:true, index:i })));
       }
     }
 
+    document.querySelectorAll('[data-drag]').forEach(el=> attachDrag(el, el.closest('.roster-row')));
     document.querySelectorAll('[data-cam]').forEach(el=>{
       el.addEventListener('click', ()=>{
         const name = el.dataset.cam;
         P.userRecDefaults[name] = !recOf(P, name);
         AtsuCup.persist();
         renderAll();
-        syncToGitHub();
       });
     });
     document.querySelectorAll('[data-archive]').forEach(el=>{
@@ -190,7 +317,6 @@
         confirmingName = null;
         AtsuCup.persist();
         renderAll();
-        syncToGitHub();
       });
     });
     document.querySelectorAll('[data-restore]').forEach(el=>{
@@ -199,9 +325,10 @@
         P.archivedUsers[name] = false;
         AtsuCup.persist();
         renderAll();
-        syncToGitHub();
       });
     });
+
+    updateSaveBar();
   }
 
   archivedToggle.addEventListener('click', ()=>{
@@ -210,14 +337,19 @@
   });
 
   document.getElementById("openRegisterBtn").addEventListener("click", ()=>{
-    UserRegisterModal.open({ onRegistered: ()=>{ renderAll(); syncToGitHub(); } });
+    UserRegisterModal.open({ onRegistered: ()=>{ renderAll(); } });
   });
 
   renderAll();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
   AtsuCup.ready.then(()=>{ renderAll(); });
+  // roleはpingの応答でしか分からない。確定するまでは管理UIを出さず、届いてから描き直す
+  if(typeof GasDB !== 'undefined' && GasDB.canWrite()) GasDB.ensureRole().then(()=> renderAll());
   // ログイン状態が変わったら(このタブ内で)、対象プールが切り替わるので描き直す
-  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=> renderAll());
+  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=>{
+    if(typeof GasDB !== 'undefined' && GasDB.canWrite()) GasDB.ensureRole().then(()=> renderAll());
+    renderAll();
+  });
 })();
 </script>
 </body>

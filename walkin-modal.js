@@ -39,8 +39,8 @@ const WalkinModal = (function(){
     close();
     const P = AtsuCup.pool();
     const exclude = new Set(opts.excludeNames || []);
-    const archived = P.archivedUsers || {};
-    const candidates = (P.roster || []).filter(n => !archived[n] && !exclude.has(n));
+    // ユーザー管理画面で決めた並び順で出す(orderedRosterがアーカイブ済みを除いてくれる)
+    const candidates = AtsuCup.orderedRoster(P).filter(n => !exclude.has(n));
 
     const escapeHtml = AtsuCup.escapeHtml;
     overlayEl = document.createElement('div');

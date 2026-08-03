@@ -14,6 +14,38 @@ const GasDB = (function(){
   function canWrite(){ return typeof GoogleAuth !== 'undefined' && GoogleAuth.isSignedIn(); }
   function currentEmail(){ return typeof GoogleAuth !== 'undefined' ? GoogleAuth.getEmail() : ''; }
 
+  /* ---------- 役割(role)のキャッシュ ----------
+   * adminsシートの role は ping の応答にしか含まれない。毎ページGASを叩くと
+   * コールドスタートで遅く実行クォータも食うので、sessionStorage に持つ。
+   * ⚠️ これは**UIの出し分け専用**。権限の実体は gas/Code.gs 側にあり、
+   *    ここを書き換えても saveUsers の既存行変更はサーバーで無視される。
+   * キーにメールアドレスを含めるのは、別アカウントでログインし直した時に
+   * 前のアカウントの役割を使い回してしまわないようにするため。 */
+  const ROLE_KEY = 'atsucup:role';
+  function readRoleCache(){
+    try{ return JSON.parse(sessionStorage.getItem(ROLE_KEY) || 'null'); }catch(e){ return null; }
+  }
+  /** 同期。キャッシュ済みなら 'admin'/'editor' 等、未確定なら null */
+  function getRole(){
+    if(!canWrite()) return null;
+    const c = readRoleCache();
+    return (c && c.email && c.email === currentEmail()) ? (c.role || null) : null;
+  }
+  function clearRole(){ try{ sessionStorage.removeItem(ROLE_KEY); }catch(e){} }
+  let rolePending = null;
+  /** 非同期。未確定なら ping を1回だけ投げて確定させる。失敗しても投げない(nullを返す) */
+  async function ensureRole(){
+    if(!canWrite()) return null;
+    const cached = getRole();
+    if(cached) return cached;
+    if(rolePending) return rolePending;
+    rolePending = ping().then(r=>{
+      try{ sessionStorage.setItem(ROLE_KEY, JSON.stringify({ email: r.email, role: r.role })); }catch(e){}
+      return r.role || null;
+    }).catch(()=> null).then(v=>{ rolePending = null; return v; });
+    return rolePending;
+  }
+
   /**
    * GASへPOSTする。
    *
@@ -100,5 +132,11 @@ const GasDB = (function(){
     return call('archiveTournament', { tournamentId });
   }
 
-  return { canWrite, currentEmail, call, ping, saveUsers, saveTournament, updateTournamentMeta, archiveTournament };
+  // ログアウト/アカウント切替に追従してキャッシュを捨てる(登録時には発火しない)
+  if(typeof GoogleAuth !== 'undefined' && GoogleAuth.onStateChange){
+    GoogleAuth.onStateChange((s)=>{ if(!s || !s.signedIn) clearRole(); });
+  }
+
+  return { canWrite, currentEmail, getRole, ensureRole, clearRole,
+           call, ping, saveUsers, saveTournament, updateTournamentMeta, archiveTournament };
 })();

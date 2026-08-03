@@ -35,7 +35,11 @@ var SCHEMA = {
     { k: 'recDefault', t: 'bool' },
     { k: 'archived',   t: 'bool' },
     { k: 'createdAt',  t: 'str'  },
-    { k: 'note',       t: 'str'  }
+    { k: 'note',       t: 'str'  },
+    // 2026-08-03追加。ユーザー管理画面のドラッグ&ドロップで決める表示順。
+    // 昇順で並べ、同値の場合は従来どおりの登録順(行順)を保つ。列追加前の既存行は
+    // 空欄=0として読まれるため、全員0の間は今までとまったく同じ並びになる。
+    { k: 'sortOrder',  t: 'num'  }
   ],
   tournaments: [
     { k: 'id',            t: 'str'  },
@@ -275,16 +279,28 @@ function verifyIdToken_(idToken) {
   return String(info.email).trim().toLowerCase();
 }
 
-/** adminsシートに載っているか確認し、役割を返す。載っていなければ拒否。 */
+/**
+ * adminsシートに載っているか確認し、役割を返す。載っていなければ拒否。
+ *
+ * 役割は2種類:
+ *   admin  … 全ての操作(大会 + ユーザーマスタの変更)
+ *   editor … 大会の操作とユーザーの新規追加のみ。既存ユーザーの変更はできない
+ *
+ * ⚠️ 空欄は従来どおり admin として扱う(既存の管理者をロックアウトしないため)。
+ *    一方、admin 以外の文字列(打ち間違い等)は最小権限側=editor に倒れる。
+ */
 function assertAdmin_(email) {
   var values = sheet_('admins').getDataRange().getValues();
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][0]).trim().toLowerCase() === email) {
-      return String(values[i][1] || 'admin').trim();
+      return String(values[i][1] || 'admin').trim().toLowerCase();
     }
   }
   throw authError_('このアカウント(' + email + ')には編集権限がありません。管理者に追加を依頼してください。');
 }
+
+/** ユーザーマスタの既存行を書き換えられるのは admin だけ */
+function canManageUsers_(role) { return role === 'admin'; }
 
 function writeAudit_(email, action, target) {
   try {
@@ -304,8 +320,38 @@ function githubApiUrl_(path) {
   return 'https://api.github.com/repos/' + prop_('GITHUB_OWNER') + '/' + prop_('GITHUB_REPO') + '/contents/' + path;
 }
 
-// GitHub Contents APIへ、base64済みのコンテンツをそのままPUTする共通処理
-// (JSON書き出し・バイナリ画像アップロードの両方から使う)
+/**
+ * 内容から git の blob sha を求める。GitHub Contents API が返す `sha` と同じ値になる。
+ *
+ *   sha = SHA1("blob " + <バイト長> + "\0" + <中身のバイト列>)
+ *
+ * これを使うと、既に取得済みの sha と比べるだけで「送っても中身が変わらないか」が
+ * 分かるため、**GitHubへの問い合わせを増やさずに**無駄な書き込みを省ける。
+ */
+function gitBlobSha_(base64Content) {
+  var bytes = Utilities.base64Decode(base64Content);
+  // ヘッダの区切りは半角スペースではなく NUL(0x00)。ソース上で見分けが付かず
+  // 壊れる事故を避けるため、リテラルに埋めず fromCharCode(0) で明示する。
+  var header = 'blob ' + bytes.length + String.fromCharCode(0);
+  var all = [];
+  for (var i = 0; i < header.length; i++) all.push(header.charCodeAt(i)); // ASCII と NUL のみ
+  all = all.concat(bytes);
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, all);
+  var hex = '';
+  for (var j = 0; j < digest.length; j++) hex += ('0' + (digest[j] & 0xFF).toString(16)).slice(-2);
+  return hex;
+}
+
+/**
+ * GitHub Contents APIへ、base64済みのコンテンツをそのままPUTする共通処理
+ * (JSON書き出し・バイナリ画像アップロードの両方から使う)
+ *
+ * 内容が現在のGitHub上のファイルと同一なら、PUTそのものを省く。
+ * これをしないと、値が1つも変わっていない保存でも毎回コミットが積まれる
+ * (「手動編集をGitHubへ反映」で3テーブル分の空コミットが並ぶ現象の原因)。
+ *
+ * 戻り値: 実際に書き込んだら true、内容が同じで省いたら false
+ */
 function putGithubContent_(path, base64Content, message) {
   var pat    = prop_('GITHUB_PAT');
   var branch = prop_('GITHUB_BRANCH', 'main');
@@ -321,6 +367,13 @@ function putGithubContent_(path, base64Content, message) {
     throw new Error('GitHubの取得に失敗しました(' + get.getResponseCode() + '): ' + path);
   }
 
+  // ⚠️ 判定は「一致したら省く」方向にすること。sha の計算が万一狂っても
+  //    「一致しない＝従来どおり書き込む」に倒れるだけで、データが届かない事故にはならない。
+  if (sha && sha === gitBlobSha_(base64Content)) {
+    Logger.log('内容に変更が無いため書き込みを省きました: ' + path);
+    return false;
+  }
+
   var body = { message: message, content: base64Content, branch: branch };
   if (sha) body.sha = sha;
 
@@ -331,6 +384,7 @@ function putGithubContent_(path, base64Content, message) {
   if (put.getResponseCode() >= 300) {
     throw new Error('GitHubへの保存に失敗しました(' + put.getResponseCode() + '): ' + put.getContentText().slice(0, 200));
   }
+  return true;
 }
 
 function pushToGitHub_(path, rows, message) {
@@ -393,7 +447,7 @@ function ensureUsers_(names) {
     var n = 1, id;
     do { id = 'u' + ('000' + n).slice(-4); n++; } while (used[id]);
     used[id] = true;
-    var nu = { id: id, name: name, recDefault: true, archived: false, createdAt: new Date().toISOString(), note: '' };
+    var nu = { id: id, name: name, recDefault: true, archived: false, createdAt: new Date().toISOString(), note: '', sortOrder: 0 };
     rows.push(nu);
     idByName[name] = id;
     added.push(nu);
@@ -405,39 +459,51 @@ function ensureUsers_(names) {
 
 /**
  * action: saveUsers
- * payload.users = [{ name, recDefault, archived }] (アプリ側の名前キーのマスタ)
+ * payload.users = [{ name, recDefault, archived, sortOrder }] (アプリ側の名前キーのマスタ)
  * 名前で突き合わせ、既存行のidは保ったまま値を更新する。未登録の名前は採番して追加。
+ *
+ * 🔴 role による違い(ここが権限の実体。クライアント側のUI制御は目隠しに過ぎない):
+ *   admin  … 追加も既存行の変更も行う
+ *   editor … 追加のみ行い、既存行への変更は**エラーにせず黙って無視する**
+ *
+ * ⚠️ editor の変更をエラーで弾いてはいけない。クライアントは毎回ロースター全件を送るため、
+ *    他の端末で admin が値を変えた直後の editor 端末は、古いキャッシュの値を載せて送ってくる。
+ *    エラーにすると大会中の飛び入り登録まで止まる。無視すれば、editor の古い値で admin の
+ *    変更を巻き戻す事故も同時に防げる(「既存行は editor には見えていない」という扱い)。
  */
-function actionSaveUsers_(payload) {
+function actionSaveUsers_(payload, role) {
+  var canEditExisting = canManageUsers_(role);
   var incoming = (payload && payload.users) || [];
   var rows = readSheet_('users');
   var byName = {};
   var used = {};
   rows.forEach(function (u) { byName[u.name] = u; used[u.id] = true; });
 
-  var added = 0, updated = 0;
+  var added = 0, updated = 0, ignoredChanges = [];
   incoming.forEach(function (u) {
     if (!u || !u.name) return;
     var recDefault = u.recDefault !== false;
     var archived = u.archived === true;
+    var sortOrder = Number(u.sortOrder) || 0;
     var ex = byName[u.name];
     if (ex) {
-      if (ex.recDefault !== recDefault || ex.archived !== archived) {
-        ex.recDefault = recDefault; ex.archived = archived; updated++;
-      }
+      if (ex.recDefault === recDefault && ex.archived === archived && ex.sortOrder === sortOrder) return;
+      if (!canEditExisting) { ignoredChanges.push(u.name); return; }
+      ex.recDefault = recDefault; ex.archived = archived; ex.sortOrder = sortOrder; updated++;
     } else {
       var n = 1, id;
       do { id = 'u' + ('000' + n).slice(-4); n++; } while (used[id]);
       used[id] = true;
       var nu = { id: id, name: u.name, recDefault: recDefault, archived: archived,
-                 createdAt: new Date().toISOString(), note: '' };
+                 createdAt: new Date().toISOString(), note: '', sortOrder: sortOrder };
       rows.push(nu); byName[u.name] = nu; added++;
     }
   });
 
   writeSheet_('users', rows);
   exportTables_(['users'], 'ユーザー情報を更新(' + rows.length + '人)');
-  return { total: rows.length, added: added, updated: updated };
+  return { total: rows.length, added: added, updated: updated,
+           role: role, ignoredChanges: ignoredChanges };
 }
 
 /**
@@ -664,7 +730,8 @@ function doPost(e) {
     if (!lock.tryLock(30000)) throw new Error('他の更新処理と競合しました。少し待ってからやり直してください。');
     try {
       var result;
-      if (action === 'saveUsers')                result = actionSaveUsers_(body.payload);
+      // 大会系のアクションは admin/editor とも可。ユーザーマスタだけ role で分岐する
+      if (action === 'saveUsers')                result = actionSaveUsers_(body.payload, role);
       else if (action === 'saveTournament')       result = actionSaveTournament_(body.payload);
       else if (action === 'updateTournamentMeta') result = actionUpdateTournamentMeta_(body.payload);
       else if (action === 'archiveTournament')    result = actionArchiveTournament_(body.payload);

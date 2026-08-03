@@ -115,6 +115,13 @@
 
   function recDefaultOf(name){ return AtsuCup.pool().userRecDefaults[name] !== false; }
 
+  // 配列を「描画用に」並び順(sortOrder)で並べたコピーを返す。元の配列は変更しない。
+  // ⚠️ state.people をこれで置き換えないこと(理由は選択中リストの描画箇所のコメント参照)。
+  function sortedForDisplay(list, nameOf){
+    const so = AtsuCup.pool().userSortOrder || {};
+    return list.slice().sort((a,b)=> (Number(so[nameOf(a)])||0) - (Number(so[nameOf(b)])||0));
+  }
+
   // 退出時にエントリー内容をサーバーへ保存してから戻る。飛び込みエントリー・エントリー取り消し
   // (対戦表側)は従来通り「💾 進行状況を保存」でのみ反映するため、ここではフルの
   // saveTournamentToData(entries/matches込み)を使う。ゲスト(ローカル)大会・未ログイン・
@@ -208,7 +215,12 @@
       selectedList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ選ばれていません。下の「登録済みユーザーから追加」からタップして選んでください。</div>`;
     }else{
       selectedList.className = 'selected-grid';
-      state.people.forEach(person=>{
+      // 🔴 表示だけ並び順に揃える。state.people の配列順は絶対に変えないこと。
+      //    fromAppTournament の entryRows は t.people の順に作られ、その配列は
+      //    syncSignatureOf の stableStringify に**順序込みで**入る(stableStringifyが
+      //    並べ替えるのはオブジェクトのキーだけで、配列要素は並べ替えない)。
+      //    並べ替えると全大会の署名が変わり、全端末で競合モーダルが誤爆する。
+      sortedForDisplay(state.people, p=>p.name).forEach(person=>{
         const cell = document.createElement('div');
         cell.className = 'roster-cell selected';
         cell.innerHTML = `
@@ -225,7 +237,8 @@
     // 登録済み(アーカイブ除く)だが今回は未選択の人・3列表示
     // ログイン中は本物のロースターのみ、未ログインは練習用ロースターのみを候補にする(混在させない)
     const P = AtsuCup.pool();
-    const activeRoster = P.roster.filter(name => !P.archivedUsers[name]);
+    // ユーザー管理画面で決めた並び順(sortOrder)で候補を出す。アーカイブ済みは除かれる
+    const activeRoster = AtsuCup.orderedRoster(P);
     const unselected = activeRoster.filter(name => !state.people.some(p=>p.name===name));
     availableList.className = '';
     availableList.innerHTML = "";

@@ -11,6 +11,11 @@ const AtsuCup = (function(){
     roster: [],       // [name, ...] この端末に登録済みの参加者マスタ(大会をまたいで再利用)
     userRecDefaults: {}, // {name: boolean} ユーザーごとの撮影可否デフォルト値
     archivedUsers: {}, // {name: boolean} アーカイブ済みユーザー
+    userSortOrder: {}, // {name: number} ユーザー管理画面のD&Dで決めた表示順(昇順・同値は roster順)
+    // この端末が最後に把握しているサーバー側のユーザーマスタの署名(usersSignatureOf)。
+    // 保存ボタン方式にしたため、「未保存の変更があるか」と「他の端末の変更を取り込んでよいか」の
+    // 両方をこれ1つで判定する。null = まだ一度もサーバーの状態を把握していない
+    remoteUsersSig: null,
     tournaments: [],  // [{id,title,details,posterUrl,createdAt,status,people,order,remaining,matches,winnerName,thirdPlaceMatch}]
     // {tournamentId: {sig, updatedAt}} 「この端末が最後に把握しているサーバー側の状態」。
     //   sig       : AtsuCupData.syncSignatureOf() で作った、その時点のサーバー内容の署名
@@ -23,6 +28,7 @@ const AtsuCup = (function(){
     guestRoster: [],
     guestUserRecDefaults: {},
     guestArchivedUsers: {},
+    guestUserSortOrder: {},
     guestTournaments: [],
     // ---- 共通のアクティブ大会ポインタ(どちらのプールの大会かを activePool が示す) ----
     activeId: null,   // 現在操作対象の大会id(各画面が ?id= から setActive でセット)
@@ -31,6 +37,15 @@ const AtsuCup = (function(){
 
   // ログイン状態の判定はGoogleAuthに一本化する(サーバー側の許可判定はGAS側のallowlistが正、ここは表示/出し分けのみに使う)
   function signedIn(){ return typeof GoogleAuth !== 'undefined' && GoogleAuth.isSignedIn(); }
+  // ユーザーマスタを編集できる役割か。
+  // ⚠️ これは**UIの出し分け専用**。権限の実体は gas/Code.gs の canManageUsers_() で、
+  //    ここを偽装してもサーバー側で弾かれる。
+  // ⚠️ role が未確定(GasDB.ping()の応答待ち)の間は false に倒すこと。
+  //    admin UIが一瞬出てから消えるより、出てこない方が誤操作が無い。
+  function isAdmin(){
+    if(!signedIn()) return false;
+    return (typeof GasDB !== 'undefined') && GasDB.getRole() === 'admin';
+  }
   function currentPoolKind(){ return signedIn() ? 'auth' : 'guest'; }
   function isGuestMode(){ return currentPoolKind() === 'guest'; }
   function tournamentsOf(kind){ return kind === 'guest' ? state.guestTournaments : state.tournaments; }
@@ -46,6 +61,8 @@ const AtsuCup = (function(){
       set userRecDefaults(v){ if(guest) state.guestUserRecDefaults = v; else state.userRecDefaults = v; },
       get archivedUsers(){ return guest ? state.guestArchivedUsers : state.archivedUsers; },
       set archivedUsers(v){ if(guest) state.guestArchivedUsers = v; else state.archivedUsers = v; },
+      get userSortOrder(){ return guest ? state.guestUserSortOrder : state.userSortOrder; },
+      set userSortOrder(v){ if(guest) state.guestUserSortOrder = v; else state.userSortOrder = v; },
       get tournaments(){ return tournamentsOf(kind); },
       set tournaments(v){ if(guest) state.guestTournaments = v; else state.tournaments = v; }
     };
@@ -326,13 +343,58 @@ const AtsuCup = (function(){
     return removed;
   }
 
-  // users.jsonの内容を端末のマスタ(roster/recDefaults/archived)へ反映する
+  // ユーザーマスタ(認証プール)の内容を表す署名。
+  // ⚠️ roster配列の順序に依存させないこと。並び順は sortOrder が持つ情報であり、
+  //    配列の並びは登録順のまま(端末ごとに違いうる)なので、順序を含めると
+  //    中身が同じでも署名が食い違い、未保存の誤検出が起きる。
+  function usersSignatureOf(){
+    const rows = state.roster.map(name=>[
+      name,
+      state.userRecDefaults[name] !== false,
+      !!state.archivedUsers[name],
+      Number(state.userSortOrder[name]) || 0
+    ]);
+    rows.sort((a,b)=> a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+    return JSON.stringify(rows);
+  }
+  // 保存ボタンを押していない変更がこの端末にあるか(users.htmlの保存バーの表示条件)。
+  // ⚠️ ここでログイン状態を見ないこと。判定対象は常に認証プールの署名で、練習モード中の
+  //    編集はゲストプール側へ入るのでこの署名は動かない。逆にログイン状態で早期returnすると、
+  //    「編集してからログアウトした」ケースで未保存の変更が保護されなくなる。
+  function hasUnsavedUserChanges(){
+    if(state.remoteUsersSig === null) return false; // サーバーの状態を未把握。判断材料が無い
+    return usersSignatureOf() !== state.remoteUsersSig;
+  }
+
+  // users.jsonの内容を端末のマスタ(roster/recDefaults/archived/sortOrder)へ反映する。
+  //
+  // 🔴 この端末に未保存の変更がある間は、取り込みを丸ごと見送る。
+  //    users.htmlを「保存ボタンを押した時だけサーバーへ送る」方式にしたため、
+  //    従来のように Object.assign でリモート値を無条件に被せると、
+  //    毎ページ読み込みで走るこの関数が**未保存の編集を黙って消してしまう**。
+  //    (即時保存だった頃は窓が狭くて表面化していなかっただけ)
+  //    大会側の3分類マージの「この端末だけ変更 → 何もしない」と同じ考え方。
   function mergeRemoteUsers(users){
     const m = AtsuCupData.toAppRoster(users);
+    if(hasUnsavedUserChanges()) return;
     const set = new Set(state.roster);
     m.roster.forEach(n=>{ if(!set.has(n)){ state.roster.push(n); set.add(n); } });
     Object.assign(state.userRecDefaults, m.userRecDefaults);
     Object.assign(state.archivedUsers, m.archivedUsers);
+    Object.assign(state.userSortOrder, m.userSortOrder);
+    state.remoteUsersSig = usersSignatureOf();
+  }
+
+  // 表示用に並べ替えた名前配列を返す(ユーザー管理・大会エントリーの候補一覧で共用)。
+  // sortOrder昇順 → 同値なら元の roster 配列の順(Array.prototype.sortは安定)。
+  // 全員が0(列を追加する前のデータ)なら、従来とまったく同じ並びになる。
+  // opts.includeArchived を真にしない限りアーカイブ済みは除く。
+  function orderedRoster(P, opts){
+    const p = P || pool();
+    const names = (opts && opts.includeArchived)
+      ? p.roster.slice()
+      : p.roster.filter(n=> !p.archivedUsers[n]);
+    return names.sort((a,b)=> (Number(p.userSortOrder[a])||0) - (Number(p.userSortOrder[b])||0));
   }
 
   // 読み込みは同一オリジンの静的ファイルから行う(アプリと一緒に配信されているdata/を読む)。
@@ -426,7 +488,12 @@ const AtsuCup = (function(){
       removedUsers = state.roster.filter(n=>!remoteNames.has(n));
       if(removedUsers.length){
         state.roster = state.roster.filter(n=>remoteNames.has(n));
-        removedUsers.forEach(n=>{ delete state.userRecDefaults[n]; delete state.archivedUsers[n]; });
+        removedUsers.forEach(n=>{
+          delete state.userRecDefaults[n]; delete state.archivedUsers[n]; delete state.userSortOrder[n];
+        });
+        // ロースターが変わったので、サーバーの状態の把握値も取り直す
+        // (残したままだと「未保存の変更あり」と誤判定してマージが止まる)
+        state.remoteUsersSig = usersSignatureOf();
       }
     }
 
@@ -476,6 +543,7 @@ const AtsuCup = (function(){
     state.guestRoster = [];
     state.guestUserRecDefaults = {};
     state.guestArchivedUsers = {};
+    state.guestUserSortOrder = {};
     state.guestTournaments = [];
     if(state.activePool === 'guest'){ state.activeId = null; state.activePool = 'auth'; }
     persist();
@@ -672,9 +740,18 @@ const AtsuCup = (function(){
     const users = state.roster.map(name => ({
       name,
       recDefault: state.userRecDefaults[name] !== false,
-      archived: !!state.archivedUsers[name]
+      archived: !!state.archivedUsers[name],
+      sortOrder: Number(state.userSortOrder[name]) || 0
     }));
+    const sentSig = usersSignatureOf();
     const r = await GasDB.saveUsers(users);
+    // ⚠️ 送った内容の署名で基準値を更新する(大会側の saveTournamentToData と同じ考え方)。
+    //    これをしないと、保存した直後の読み込みで「未保存の変更あり」と誤判定され、
+    //    他の端末の更新を取り込むマージが永久に止まる。
+    //    サーバーに他端末が足したユーザーがいる場合は署名がずれるが、その差は
+    //    「ローカルは基準値のまま・リモートだけ違う」形になるので次のマージが正しく取り込む。
+    state.remoteUsersSig = sentSig;
+    persist();
     return r.total;
   }
 
@@ -781,10 +858,18 @@ const AtsuCup = (function(){
     state.roster = data.roster || [];
     state.userRecDefaults = data.userRecDefaults || {};
     state.archivedUsers = data.archivedUsers || {};
+    state.userSortOrder = data.userSortOrder || {};
+    // ⚠️ sortOrder導入(2026-08-03)より前のキャッシュには remoteUsersSig が無い。
+    //    その場合は null のままにして「サーバーの状態は未把握」から始める。
+    //    ここで安易に現在値を入れると、実際にはサーバーと違う可能性があるのに
+    //    「未保存の変更なし」と誤認して、他の端末の更新を取り込む前に上書きしうる。
+    //    null なら次の loadFromData のマージが素通しで走って正しく張り直される。
+    state.remoteUsersSig = (typeof data.remoteUsersSig === 'string') ? data.remoteUsersSig : null;
     // ゲストプールは新規追加のキーなので、既存の保存データには無くて当然(空のデフォルトで補う)
     state.guestRoster = data.guestRoster || [];
     state.guestUserRecDefaults = data.guestUserRecDefaults || {};
     state.guestArchivedUsers = data.guestArchivedUsers || {};
+    state.guestUserSortOrder = data.guestUserSortOrder || {};
     state.guestTournaments = data.guestTournaments || [];
     if(Array.isArray(data.tournaments)){
       // everSyncedToServer導入(2026-07-27深夜)より前にキャッシュされた大会にはこのフィールドが
@@ -1198,6 +1283,10 @@ const AtsuCup = (function(){
       state.archivedUsers[newName] = state.archivedUsers[oldName];
       delete state.archivedUsers[oldName];
     }
+    if(Object.prototype.hasOwnProperty.call(state.userSortOrder, oldName)){
+      state.userSortOrder[newName] = state.userSortOrder[oldName];
+      delete state.userSortOrder[oldName];
+    }
     persist();
   }
 
@@ -1311,6 +1400,12 @@ const AtsuCup = (function(){
 
   // 登録者全員(まだ大会に出ていない人も含む)を対象に、通算ポイント・優勝/準優勝/3位/4位の回数を集計する。
   // optsはallFinishedEntriesにそのまま渡す(省略時は従来通り全大会)
+  //
+  // 🔴 アーカイブ済みユーザーは戦績に出さない(2026-08-03)。
+  //    ⚠️ 除外は「返す直前」で行うこと。state.rosterを種にするループだけを絞っても、
+  //    過去大会の参加者から ensure() 経由で復活してしまう。
+  //    ⚠️ 他の人のポイント・順位はこの除外の影響を受けない(ポイントは大会ごとに
+  //    computeTournamentPoints/computePlacements で導出しており、集計対象の人数に依存しない)。
   function computeAllTimeStats(opts){
     const stats = {};
     const ensure = name=>{
@@ -1329,7 +1424,7 @@ const AtsuCup = (function(){
         if(place===1) s.p1++; else if(place===2) s.p2++; else if(place===3) s.p3++; else if(place===4) s.p4++;
       });
     });
-    return Object.values(stats);
+    return Object.values(stats).filter(s=> !state.archivedUsers[s.name]);
   }
 
   // 戦績集計の対象: 優勝が決まっている全大会(終了済み・進行中を問わない)。
@@ -1470,7 +1565,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-29 02:30";
+  const BUILD_DATE = "2026-08-03 11:20";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1566,6 +1661,7 @@ const AtsuCup = (function(){
     computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
     setActive, activeT,
     isGuestMode, pool, authPool, guestPool, poolKindOfTournamentId, guestPoolHasData,
+    isAdmin, orderedRoster, hasUnsavedUserChanges, usersSignatureOf,
     // カード描画は results.html の「優勝カードを作る」がまだ使う(歴代優勝者ページ廃止後も残す)
     THEMES, themeForTitle, drawCard, generateAndSaveCard,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable

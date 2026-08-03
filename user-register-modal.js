@@ -54,7 +54,10 @@ const UserRegisterModal = (function(){
       const uniqNew = [...new Set(lines)].filter(n=>!P.roster.includes(n));
       if(!uniqNew.length){ alert('入力された名前は、すでにすべて登録済みです。'); return; }
       P.roster = [...P.roster, ...uniqNew];
-      uniqNew.forEach(name=>{ P.userRecDefaults[name] = true; });
+      // 並び順は既存の最大値の後ろへ。これをしないと sortOrder が未設定(=0)になり、
+      // 新規登録した人が一覧の先頭へ飛ぶ(既存は並べ替え済みなら1以上のため)
+      let next = Math.max(0, ...P.roster.map(n=>Number(P.userSortOrder[n])||0)) + 1;
+      uniqNew.forEach(name=>{ P.userRecDefaults[name] = true; P.userSortOrder[name] = next++; });
       AtsuCup.persist();
       close();
       if(typeof opts.onRegistered === 'function') opts.onRegistered(uniqNew);
