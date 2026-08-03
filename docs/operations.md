@@ -93,6 +93,33 @@ git update-index --skip-worktree data/*.json data/SCHEMA.md
 Claude Code を使う環境と OpenAI Codex を使う環境が、**それぞれ別のローカルクローン**を持ち、
 同じ GitHub リポジトリを更新する。作業ディレクトリは共有しない。統合は必ず Git/GitHub 経由で行う。
 
+### 🔴 新しいローカル環境をセットアップするとき
+
+**`skip-worktree` はリポジトリに保存されない、クローンごとのローカル設定**である。
+クローンしただけでは設定されていないので、**環境を増やしたら必ず手で設定する**。
+
+```bash
+git clone <このリポジトリ> && cd atsu_cup
+
+# data/*.json を skip-worktree にする(実データ4つだけ。SCHEMA.md は通常追跡のまま)
+git update-index --skip-worktree data/users.json data/tournaments.json data/entries.json data/matches.json
+
+# 確認: 先頭が S なら有効。SCHEMA.md だけ H(通常追跡)であること
+git ls-files -v data
+```
+
+設定しないと、ローカルで `data/*.json` を触ったときに `git add -A` で拾ってしまい、
+GAS が書き出した内容とローカルの実験結果が混ざる。
+
+**`git pull` が `data/*.json` で止まった場合**（skip-worktree のファイルは Git が更新できないことがある）:
+
+```bash
+git update-index --no-skip-worktree data/*.json
+git checkout data                       # ローカルの変更を捨ててHEADに戻す
+git pull --rebase
+git update-index --skip-worktree data/users.json data/tournaments.json data/entries.json data/matches.json
+```
+
 ### 毎回守ること
 
 1. **作業開始前にリモートを取り込む** — `git pull --rebase`
