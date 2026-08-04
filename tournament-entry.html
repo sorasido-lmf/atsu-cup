@@ -196,7 +196,7 @@
       blockedBox.innerHTML = expired
         ? `<div class="empty-state"><span class="big">⚠️</span>ログインの有効期限が切れました。編集するには再度ログインしてください。<br><button class="btn btn-primary" id="sessionRelBtn" style="margin-top:12px;">再ログイン</button></div>`
         : `<div class="empty-state"><span class="big">🚫</span>この大会のエントリーは編集できません。<br><a class="btn btn-ghost" href="${detailHref}" style="margin-top:12px;">大会詳細へ戻る</a></div>`;
-      if(expired) document.getElementById('sessionRelBtn').addEventListener('click', ()=>{ GoogleAuth.signIn().then(renderAll).catch(()=>{}); });
+      if(expired) document.getElementById('sessionRelBtn').addEventListener('click', ()=>{ location.href='settings.html?reauth=1'; });
       return;
     }
     entryPanels.style.display = '';
@@ -285,12 +285,12 @@
         renderAll();
         // ユーザーマスタが増えたので data/users.json(GitHub) にも書き戻す(練習モードでは行わない)
         const box = document.getElementById('syncStatus');
-        const show = (msg, color)=>{ box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : ''; };
+        const show = (msg, tone)=>{ box.innerHTML = msg ? `<div class="inline-status${tone?' is-'+tone:''}" style="margin-top:0;">${escapeHtml(msg)}</div>` : ''; };
         if(AtsuCup.isGuestMode()){ show('練習モードです。この端末にのみ登録しました。'); return; }
         if(!GasDB.canWrite()){ show('この端末にのみ登録しました(GitHubへ反映するには「設定」でGoogleログインしてください)'); return; }
         show('GitHubへ保存中...');
-        try{ const n = await AtsuCup.saveUsersToData(); show(`GitHubへ保存しました(登録者${n}人)`, '#7cffb0'); }
-        catch(e){ show('GitHubへの保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a'); }
+        try{ const n = await AtsuCup.saveUsersToData(); show(`GitHubへ保存しました(登録者${n}人)`, 'ok'); }
+        catch(e){ show('GitHubへの保存に失敗しました: ' + ((e && e.message) || e), 'error'); }
       }
     });
   });

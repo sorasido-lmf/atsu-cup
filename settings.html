@@ -125,12 +125,18 @@
   if(!(typeof AtsuCupGasConfig !== 'undefined' && AtsuCupGasConfig.OAUTH_CLIENT_ID)){
     authState.innerHTML = '⚠️ gas-config.js が未設定です。';
   }else{
-    const buttonWidth = Math.min(400, Math.max(220, Math.floor(signinArea.getBoundingClientRect().width)));
+    const buttonWidth = Math.min(400, Math.max(200, Math.floor(signinArea.getBoundingClientRect().width - 12)));
     GoogleAuth.renderButton(signinArea, { width: buttonWidth }).catch(e=>{
       signinArea.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:#ff6a6a;">ログインボタンの表示に失敗しました: ${e.message}</div>`;
     });
   }
   renderAuth();
+  if(new URLSearchParams(location.search).get('reauth') === '1'){
+    requestAnimationFrame(()=>{
+      signinArea.scrollIntoView({behavior:'smooth', block:'center'});
+      signinArea.classList.add('atsucup-login-focus');
+    });
+  }
 })();
 </script>
 </body>

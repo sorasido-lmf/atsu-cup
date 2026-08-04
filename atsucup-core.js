@@ -1580,7 +1580,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-08-04 15:21";
+  const BUILD_DATE = "2026-08-04 15:52";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1625,10 +1625,18 @@ const AtsuCup = (function(){
     banner.innerHTML = '<span>⚠️ ログインの有効期限が切れました。編集するには再ログインしてください。</span>'
       + '<button type="button" id="atsucupSessionReloginBtn">再ログイン</button>';
     document.body.appendChild(banner);
-    document.getElementById('atsucupSessionReloginBtn').addEventListener('click', ()=>{
-      // coreには再描画の購読機構が無いため、他の同種UI(showGuestWipeBanner/showSyncConflictModal)と
-      // 同じくリロードで画面全体を揃える
-      if(typeof GoogleAuth !== 'undefined') GoogleAuth.signIn().then(()=> location.reload()).catch(()=>{});
+    const reloginBtn = document.getElementById('atsucupSessionReloginBtn');
+    const onSettingsPage = /(?:^|\/)settings\.html$/.test(location.pathname);
+    if(onSettingsPage) reloginBtn.textContent = 'ログインボタンへ';
+    reloginBtn.addEventListener('click', ()=>{
+      // One Tapのprompt()は環境によって表示されず、以前はcatchを握りつぶして無反応になっていた。
+      // 確実なGISボタンを描画する設定画面へ誘導する。設定画面内ではそのボタンまでスクロールする。
+      if(onSettingsPage){
+        const area = document.getElementById('signinArea');
+        if(area){ area.scrollIntoView({behavior:'smooth', block:'center'}); area.classList.add('atsucup-login-focus'); }
+        return;
+      }
+      location.href = 'settings.html?reauth=1';
     });
 
     function update(){

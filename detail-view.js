@@ -806,7 +806,7 @@
         : '⚔️で勝敗入力・シード枠の➕で途中参加・ドラッグ&ドロップで枠の移動/入れ替え';
     bracketSection.innerHTML = `
       <div id="championArea"></div>
-      <div class="tree-title" id="treeTitle">${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
+      <div class="tree-title" id="treeTitle" hidden>${escapeHtml(state.tournamentMeta.title||'トーナメント表')}</div>
       <p class="hint" style="margin:2px 0 8px;">${hint}</p>
       <div class="row" id="jumpRow" style="display:none; margin-bottom:8px;"><button class="btn btn-ghost" id="jumpNextBtn" style="width:100%;">🎯 次の対戦へ</button></div>
       <div class="tree-scroll" id="treeScroll"></div>
@@ -864,7 +864,7 @@
     const area = document.getElementById('championArea');
     if(!area) return;
     const treeTitle = document.getElementById('treeTitle');
-    if(treeTitle) treeTitle.hidden = finished;
+    if(treeTitle) treeTitle.hidden = true;
     if(!finished){ area.innerHTML=''; return; }
     const rows = topPlacements();
     if(!rows.length){
@@ -897,19 +897,19 @@
   // 明示的なボタン操作でのみ書き込む(コミットの乱発と競合を避けるため)。
   async function saveTournamentToGitHub(tid){
     // ⚠️ 保存に成功すると終了済み大会では保存ボタンごと描き直すので、DOM参照は毎回取り直す
-    const show = (msg, color)=>{
+    const show = (msg, tone)=>{
       const box = document.getElementById('dataSaveStatus');
-      if(box) box.innerHTML = msg ? `<div class="empty-state" style="padding:9px 12px; margin-top:8px; font-size:12.5px; color:${color||'inherit'};">${escapeHtml(msg)}</div>` : '';
+      if(box) box.innerHTML = msg ? `<div class="inline-status${tone?' is-'+tone:''}">${escapeHtml(msg)}</div>` : '';
     };
     const setBtn = (disabled, label)=>{
       const btn = document.getElementById('saveToDataBtn');
       if(btn){ btn.disabled = disabled; btn.textContent = label; }
     };
-    if(!GasDB.canWrite()){ show('ログインが必要です。「設定」画面からGoogleログインしてください。', '#ff6a6a'); return; }
+    if(!GasDB.canWrite()){ show('ログインが必要です。「設定」画面からGoogleログインしてください。', 'error'); return; }
     const id = tid || (state.tournamentMeta && state.tournamentMeta.id);
     // 保存前に、他の端末が先に更新していないか確認する(検知しても「上書き」は常に選べる)
     const choice = await AtsuCup.confirmOverwriteIfRemoteNewer(id);
-    if(choice === 'cancel'){ show('保存をやめました。', '#ffcf6a'); return; }
+    if(choice === 'cancel'){ show('保存をやめました。', 'warn'); return; }
     if(choice === 'reload'){ location.reload(); return; }
     setBtn(true, '保存中...');
     show('保存中...(参加者・大会・対戦結果をスプレッドシートへ反映します)');
@@ -918,9 +918,9 @@
       const posterNote = r.posterUploadError ? `⚠️ ポスター画像のアップロードに失敗しました(${r.posterUploadError})。` : '';
       // 未反映の変更が無くなったので、終了済みなら保存ボタンを引っ込めるために描き直す
       if(finished) renderBracket();
-      show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})${posterNote?' '+posterNote:''}`, r.posterUploadError ? '#ffcf6a' : '#7cffb0');
+      show(`保存しました(エントリー${r.entries}件・対戦${r.matches}件${r.addedUsers?`・新規ユーザー${r.addedUsers}人`:''})${posterNote?' '+posterNote:''}`, r.posterUploadError ? 'warn' : 'ok');
     }catch(e){
-      show('保存に失敗しました: ' + ((e && e.message) || e), '#ff6a6a');
+      show('保存に失敗しました: ' + ((e && e.message) || e), 'error');
     }finally{
       setBtn(false, '💾 進行状況を保存');
     }

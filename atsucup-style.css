@@ -125,14 +125,15 @@ a.back-link:active{ transform:scale(.93); }
   position:fixed; left:0; right:0; bottom:0; z-index:9997; display:none;
   align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
   padding:10px 14px calc(10px + env(safe-area-inset-bottom)); /* iPhoneのホームインジケータを避ける */
-  background:linear-gradient(180deg,rgba(21,15,34,.97),rgba(10,7,18,.99));
-  border-top:1.5px solid var(--gold-dim,#8a6d2f); box-shadow:0 -8px 24px rgba(0,0,0,.5);
-  font-size:12px; line-height:1.6; color:#f5efe0; font-family:'Noto Sans JP',sans-serif;
+  background:linear-gradient(180deg,rgba(255,253,247,.98),rgba(245,238,220,.99));
+  border-top:2px solid var(--antique-gold); box-shadow:0 -8px 24px rgba(63,43,24,.24);
+  font-size:12px; line-height:1.6; color:var(--fantasy-text); font-family:'Noto Sans JP',sans-serif;
 }
 .atsucup-session-banner.is-on{ display:flex; }
 .atsucup-session-banner button{
   font-family:inherit; font-size:12px; font-weight:800; padding:8px 14px; border-radius:999px;
-  border:none; background:linear-gradient(90deg,var(--gold),var(--ember2)); color:#1a1208; cursor:pointer;
+  border:1.5px solid #b86e19; background:linear-gradient(180deg,var(--amber),var(--primary-orange)); color:#3b2109; cursor:pointer;
+  box-shadow:0 3px 0 #a95e16;
   -webkit-tap-highlight-color:transparent; flex-shrink:0;
 }
 .atsucup-session-banner button:active{ transform:scale(.95); }
@@ -363,7 +364,7 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
 .btn-page-icon{display:block; width:24px; height:24px; flex:0 0 24px; object-fit:contain;}
 .entry-empty-icon{display:block; width:48px; height:48px; margin:0 auto; object-fit:contain;}
 .entry-label-icon{display:inline-block; width:24px; height:24px; margin-right:6px; vertical-align:-6px; object-fit:contain;}
-footer.note{text-align:center; font-size:11px; color:#544a67; margin-top:6px; padding:0 20px; line-height:1.8;}
+footer.note{text-align:center; font-size:11px; color:var(--dark-cocoa); margin-top:6px; padding:0 20px; line-height:1.8; font-weight:700; text-shadow:0 1px 0 rgba(255,255,255,.9);}
 
 /* Phase 2: 共通パネル、フォーム、ボタンを明るい闘技場テーマへ統一する。 */
 .panel{
@@ -661,12 +662,18 @@ a.back-link{
 }
 .roster-row.dragging,.dnd-ghost{color:var(--fantasy-text)!important;background:#fff1b8!important;border-color:var(--antique-gold)!important;}
 .swap-note{color:var(--fantasy-muted)!important;background:#f2ead8!important;border-color:var(--stone-beige)!important;}
-#championArea{margin-bottom:30px;}
+#championArea{margin-bottom:0;}
+#championArea:not(:empty){margin-bottom:30px;}
 .pick-btn{color:var(--fantasy-text);background:#fffdf7;border:1.5px solid var(--stone-beige);}
 .pick-btn.winner{background:#fff2b8!important;border:3px solid var(--antique-gold)!important;}
 .winner-star{color:#a87512;text-shadow:0 1px 0 #fff;}
-#signinArea{width:100%;max-width:100%;overflow:hidden;}
-#signinArea>div,#signinArea iframe{max-width:100%!important;}
+#signinArea{width:100%;max-width:100%;padding:0 6px;display:flex;justify-content:center;overflow:visible;}
+#signinArea>div,#signinArea iframe{max-width:100%!important;flex:0 1 auto;}
+.inline-status{padding:9px 12px;margin-top:8px;font-size:12.5px;border-radius:9px;border:1px solid var(--stone-beige);background:#fffdf7;color:var(--fantasy-muted);}
+.inline-status.is-ok{color:#2f6b28;background:#eef8e8;border-color:#579848;}
+.inline-status.is-warn{color:#76510f;background:#fff2bd;border-color:var(--antique-gold);}
+.inline-status.is-error{color:#8f2f27;background:#fbe7e3;border-color:#c25b50;}
+.atsucup-login-focus{outline:3px solid rgba(87,196,229,.42);outline-offset:4px;border-radius:12px;}
 .tournament-title-line{
   display:table; max-width:calc(100% - 28px); margin:0 auto 20px!important; padding:8px 16px;
   color:var(--dark-cocoa)!important; font-weight:900; line-height:1.5;

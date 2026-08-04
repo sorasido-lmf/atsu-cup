@@ -143,6 +143,7 @@ state = {
 以前は`detail-view.js`の「エントリーがまだ無い大会」の分岐でだけ、しかもページ**上部**に出していた。対戦表が縦に長い大会では下までスクロールすると気づけず、「編集したのに保存できない」状態に陥っていた。
 
 `atsucup-core.js`の`initSessionExpiredBanner()`に共通化し、**全ページで画面下部に固定表示**する(`initUpdateBanner`と同じ自動起動パターン。更新通知バナーは上部固定なので位置は競合しない)。
+「再ログイン」は表示できない環境があるOne Tapを直接呼ばず、確実なGISログインボタンを持つ`settings.html?reauth=1`へ誘導する。設定画面上では同じボタンが`#signinArea`までスクロールする。
 
 - CSSは`atsucup-style.css`の`.atsucup-session-banner`。`z-index:9997`で競合モーダル(9999)・resyncトースト(9998)より下にし、モーダル表示中は隠れるようにしている
 - 表示中は`body`に`padding-bottom`を足してページ末尾のコンテンツが隠れないようにする(実測の高さを`--atsucup-bottom-bar`で共有し、`showAuthResyncNotice`の下部トーストもその分だけ持ち上げる)

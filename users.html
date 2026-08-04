@@ -98,7 +98,7 @@
   const syncStatus = document.getElementById("syncStatus");
   function setSyncStatus(msg, type){
     syncStatus.innerHTML = msg
-      ? `<div class="empty-state" style="padding:9px 12px; font-size:12.5px; color:${type==='error'?'#ff6a6a':type==='ok'?'#7cffb0':'inherit'};">${escapeHtml(msg)}</div>`
+      ? `<div class="inline-status${type?' is-'+type:''}" style="margin-top:0;">${escapeHtml(msg)}</div>`
       : '';
   }
 
