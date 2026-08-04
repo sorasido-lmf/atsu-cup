@@ -408,18 +408,6 @@
     "updatedAt": "2026-07-29T13:20:22.533Z"
   },
   {
-    "id": "t1785819320466mc95be",
-    "title": "テスト2",
-    "detail": "テストだよー",
-    "posterImage": null,
-    "heldAt": "2026-08-11T15:00:00.000Z",
-    "status": "ongoing",
-    "archived": false,
-    "isOfficial": false,
-    "isRestricted": true,
-    "updatedAt": "2026-08-04T06:38:22.171Z"
-  },
-  {
     "id": "t1785721551793uq2r33",
     "title": "テスト",
     "detail": "",
@@ -430,5 +418,17 @@
     "isOfficial": false,
     "isRestricted": false,
     "updatedAt": "2026-08-04T07:20:06.912Z"
+  },
+  {
+    "id": "t1785819320466mc95be",
+    "title": "テスト2",
+    "detail": "テストだよー",
+    "posterImage": null,
+    "heldAt": "2026-08-11T15:00:00.000Z",
+    "status": "completed",
+    "archived": false,
+    "isOfficial": false,
+    "isRestricted": true,
+    "updatedAt": "2026-08-04T08:04:42.941Z"
   }
 ]
