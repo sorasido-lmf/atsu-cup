@@ -10378,5 +10378,35 @@
     "player2SrcIndex": null,
     "videoUrl": "",
     "playedAt": null
+  },
+  {
+    "id": "t1785721551793uq2r33_r1_m0",
+    "tournamentId": "t1785721551793uq2r33",
+    "round": 1,
+    "stage": "normal",
+    "matchIndex": 0,
+    "player1Id": null,
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": false,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
+    "videoUrl": "",
+    "playedAt": null
+  },
+  {
+    "id": "t1785721551793uq2r33_r1_m1",
+    "tournamentId": "t1785721551793uq2r33",
+    "round": 1,
+    "stage": "normal",
+    "matchIndex": 1,
+    "player1Id": null,
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": false,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
+    "videoUrl": "",
+    "playedAt": null
   }
 ]
