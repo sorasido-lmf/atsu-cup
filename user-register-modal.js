@@ -11,7 +11,7 @@ const UserRegisterModal = (function(){
     style.id = 'urmStyle';
     style.textContent = `
       .urm-overlay{ position:fixed; inset:0; background:rgba(5,3,10,.72); z-index:200; display:flex; align-items:flex-end; justify-content:center; }
-      .urm-sheet{ width:100%; max-width:520px; background:#150f22; border:1.5px solid var(--line); border-bottom:none; border-top-left-radius:20px; border-top-right-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
+      .urm-sheet{ width:100%; max-width:520px; background:var(--pale-marble); color:var(--fantasy-text); border:1.5px solid var(--frame-brown); border-bottom:none; border-top-left-radius:20px; border-top-right-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
       .urm-sheet h3{ margin:0 0 10px; font-size:16px; color:var(--cream,#f5efe0); }
       .urm-actions{ display:flex; gap:10px; margin-top:12px; }
       .urm-actions .btn{ flex:1; }

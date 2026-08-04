@@ -16,7 +16,7 @@
   .confirm-banner .row{ margin-top:10px; }
 </style>
 </head>
-<body>
+<body class="page-scene page-tournament-list">
 <a class="back-link" href="index.html">‹ トップへ</a>
 <div class="wrap">
   <header class="top">
@@ -72,7 +72,7 @@
       <div class="video-card">
         <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" placeholder="例: 第30回 あつ杯"></div>
         <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;"></textarea></div>
-        <div class="field" style="margin-bottom:8px;"><label>開催日</label><input type="date" id="tfHeldDate"></div>
+        <div class="field" style="margin-bottom:8px;"><label>開催日</label><div class="date-input"><input type="date" id="tfHeldDate"><span class="date-icon" role="button" tabindex="0" aria-label="カレンダーを開く">📅</span></div></div>
         <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
         ${AtsuCup.isGuestMode() ? '' : `<div class="field" style="margin-bottom:8px;">${flagToggleHtml()}</div>`}
         <div class="row">
@@ -82,6 +82,10 @@
     `;
     const heldDateInput = document.getElementById('tfHeldDate');
     if(!heldDateInput.value) heldDateInput.value = AtsuCup.dateInputValueOf(new Date().toISOString());
+    const dateIcon = document.querySelector('#formBox .date-icon');
+    const openDatePicker = ()=>{ try{ heldDateInput.showPicker(); }catch(e){ heldDateInput.focus(); } };
+    dateIcon.addEventListener('click', openDatePicker);
+    dateIcon.addEventListener('keydown', ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openDatePicker(); } });
     if(!AtsuCup.isGuestMode()) wireFlagToggles();
     document.getElementById("tfSave").addEventListener("click", async ()=>{
       const title = document.getElementById("tfTitle").value.trim();

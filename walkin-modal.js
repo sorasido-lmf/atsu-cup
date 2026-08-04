@@ -12,10 +12,10 @@ const WalkinModal = (function(){
     style.id = 'wkmStyle';
     style.textContent = `
       .wkm-overlay{ position:fixed; inset:0; background:rgba(5,3,10,.72); z-index:200; display:flex; align-items:flex-end; justify-content:center; }
-      .wkm-sheet{ width:100%; max-width:520px; max-height:80vh; overflow-y:auto; background:#150f22; border:1.5px solid var(--line); border-bottom:none; border-top-left-radius:20px; border-top-right-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
+      .wkm-sheet{ width:100%; max-width:520px; max-height:80vh; overflow-y:auto; background:var(--pale-marble); color:var(--fantasy-text); border:1.5px solid var(--frame-brown); border-bottom:none; border-top-left-radius:20px; border-top-right-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
       .wkm-sheet h3{ margin:0 0 4px; font-size:16px; color:var(--cream,#f5efe0); }
       .wkm-cand-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
-      .wkm-cand{ background:#0d0a14; border:1.5px solid var(--line); border-radius:10px; padding:9px 8px; font-weight:700; font-size:13px; color:var(--cream); cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .wkm-cand{ background:#fffdf7; border:1.5px solid var(--stone-beige); border-radius:10px; padding:9px 8px; font-weight:700; font-size:13px; color:var(--fantasy-text); cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .wkm-cand:active{ background:rgba(255,255,255,.08); }
       .wkm-actions{ display:flex; gap:10px; margin-top:14px; }
       .wkm-actions .btn{ flex:1; }

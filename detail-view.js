@@ -32,7 +32,7 @@
   }
   function heldDateLine(iso){
     const d = iso ? new Date(iso).toLocaleDateString('ja-JP') : '';
-    return d ? `<div class="cur-details" style="color:var(--muted);">開催日: ${d}</div>` : '';
+    return d ? `<div class="cur-details tournament-date">開催日: ${d}</div>` : '';
   }
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
@@ -231,7 +231,7 @@
       <div class="video-card">
         <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" value="${escapeHtml(meta.title)}"></div>
         <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;">${escapeHtml(meta.details||'')}</textarea></div>
-        <div class="field" style="margin-bottom:8px;"><label>開催日</label><input type="date" id="tfHeldDate" value="${AtsuCup.dateInputValueOf(meta.createdAt)}"></div>
+        <div class="field" style="margin-bottom:8px;"><label>開催日</label><div class="date-input"><input type="date" id="tfHeldDate" value="${AtsuCup.dateInputValueOf(meta.createdAt)}"><span class="date-icon" role="button" tabindex="0" aria-label="カレンダーを開く">📅</span></div></div>
         <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
         ${isGuestTournament() ? '' : `<div class="field" style="margin-bottom:8px;">
           <button type="button" class="flag-toggle-btn official ${editOfficial?'on':'off'}" id="tfOfficial">🏅 公式大会</button>
@@ -239,6 +239,11 @@
         </div>`}
         <div class="row"><button class="btn btn-primary" id="tfSave">更新する</button><button class="btn btn-ghost" id="tfCancel">キャンセル</button></div>
       </div>`;
+    const heldDateInput = document.getElementById('tfHeldDate');
+    const dateIcon = content.querySelector('.date-icon');
+    const openDatePicker = ()=>{ try{ heldDateInput.showPicker(); }catch(e){ heldDateInput.focus(); } };
+    dateIcon.addEventListener('click', openDatePicker);
+    dateIcon.addEventListener('keydown', ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openDatePicker(); } });
     document.getElementById('tfCancel').addEventListener('click', ()=>{ mode='view'; render(); });
     // トグルは他の入力欄を巻き込まないよう、ボタン自身のクラスだけ直接切り替える(ローカル大会では非表示のため無い)
     if(!isGuestTournament()){
@@ -858,6 +863,8 @@
   function renderResultBox(){
     const area = document.getElementById('championArea');
     if(!area) return;
+    const treeTitle = document.getElementById('treeTitle');
+    if(treeTitle) treeTitle.hidden = finished;
     if(!finished){ area.innerHTML=''; return; }
     const rows = topPlacements();
     if(!rows.length){
@@ -1281,7 +1288,7 @@
   // 誤操作の原因になっていた(2026-07-28にモーダル方式へ統一)。✏️(名前のインライン編集)も廃止
   function pickBtnHtml(name,winner,recMap){
     const isWinner=winner===name;
-    return `<div class="pick-btn ${isWinner?'winner':''}"><span class="pick-main"><span class="avatar">${escapeHtml(initials(name))}</span><span class="nm">${escapeHtml(name)}</span><span>${recMap[name]?'📹':'🚫'}</span></span></div>`;
+    return `<div class="pick-btn ${isWinner?'winner':''}"><span class="pick-main"><span class="nm">${isWinner?'<span class="winner-star" aria-hidden="true">★</span> ':''}${escapeHtml(name)}</span><span>${recMap[name]?'📹':'🚫'}</span></span></div>`;
   }
   function swappedMatchIndices(r){
     if(r===0) return new Set(); const cur=state.matches[r]; if(!cur) return new Set(); const swapped=new Set();
