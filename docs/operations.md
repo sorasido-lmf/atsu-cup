@@ -100,6 +100,23 @@ Claude Code を使う環境と OpenAI Codex を使う環境が、**それぞれ�
 
 ### 🔴 新しいローカル環境をセットアップするとき
 
+#### GitHub CLI の初期設定
+
+通常の Git 操作と GitHub CLI の役割を区別する。
+
+- `git`: pull、status、add、commit、push、branch
+- `gh`: PR の作成・確認・マージ、GitHub Actions、Issue 操作
+
+GitHub CLI の認証と設定はリポジトリ内ではなく、**各 Mac のユーザー環境**で行う。
+そのため、新しい Mac や新しいユーザー環境では、Terminal で以下を実行する。
+
+```bash
+gh auth login -h github.com --web
+gh config set git_protocol https -h github.com
+gh auth setup-git
+gh auth status
+```
+
 **`skip-worktree` はリポジトリに保存されない、クローンごとのローカル設定**である。
 クローンしただけでは設定されていないので、**環境を増やしたら必ず手で設定する**。
 
