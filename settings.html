@@ -125,7 +125,9 @@
   if(!(typeof AtsuCupGasConfig !== 'undefined' && AtsuCupGasConfig.OAUTH_CLIENT_ID)){
     authState.innerHTML = '⚠️ gas-config.js が未設定です。';
   }else{
-    const buttonWidth = Math.min(400, Math.max(200, Math.floor(signinArea.getBoundingClientRect().width - 12)));
+    // 推奨アカウント表示は通常ボタンより横幅を使うため、パネル内の有効幅を余さず渡す。
+    // CSS側でもGoogle生成DOMの min-width を解除し、右端のロゴが切れないようにする。
+    const buttonWidth = Math.min(400, Math.max(200, Math.floor(signinArea.clientWidth)));
     GoogleAuth.renderButton(signinArea, { width: buttonWidth }).catch(e=>{
       signinArea.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:#ff6a6a;">ログインボタンの表示に失敗しました: ${e.message}</div>`;
     });

@@ -667,10 +667,12 @@ a.back-link{
 .pick-btn{color:var(--fantasy-text);background:#fffdf7;border:1.5px solid var(--stone-beige);}
 .pick-btn.winner{background:#fff2b8!important;border:3px solid var(--antique-gold)!important;}
 .winner-star{color:#a87512;text-shadow:0 1px 0 #fff;}
-#signinArea{width:100%;max-width:100%;padding:0 6px;display:flex;justify-content:center;overflow:visible;}
-#signinArea>div,#signinArea iframe{max-width:100%!important;flex:0 1 auto;}
+#signinArea{width:100%;max-width:100%;padding:0;display:flex;justify-content:center;overflow:visible;}
+#signinArea>div,#signinArea>div>div,#signinArea iframe{width:100%!important;max-width:100%!important;flex:1 1 auto;overflow:visible!important;}
+#signinArea [role="button"]{width:100%!important;max-width:100%!important;min-width:0!important;}
 .inline-status{padding:9px 12px;margin-top:8px;font-size:12.5px;border-radius:9px;border:1px solid var(--stone-beige);background:#fffdf7;color:var(--fantasy-muted);}
-.inline-status.is-ok{color:#2f6b28;background:#eef8e8;border-color:#579848;}
+.inline-status.is-ok{color:var(--dark-cocoa);background:#eef8e8;border-color:#579848;box-shadow:inset 4px 0 0 #3f7b36;font-weight:800;}
+.inline-status.is-working{color:var(--dark-cocoa);background:#eef7fa;border-color:#69a8b9;box-shadow:inset 4px 0 0 #46899c;font-weight:800;}
 .inline-status.is-warn{color:#76510f;background:#fff2bd;border-color:var(--antique-gold);}
 .inline-status.is-error{color:#8f2f27;background:#fbe7e3;border-color:#c25b50;}
 .atsucup-login-focus{outline:3px solid rgba(87,196,229,.42);outline-offset:4px;border-radius:12px;}

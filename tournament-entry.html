@@ -137,7 +137,7 @@
       && !isBlocked();
     if(!shouldSync || exitSyncing){ location.href = href; return; }
     exitSyncing = true;
-    if(exitStatus) exitStatus.innerHTML = `<div class="empty-state" style="padding:9px 12px; font-size:12.5px;">💾 エントリー内容を保存しています...</div>`;
+    if(exitStatus) exitStatus.innerHTML = `<div class="inline-status is-working" role="status">💾 エントリー内容を保存しています...</div>`;
     try{ await AtsuCup.saveTournamentToData(id); }
     catch(e){
       console.error('[atsucup] エントリー保存に失敗しました:', e);
