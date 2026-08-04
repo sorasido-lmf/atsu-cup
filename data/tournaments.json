@@ -414,10 +414,10 @@
     "posterImage": null,
     "heldAt": "2026-08-11T15:00:00.000Z",
     "status": "completed",
-    "archived": false,
+    "archived": true,
     "isOfficial": false,
     "isRestricted": true,
-    "updatedAt": "2026-08-04T08:04:42.941Z"
+    "updatedAt": "2026-08-04T08:08:08.234Z"
   },
   {
     "id": "t1785721551793uq2r33",
