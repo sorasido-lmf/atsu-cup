@@ -121,7 +121,7 @@
     if(!decidable && !hasTree){
       matchupSection.style.display = 'block';
       if(readOnly){
-        matchupSection.innerHTML = `<div class="empty-state"><span class="big">🙋</span>${finished?'この大会は終了しています(対戦データがありません)。':'この大会にはまだエントリーがありません。(閲覧のみ)'}</div>`;
+        matchupSection.innerHTML = `<div class="empty-state"><span class="big"><img class="entry-empty-icon" src="assets/icons/headings/page-entry-v1.png" alt="" width="48" height="48"></span>${finished?'この大会は終了しています(対戦データがありません)。':'この大会にはまだエントリーがありません。(閲覧のみ)'}</div>`;
       }else{
         renderMatchup();
       }
@@ -330,8 +330,8 @@
     const box = document.getElementById('peopleSummary');
     if(!box) return;
     if(!state.people.length){
-      box.innerHTML = `<div class="empty-state"><span class="big">🙋</span>参加者が選ばれていません。</div>
-        <a class="btn btn-primary" style="width:100%;" href="tournament-entry.html?id=${encodeURIComponent(state.tournamentMeta.id)}">🙋 大会エントリー</a>`;
+      box.innerHTML = `<div class="empty-state"><span class="big"><img class="entry-empty-icon" src="assets/icons/headings/page-entry-v1.png" alt="" width="48" height="48"></span>参加者が選ばれていません。</div>
+        <a class="btn btn-primary" style="width:100%;" href="tournament-entry.html?id=${encodeURIComponent(state.tournamentMeta.id)}"><img class="btn-page-icon" src="assets/icons/headings/page-entry-v1.png" alt="" width="24" height="24">大会エントリー</a>`;
       return;
     }
     const rec = state.people.filter(p=>p.rec).length;
@@ -341,7 +341,7 @@
       <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
       <span class="count-badge muted2">🚫 撮影不可: ${state.people.length-rec}人</span>
       <div class="row">
-        <a class="btn btn-ghost" style="width:100%;" href="${entryHref}">🙋 大会エントリー</a>
+        <a class="btn btn-ghost" style="width:100%;" href="${entryHref}"><img class="btn-page-icon" src="assets/icons/headings/page-entry-v1.png" alt="" width="24" height="24">大会エントリー</a>
       </div>`;
   }
 
@@ -476,7 +476,7 @@
     const canConvertToSeed = !match.bye;
     slotPickerEl.innerHTML = `
       <div class="slotpick-sheet">
-        <h3>🙋 エントリー者を選ぶ</h3>
+        <h3><img class="entry-label-icon" src="assets/icons/headings/page-entry-v1.png" alt="" width="24" height="24">エントリー者を選ぶ</h3>
         ${isRestricted ? `<p class="hint" style="margin-top:0; color:#ffb3b3;">撮影不可の偏りを避けるため、候補を絞っています。</p>` : `<p class="hint" style="margin-top:0;">タップでこの枠に入れます。</p>`}
         ${restricted.length ? `
           <div class="slotpick-grid">

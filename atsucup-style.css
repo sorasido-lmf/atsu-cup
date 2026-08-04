@@ -156,7 +156,15 @@ body.atsucup-has-session-banner{ padding-bottom:var(--atsucup-bottom-bar,0px); }
 .atsucup-save-bar button{ flex-shrink:0; margin-top:0; width:auto; padding:9px 16px; font-size:13px; }
 body.atsucup-has-save-bar{ padding-bottom:calc(var(--atsucup-bottom-bar,0px) + var(--atsucup-save-bar,0px)); }
 header.top{padding:22px 6px 14px; text-align:center; position:relative;}
-.crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
+.crown-mark{
+  display:flex; align-items:center; justify-content:center; min-height:64px;
+  font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));
+}
+.page-heading-icon{display:block; width:64px; height:64px; object-fit:contain;}
+@media (max-width:600px){
+  .crown-mark{min-height:56px;}
+  .page-heading-icon{width:56px; height:56px;}
+}
 h1{
   font-family:'Noto Sans JP',sans-serif; font-weight:900; font-size:26px; letter-spacing:.06em;
   margin:6px 0 2px; background:linear-gradient(180deg,#fff2da,var(--gold) 60%, var(--ember2));
@@ -351,6 +359,10 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
 }
 .menu-card:active{transform:scale(.95); border-color:var(--ember2);}
 .menu-card .ic{font-size:28px;}
+.menu-page-icon{display:block; width:48px; height:48px; object-fit:contain;}
+.btn-page-icon{display:block; width:24px; height:24px; flex:0 0 24px; object-fit:contain;}
+.entry-empty-icon{display:block; width:48px; height:48px; margin:0 auto; object-fit:contain;}
+.entry-label-icon{display:inline-block; width:24px; height:24px; margin-right:6px; vertical-align:-6px; object-fit:contain;}
 footer.note{text-align:center; font-size:11px; color:#544a67; margin-top:6px; padding:0 20px; line-height:1.8;}
 
 /* Phase 2: 共通パネル、フォーム、ボタンを明るい闘技場テーマへ統一する。 */
