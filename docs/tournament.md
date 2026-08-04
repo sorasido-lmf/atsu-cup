@@ -94,13 +94,25 @@
 |---|---|---|
 | 編集UI(⚔️/🎫/➕/タップで選ぶ/D&D/進行ボタン/編集する/終了する) | 出る | **全部出ない**(`readOnly`) |
 | 1〜4位の表示 | **出さない**(優勝者決定バッジのみ) | **対戦表の直上のリザルト枠**(`#championArea`) |
-| 管理操作(💾進行状況を保存 / 🗑️削除) | 保存のみ | **どちらも出る**(`canManage()`) |
+| 管理操作(💾進行状況を保存 / 🗑️削除) | 保存のみ | 保存は出る。🗑️削除は**adminのみ**(`canDelete()`) |
 
 対戦表と3位決定戦は**終了後も残る**(「あとから見たい」が要件)。
 
 **`readOnly`と`canManage()`は別軸であること。**
 - `readOnly = isReadOnlyView() || finished` … 編集ロック
 - `canManage() = !isReadOnlyView()` … 保存・削除の可否。**終了済みでもサーバーへ反映したいし削除もしたい**ので`finished`を含めない
+
+### 🔴 大会の削除は admin のみ(2026-08-04)
+
+`canDelete() = canManage() && (isGuestTournament() || AtsuCup.isAdmin())`
+
+- 大会1件ぶんの対戦結果がまとめて一覧から消える操作なので、`editor`には開けない。それまでは`editor`でも削除できた
+- ⚠️ **ローカル(ゲスト)大会は除外する。** サーバーに存在しないこの端末だけのデータで、admin限定にすると「自分で作った練習大会を自分で消せない」不合理な状態になる
+- ⚠️ **終了・保存・情報更新は`editor`も可のまま。** 当日の運営が止まるため絞っていない
+- ⚠️ **ボタンが1つも無いなら`<div class="row">`ごと出さないこと**(終了済み × 非adminで空の枠だけが残る)。`manageRowHtml()`が担当し、非adminには代わりに「🔒 大会の削除は管理者のみ行えます。」を出す
+- ⚠️ **非adminでは`deleteBtn`要素自体が存在しない。** 配線する前に必ず存在確認する
+- 🔴 **`detail-view.js`は`GasDB.ensureRole().then(render)`を呼ぶこと。** 呼ばないと`AtsuCup.isAdmin()`が常にfalseで、**adminでも削除ボタンが出ない**
+- これはUIの出し分けに過ぎない。権限の実体は`gas/Code.gs`の`canDeleteTournament_()`で、`actionArchiveTournament_`が**シートを読む前に**拒否する
 
 ⚠️ **`mode`のリセットは`editing`の時だけに限ること。** `mode = readOnly ? 'view' : mode` と書くと、終了済み(=`readOnly`)で🗑️を押しても`confirmDelete`が即`view`に戻され、**確認バナーが出ず削除できない詰み**になる。正しくは `mode = (readOnly && mode==='editing') ? 'view' : mode`。
 

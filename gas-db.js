@@ -79,13 +79,16 @@ const GasDB = (function(){
     }
 
     if(!data.ok){
-      // 認証・権限エラーは呼び出し側で再ログイン導線に使えるよう印を付ける
       // ⚠️ GASがerrorを返さないケースが実際にあり、「保存に失敗しました」としか出ずに
       //    原因を追えなくなった(2026-07-28)。手掛かりになる値を必ず文言に混ぜる
       const detail = data.error || `原因不明(HTTP ${res.status} / code=${data.code || 'なし'} / action=${action})`;
       const err = new Error(detail);
       err.code = data.code || 'ERROR';
+      // 🔴 needsAuth は「再ログインすれば解決する」という意味。認証エラー(FORBIDDEN)にだけ立てる。
+      //    権限不足(PERMISSION)は再ログインしても解決しないので立てない
+      //    — editor に再ログインを促すと、直らない操作を延々と繰り返させることになる
       if(err.code === 'FORBIDDEN') err.needsAuth = true;
+      if(err.code === 'PERMISSION') err.isPermission = true;
       throw err;
     }
     return data.result;

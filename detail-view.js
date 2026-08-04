@@ -86,6 +86,12 @@
   // 管理操作(💾進行状況を保存・🗑️削除)の可否。終了済みでもこの2つはしたいので、
   // 編集ロック(readOnly)とは別軸で判定する
   function canManage(){ return !isReadOnlyView(); }
+  // 🗑️削除だけは admin 限定(2026-08-04)。大会1件ぶんの対戦結果がまとめて一覧から
+  // 消える操作なので、editor には開けない。
+  // ⚠️ ローカル(ゲスト)大会は除外する。サーバーに存在しないこの端末だけのデータで、
+  //    admin限定にすると「自分で作った練習大会を自分で消せない」不合理な状態になる。
+  // ⚠️ これはUIの出し分けに過ぎない。権限の実体は gas/Code.gs の canDeleteTournament_()
+  function canDelete(){ return canManage() && (isGuestTournament() || AtsuCup.isAdmin()); }
   function renderBlocked(){
     hideSub(); content.style.display='block';
     content.innerHTML = `<div class="empty-state"><span class="big">🚫</span>この大会は表示できません。<br><a class="btn btn-ghost" href="tournaments.html" style="margin-top:12px;">大会一覧へ戻る</a></div>`;
@@ -170,17 +176,15 @@
       <div class="cur-title">${escapeHtml(meta.title)}</div>
       ${meta.details?`<div class="cur-details">${escapeHtml(meta.details)}</div>`:''}
       ${heldDateLine(meta.createdAt)}
-      ${canManage() ? `<div class="row">
-        ${finished
-          ? `<button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>`
-          : `<button class="btn btn-ghost" id="editBtn">編集する</button><button class="btn btn-ghost" id="endBtn">この大会を終了する</button>`}
-      </div>` : ''}
+      ${manageRowHtml()}
       ${confirmEndHtml}
       ${confirmDeleteHtml}
       ${syncErrorHtml}`;
     if(!canManage()) return;
     if(finished){
-      document.getElementById('deleteBtn').addEventListener('click', ()=>{ mode='confirmDelete'; renderLiveHeader(); });
+      // ⚠️ 非adminでは削除ボタン自体が存在しないので、配線する前に必ず存在確認する
+      const delBtn = document.getElementById('deleteBtn');
+      if(delBtn) delBtn.addEventListener('click', ()=>{ mode='confirmDelete'; renderLiveHeader(); });
       if(mode==='confirmDelete') wireDeleteConfirm(meta);
       return;
     }
@@ -198,6 +202,24 @@
         if(!isGuestTournament()) await saveTournamentToGitHub(id);
       });
     }
+  }
+
+  // 管理操作の行。⚠️ ボタンが1つも無いなら <div class="row"> ごと出さないこと
+  // (終了済み × 非admin で空の枠だけが残る)
+  function manageRowHtml(){
+    if(!canManage()) return '';
+    if(!finished){
+      return `<div class="row">
+        <button class="btn btn-ghost" id="editBtn">編集する</button>
+        <button class="btn btn-ghost" id="endBtn">この大会を終了する</button>
+      </div>`;
+    }
+    if(!canDelete()){
+      return `<p class="hint" style="margin:10px 0 0;">🔒 大会の削除は管理者のみ行えます。</p>`;
+    }
+    return `<div class="row">
+      <button class="btn btn-ghost" id="deleteBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
+    </div>`;
   }
 
   // 削除の確認バナーの配線(終了済みのヘッダーから使う)
@@ -1389,6 +1411,14 @@
   render();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
   AtsuCup.ready.then(()=>{ render(); });
+  // 🔴 roleはpingの応答でしか分からない。AtsuCup.isAdmin()はGasDB.getRole()
+  //    (sessionStorageのキャッシュ)を見るだけなので、ensureRole()を一度も呼ばないと
+  //    **adminでも常にfalseになり、🗑️削除ボタンが誰にも出なくなる**。
+  //    未確定の間は安全側(非admin扱い)で描画し、確定してから描き直す
+  const resolveRole = ()=>{
+    if(typeof GasDB !== 'undefined' && GasDB.canWrite()) GasDB.ensureRole().then(()=> render());
+  };
+  resolveRole();
   // ログイン状態が変わったら(このタブ内で)、プール跨ぎガードや候補ロースターが変わるので描き直す
-  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=> render());
+  if(typeof GoogleAuth !== 'undefined') GoogleAuth.onStateChange(()=>{ resolveRole(); render(); });
 })();

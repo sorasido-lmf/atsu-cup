@@ -89,10 +89,19 @@
   function recOf(P, name){ return P.userRecDefaults[name] !== false; }
   function isArchived(P, name){ return !!P.archivedUsers[name]; }
 
-  // ユーザーマスタを編集できるか。
-  // 練習モード(未ログイン)はゲストプール＝この端末だけのデータなので、権限の概念そのものが無い。
-  // ログイン中は role が admin の時だけ。判定の実体はGAS側(canManageUsers_)にあり、ここは目隠し。
-  function canManage(){ return AtsuCup.isGuestMode() || AtsuCup.isAdmin(); }
+  // 権限は2つに分ける。判定の実体はGAS側(canManageUsers_)にあり、ここは目隠し。
+  //
+  // canEditUsers : 📹撮影可否・☰並べ替え・保存バー
+  //   練習モード(未ログイン)はゲストプール＝この端末だけのデータなので、権限の概念が無い→可
+  // canViewArchive : 📦アーカイブ・♻️復元・「アーカイブ済みを表示」の開閉・アーカイブ一覧
+  //   🔴 admin のみ。未ログインでも見せない(2026-08-04)。
+  //   ⚠️ 📦アーカイブも必ず一緒に隠すこと。開閉ボタンだけ隠して📦を残すと、
+  //      アーカイブはできるのに一覧に出ず復元もできない「戻せない」詰みになる。
+  //   ⚠️ この変更で、練習モードで既にアーカイブ済みのゲストユーザーは見えなくなる
+  //      (orderedRoster()がアーカイブ済みを除外するため一覧にも出ない)。ゲストプールは
+  //      ログイン時に clearGuestPool() で消える性質のものなので実害は小さい。
+  function canEditUsers(){ return AtsuCup.isGuestMode() || AtsuCup.isAdmin(); }
+  function canViewArchive(){ return AtsuCup.isAdmin(); }
 
   const roleNotice = document.getElementById("roleNotice");
   const syncStatus = document.getElementById("syncStatus");
@@ -225,37 +234,38 @@
       return row;
     }
     row.className = 'roster-row' + (archived ? ' archived-row' : '');
-    const manage = canManage();
+    const edit = canEditUsers(), archiveOk = canViewArchive();
     if(archived){
+      // アーカイブ一覧そのものが admin にしか出ないが、行側でも念のため揃える
       row.innerHTML = `
         <span class="nm">${escapeHtml(name)}</span>
-        ${manage ? `<button class="rm" data-restore="${escapeHtml(name)}" title="復元">♻️ 復元</button>` : ''}
+        ${archiveOk ? `<button class="rm" data-restore="${escapeHtml(name)}" title="復元">♻️ 復元</button>` : ''}
       `;
       return row;
     }
     const isRec = recOf(P, name);
     row.innerHTML = `
-      ${manage ? `<button class="drag-handle" data-drag="${escapeHtml(name)}" title="ドラッグして並べ替え" aria-label="並べ替え">☰</button>` : ''}
+      ${edit ? `<button class="drag-handle" data-drag="${escapeHtml(name)}" title="ドラッグして並べ替え" aria-label="並べ替え">☰</button>` : ''}
       <span class="order-num">${index+1}</span>
       <span class="nm">${escapeHtml(name)}</span>
-      ${manage
-        ? `<button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>
-           <button class="rm" data-archive="${escapeHtml(name)}" title="アーカイブ">📦</button>`
+      ${edit
+        ? `<button class="cam-toggle-inline ${isRec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${isRec?'📹':'🚫'}</button>`
         : `<span class="cam-static">${isRec?'📹':'🚫'}</span>`}
+      ${archiveOk ? `<button class="rm" data-archive="${escapeHtml(name)}" title="アーカイブ">📦</button>` : ''}
     `;
     return row;
   }
 
   function renderAll(){
     const P = AtsuCup.pool();
-    const manage = canManage();
+    const edit = canEditUsers(), archiveOk = canViewArchive();
     if(panelHeading) panelHeading.textContent = AtsuCup.isGuestMode() ? '登録済みユーザー(ローカル・この端末のみ)' : '登録済みユーザー';
 
     // 並び順(sortOrder)で表示する。全員0(列を追加する前のデータ)なら従来と同じ並びになる
     const activeNames = AtsuCup.orderedRoster(P);
     const archivedNames = P.roster.filter(n=>isArchived(P, n));
 
-    roleNotice.innerHTML = manage
+    roleNotice.innerHTML = edit
       ? (AtsuCup.isGuestMode() ? '' : '<p class="hint" style="margin:0;">☰ をドラッグすると並び順を変更できます。変更は「💾 保存」を押すまでサーバーへ反映されません。</p>')
       : '<p class="hint" style="margin:0;">🔒 並び替え・撮影可否の変更・アーカイブは管理者のみ行えます。新規ユーザーの登録はできます。</p>';
 
@@ -272,12 +282,12 @@
       activeNames.forEach((name,i)=> rosterList.appendChild(makeRow(P, name, { archived:false, index:i })));
     }
 
-    // アーカイブ済みの閲覧・復元は管理者のみ
-    archivedToggle.style.display = manage ? '' : 'none';
+    // 🔴 アーカイブ済みの閲覧・復元は admin のみ。未ログイン(練習モード)でも出さない
+    archivedToggle.style.display = archiveOk ? '' : 'none';
     archivedToggle.textContent = showArchived
       ? `▲ アーカイブ済みを隠す(${archivedNames.length}人)`
       : `▼ アーカイブ済みを表示(${archivedNames.length}人)`;
-    const showArchivedList = manage && showArchived;
+    const showArchivedList = archiveOk && showArchived;
     archivedList.style.display = showArchivedList ? 'flex' : 'none';
     archivedList.style.flexDirection = 'column';
     archivedList.style.gap = '8px';

@@ -37,6 +37,8 @@ LINE モンスターファーム のコミュニティ大会「あつ杯」の�
 - **`window.confirm()` / `window.alert()` に処理の成否を依存させない。** 一部の WebView やテスト環境で抑制され、`confirm()` が常に `false` を返しうる。破壊的操作の確認は自前のインライン UI で作る
 - **ポインタイベントの `pointerdown` で無条件に `preventDefault()` を呼ばない。** タッチ端末で以降の click イベント一式が抑制される。スクロール抑止は CSS の `touch-action:none` に任せ、ドラッグ確定後にだけ呼ぶ
 - **GAS の `verifyIdToken_()` と `assertAdmin_()` を外さない。** この2つがサーバー側の唯一の防御線で、外すと GAS URL を知る全員が書き込める
+- **役割の判定 `canManageUsers_()` / `canDeleteTournament_()` も GAS 側が実体。** クライアントのボタンの出し分けは**目隠しに過ぎない**ので、UI を直しただけで「制限した」と考えない
+- **権限不足を `authError_()` で投げない。** それは `FORBIDDEN` になり「再ログインすれば直る」導線に落ちる。権限不足は `permissionError_()`（`PERMISSION`）を使う
 
 ### コードを変更したら
 

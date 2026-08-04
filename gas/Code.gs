@@ -246,10 +246,24 @@ function prop_(key, fallback) {
   return v;
 }
 
-/** 認証・認可の失敗を、サーバ内部エラーと区別するための印 */
+/** 認証の失敗(未ログイン・トークン不正・期限切れ・adminsシートに無い)を表す印 */
 function authError_(msg) {
   var e = new Error(msg);
   e.isAuth = true;
+  return e;
+}
+
+/**
+ * 権限不足(ログインは通っているが、その役割ではその操作ができない)を表す印。
+ *
+ * 🔴 authError_() と混同しないこと。authError_ は code:'FORBIDDEN' になり、
+ *    クライアント側(gas-db.js)が needsAuth を立てて**再ログインを促す**導線に使う。
+ *    権限不足でそれを出すと、editor に「再ログインすれば直る」と誤解させる
+ *    (再ログインしても admin にはならないので永久に解決しない)。
+ */
+function permissionError_(msg) {
+  var e = new Error(msg);
+  e.isPermission = true;
   return e;
 }
 
@@ -301,6 +315,14 @@ function assertAdmin_(email) {
 
 /** ユーザーマスタの既存行を書き換えられるのは admin だけ */
 function canManageUsers_(role) { return role === 'admin'; }
+
+/**
+ * 大会を削除(アーカイブ)できるのは admin だけ。
+ * 大会1件ぶんの対戦結果がまとめて一覧から消える操作なので、editor には開けない
+ * (2026-08-04追加。それまでは editor でも削除できてしまっていた)。
+ * ⚠️ 保存・情報更新・終了は editor も可のまま。当日の運営が止まるため絞らない。
+ */
+function canDeleteTournament_(role) { return role === 'admin'; }
 
 function writeAudit_(email, action, target) {
   try {
@@ -685,7 +707,12 @@ function actionUpdateTournamentMeta_(payload) {
  * 大会をアーカイブする(行削除ではなくarchived=trueを立てるだけ)。
  * entries/matchesには一切触れない(復元可能性を残すため)。
  */
-function actionArchiveTournament_(payload) {
+function actionArchiveTournament_(payload, role) {
+  // 🔴 シートを読む前に拒否する。ここが大会削除の唯一の防御線で、
+  //    クライアント側でボタンを隠しているのは目隠しに過ぎない
+  if (!canDeleteTournament_(role)) {
+    throw permissionError_('大会の削除は管理者のみ行えます。削除が必要な場合は管理者に依頼してください。');
+  }
   if (!payload || !payload.tournamentId) throw new Error('tournamentIdが指定されていません。');
   var tid = payload.tournamentId;
 
@@ -730,11 +757,12 @@ function doPost(e) {
     if (!lock.tryLock(30000)) throw new Error('他の更新処理と競合しました。少し待ってからやり直してください。');
     try {
       var result;
-      // 大会系のアクションは admin/editor とも可。ユーザーマスタだけ role で分岐する
+      // 大会の保存・情報更新は admin/editor とも可(当日の運営が止まらないように)。
+      // ユーザーマスタの既存行の変更と、大会の削除だけ role で分岐する
       if (action === 'saveUsers')                result = actionSaveUsers_(body.payload, role);
       else if (action === 'saveTournament')       result = actionSaveTournament_(body.payload);
       else if (action === 'updateTournamentMeta') result = actionUpdateTournamentMeta_(body.payload);
-      else if (action === 'archiveTournament')    result = actionArchiveTournament_(body.payload);
+      else if (action === 'archiveTournament')    result = actionArchiveTournament_(body.payload, role);
       else throw new Error('不明なaction: ' + action);
 
       writeAudit_(email, action, (body.payload && (
@@ -750,6 +778,12 @@ function doPost(e) {
     if (err && err.isAuth) {
       writeAudit_(email || '(未認証)', 'DENIED:' + action, msg);
       return jsonResponse_({ ok: false, code: 'FORBIDDEN', error: msg });
+    }
+    // 権限不足は FORBIDDEN と分ける。FORBIDDEN はクライアントで「再ログイン」導線に
+    // 使われるが、権限不足は再ログインしても解決しないため(誤誘導になる)
+    if (err && err.isPermission) {
+      writeAudit_(email || '(不明)', 'DENIED:' + action, msg);
+      return jsonResponse_({ ok: false, code: 'PERMISSION', error: msg });
     }
     Logger.log('doPost失敗: ' + msg);
     return jsonResponse_({ ok: false, code: 'ERROR', error: msg });
