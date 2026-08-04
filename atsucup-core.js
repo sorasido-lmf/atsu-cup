@@ -1525,19 +1525,19 @@ const AtsuCup = (function(){
     cctx.beginPath(); cctx.arc(W/2,H/2,W/2-10,0,Math.PI*2); cctx.stroke();
     cctx.strokeStyle = "rgba(255,255,255,.25)"; cctx.lineWidth = 2;
     cctx.beginPath(); cctx.arc(W/2,H/2,W/2-26,0,Math.PI*2); cctx.stroke();
-    cctx.font = "80px serif"; cctx.fillStyle = theme.ring; cctx.textAlign = "center";
+    cctx.font = "80px sans-serif"; cctx.fillStyle = theme.ring; cctx.textAlign = "center";
     cctx.shadowColor = theme.glow; cctx.shadowBlur = 30;
     cctx.fillText("👑", W/2, H*0.30); cctx.shadowBlur = 0;
     cctx.font = "600 22px 'Noto Sans JP', sans-serif"; cctx.fillStyle = "rgba(255,255,255,.75)";
     cctx.letterSpacing = "6px"; cctx.fillText("W I N N E R", W/2, H*0.40); cctx.letterSpacing = "0px";
     let fontSize = 92;
-    cctx.font = `900 ${fontSize}px 'Cinzel', 'Noto Serif JP', serif`;
+    cctx.font = `900 ${fontSize}px 'Noto Sans JP', sans-serif`;
     while(cctx.measureText(name).width > W*0.78 && fontSize > 40){
-      fontSize -= 4; cctx.font = `900 ${fontSize}px 'Cinzel', 'Noto Serif JP', serif`;
+      fontSize -= 4; cctx.font = `900 ${fontSize}px 'Noto Sans JP', sans-serif`;
     }
     cctx.fillStyle = "#fff8ec"; cctx.shadowColor = theme.glow; cctx.shadowBlur = 36;
     cctx.fillText(name, W/2, H*0.56); cctx.shadowBlur = 0;
-    cctx.font = "700 26px 'Noto Serif JP', serif"; cctx.fillStyle = theme.ring;
+    cctx.font = "700 26px 'Noto Sans JP', sans-serif"; cctx.fillStyle = theme.ring;
     cctx.fillText(`優勝者 ${name}`, W/2, H*0.88);
     let titleSize = 15;
     cctx.font = `500 ${titleSize}px 'JetBrains Mono', monospace`;
@@ -1580,7 +1580,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-08-03 16:28";
+  const BUILD_DATE = "2026-08-04 03:39";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;

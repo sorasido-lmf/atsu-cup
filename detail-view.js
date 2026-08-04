@@ -416,10 +416,10 @@
     const s=document.createElement('style'); s.id='slotPickStyle';
     s.textContent=`
       .slotpick-overlay{ position:fixed; inset:0; background:rgba(5,3,10,.72); z-index:200; display:flex; align-items:flex-end; justify-content:center; }
-      .slotpick-sheet{ width:100%; max-width:520px; max-height:80vh; overflow-y:auto; background:#150f22; border:1.5px solid var(--line); border-bottom:none; border-top-left-radius:20px; border-top-right-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
-      .slotpick-sheet h3{ margin:0 0 4px; font-size:16px; color:var(--cream,#f5efe0); }
+      .slotpick-sheet{ width:100%; max-width:520px; max-height:80vh; overflow-y:auto; color:var(--fantasy-text); background:var(--pale-marble); border:1.5px solid var(--frame-brown); border-bottom:none; border-top-left-radius:20px; border-top-right-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
+      .slotpick-sheet h3{ margin:0 0 4px; font-size:16px; color:var(--dark-cocoa); }
       .slotpick-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
-      .slotpick-cand{ background:#0d0a14; border:1.5px solid var(--line); border-radius:10px; padding:9px 8px; font-weight:700; font-size:13px; color:var(--cream); cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .slotpick-cand{ background:#fffdf7; border:1.5px solid var(--stone-beige); border-radius:10px; padding:9px 8px; font-weight:700; font-size:13px; color:var(--fantasy-text); cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .slotpick-cand:active{ background:rgba(255,255,255,.08); }
       .slotpick-actions{ display:flex; gap:10px; margin-top:14px; }
       .slotpick-actions .btn{ flex:1; }
@@ -639,17 +639,22 @@
   function boxSvg(r,i,side,name,centerY,isWinner,isForced,hasWinner,dndOn,isSeedWin){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     const isLoser = hasWinner && !isWinner;
-    const fill=isWinner?'#161020':'#0d0a14'; const stroke=isWinner?'#e8b34c':(isForced?'#7a2c2c':'#3a2f4d');
+    const fill=isWinner?'#fff2b8':'#fffdf7'; const stroke=isWinner?'#c89b3c':(isForced?'#d94b3d':'#d7c29a');
     const strokeW=isWinner?2.5:1.5;
-    const nameFill=isWinner?'#e8b34c':'#f1e6cf'; const weight=isWinner?'900':'700';
-    const opacity=isLoser?0.45:1;
+    const nameFill='#3f2b18'; const weight=isWinner?'900':'700';
+    const opacity=isLoser?0.52:1;
     const dash = isSeedWin ? ' stroke-dasharray="3 3"' : '';
-    const seedTag = isSeedWin ? `<text x="${cLeft+BOX_W-8}" y="${boxY+11}" font-size="9" font-style="italic" text-anchor="end" fill="#6b5f82">シード</text>` : '';
+    const seedTag = isSeedWin ? `<text class="tree-seed-tag" x="${cLeft+BOX_W-8}" y="${boxY+11}" font-size="9" font-style="italic" text-anchor="end" fill="#6f5a43">シード</text>` : '';
+    const stateClass = isWinner ? ' is-winner' : (isLoser ? ' is-loser' : '');
+    const forcedClass = isForced ? ' is-forced' : '';
+    const seedClass = isSeedWin ? ' is-seed-win' : '';
+    const displayName = `${isWinner?'★ ':''}${truncate(name,isWinner?6:7)}`;
     treeSlotRects[`${r}_${i}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
-    return `<g class="tree-slot" data-r="${r}" data-m="${i}" data-side="${side}" opacity="${opacity}"${dndOn?' data-dnd="1"':''}>`
+    return `<g class="tree-slot${stateClass}${forcedClass}${seedClass}" data-r="${r}" data-m="${i}" data-side="${side}" opacity="${opacity}"${dndOn?' data-dnd="1"':''}>`
+      +`<title>${escapeHtml(name)}${isWinner?'（勝者）':''}</title>`
       +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"${dash}/>`
       +seedTag
-      +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="13" font-weight="${weight}" fill="${nameFill}">${escapeHtml(truncate(name,7))}</text>`
+      +`<text class="tree-name" x="${cLeft+8}" y="${centerY+4.5}" font-size="13" font-weight="${weight}" fill="${nameFill}">${escapeHtml(displayName)}</text>`
       +`<text x="${cLeft+BOX_W-8}" y="${centerY+4.5}" font-size="10.5" text-anchor="end">${bRecMap[name]?'📹':'🚫'}</text>`
       +`</g>`;
   }
@@ -660,8 +665,8 @@
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     treeSlotRects[`bye_${i}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     const addIcon = readOnly ? '' : `<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
-    const rect=`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5" stroke-dasharray="3 3"/>`;
-    const label=`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6b5f82">シード</text>`;
+    const rect=`<rect class="tree-seed-box" x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#f2ead8" stroke="#d7c29a" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+    const label=`<text class="tree-seed-label" x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6f5a43">シード</text>`;
     const canMoveCard = !readOnly && r===0 && state.matches.length===1;
     if(canMoveCard) return `<g class="tree-slot tree-card-drag" data-cardm="${i}">${rect}${label}</g>${addIcon}`;
     return rect+label+addIcon;
@@ -671,8 +676,8 @@
   function byePlaceholderSvg(i, centerY){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
     const addIcon = readOnly ? '' : `<text class="tree-add-icon" data-addm="${i}" x="${cLeft+BOX_W-6}" y="${centerY+5}" font-size="14" text-anchor="end">➕</text>`;
-    const rect=`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5" stroke-dasharray="3 3"/>`;
-    const label=`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">シード</text>`;
+    const rect=`<rect class="tree-seed-box" x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#f2ead8" stroke="#d7c29a" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+    const label=`<text class="tree-seed-label" x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6f5a43">シード</text>`;
     const canMoveCard = !readOnly && state.matches.length===1;
     if(canMoveCard) return `<g class="tree-slot tree-card-drag" data-cardm="${i}">${rect}${label}</g>${addIcon}`;
     return rect+label+addIcon;
@@ -684,19 +689,19 @@
   function slotTapBoxSvg(m,side,centerY,label,dim){
     const cLeft=colLeft(0), boxY=centerY-BOX_H/2;
     if(readOnly){
-      return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
-        +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">${dim?'シード':'未定'}</text>`;
+      return `<rect class="tree-pending-box" x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#eee4cf" stroke="#d7c29a" stroke-width="1.5"/>`
+        +`<text class="tree-pending-label" x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#806c53">${dim?'シード':'未定'}</text>`;
     }
     treeSlotRects[`0_${m}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     const canMoveCard = state.matches.length===1;
     const cls = canMoveCard ? 'tree-slot tree-slot-tap tree-card-drag' : 'tree-slot tree-slot-tap';
     const cardAttr = canMoveCard ? ` data-cardm="${m}"` : '';
     const rectAttr = dim
-      ? 'fill="#0a0810" stroke="#2a2338"'
-      : 'fill="#0d0a14" stroke="#5a4a2a"';
+      ? 'class="tree-seed-box" fill="#f2ead8" stroke="#d7c29a"'
+      : 'class="tree-slot-action-box" fill="#fff8e7" stroke="#c89b3c"';
     const textSvg = dim
-      ? `<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#4a4060">${escapeHtml(label)}</text>`
-      : `<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#e8b34c">${escapeHtml(label)}</text>`;
+      ? `<text class="tree-seed-label" x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6f5a43">${escapeHtml(label)}</text>`
+      : `<text class="tree-slot-action-label" x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="11.5" text-anchor="middle" fill="#5e4023">${escapeHtml(label)}</text>`;
     return `<g class="${cls}" data-r="0" data-m="${m}" data-side="${side}"${cardAttr}>`
       +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" ${rectAttr} stroke-width="1.5" stroke-dasharray="3 3"/>`
       +textSvg
@@ -708,13 +713,13 @@
   function pendingBoxSvg(r,i,side,centerY,isSeed){
     const cLeft=colLeft(r), boxY=centerY-BOX_H/2;
     if(isSeed){
-      return `<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0d0a14" stroke="#3a2f4d" stroke-width="1.5" stroke-dasharray="3 3"/>`
-        +`<text x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6b5f82">シード</text>`;
+      return `<rect class="tree-seed-box" x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#f2ead8" stroke="#d7c29a" stroke-width="1.5" stroke-dasharray="3 3"/>`
+        +`<text class="tree-seed-label" x="${cLeft+8}" y="${centerY+4.5}" font-size="12" font-style="italic" fill="#6f5a43">シード</text>`;
     }
     treeSlotRects[`${r}_${i}_${side}`]={x:cLeft,y:boxY,w:BOX_W,h:BOX_H};
     return `<g class="tree-slot" data-r="${r}" data-m="${i}" data-side="${side}">`
-      +`<rect x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#0a0810" stroke="#2a2338" stroke-width="1.5"/>`
-      +`<text x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#4a4060">？？？</text>`
+      +`<rect class="tree-pending-box" x="${cLeft}" y="${boxY}" width="${BOX_W}" height="${BOX_H}" rx="6" fill="#eee4cf" stroke="#d7c29a" stroke-width="1.5"/>`
+      +`<text class="tree-pending-label" x="${cLeft+BOX_W/2}" y="${centerY+4.5}" font-size="12" text-anchor="middle" fill="#806c53">？？？</text>`
       +`</g>`;
   }
   let treeCardRects={};
@@ -730,8 +735,8 @@
       const round=state.matches[r]||[]; const matchCount=leafCount/Math.pow(2,r+1);
       const boxRight=colLeft(r)+BOX_W, joinX=boxRight+STUB_W;
       const frameX=colLeft(r)-4; const frameW=(r===totalRounds-1)?(BOX_W+8):COL_W;
-      framesSvg+=`<rect x="${frameX}" y="${HEADER_H-2}" width="${frameW}" height="${svgH-HEADER_H}" rx="8" fill="none" stroke="#241d33" stroke-width="1"/>`;
-      framesSvg+=`<text x="${colLeft(r)+BOX_W/2}" y="14" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9a8fae">${escapeHtml(roundLabel(matchCount))}</text>`;
+      framesSvg+=`<rect class="tree-round-frame" x="${frameX}" y="${HEADER_H-2}" width="${frameW}" height="${svgH-HEADER_H}" rx="8" fill="none" stroke="#d7c29a" stroke-width="1"/>`;
+      framesSvg+=`<text class="tree-round-label" x="${colLeft(r)+BOX_W/2}" y="14" font-size="11.5" font-weight="700" text-anchor="middle" fill="#5e4023">${escapeHtml(roundLabel(matchCount))}</text>`;
       for(let i=0;i<matchCount;i++){
         const m=round[i]; const centerY=jointY(r,i); const upY=centerY-TREE_ROW_H/2, downY=centerY+TREE_ROW_H/2;
         const isForced = m && m.a && m.b && !bRecMap[m.a] && !bRecMap[m.b];
@@ -743,9 +748,9 @@
           cardZoneSvg+=`<rect class="tree-card-hoverzone" data-cardhover="${i}" x="${colLeft(0)}" y="${cardY}" width="${BOX_W}" height="${cardH}" rx="8" fill="none" stroke="transparent" stroke-width="3" pointer-events="none"/>`;
         }
         // カード内の短いコの字のみ(次カラムへ伸びる線は引かない)
-        linesSvg+=`<path d="M${boxRight},${upY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
-        linesSvg+=`<path d="M${boxRight},${downY} H${joinX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
-        linesSvg+=`<path d="M${joinX},${upY} V${downY}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
+        linesSvg+=`<path class="tree-connector" d="M${boxRight},${upY} H${joinX}" stroke="#8a6232" stroke-width="2" fill="none"/>`;
+        linesSvg+=`<path class="tree-connector" d="M${boxRight},${downY} H${joinX}" stroke="#8a6232" stroke-width="2" fill="none"/>`;
+        linesSvg+=`<path class="tree-connector" d="M${joinX},${upY} V${downY}" stroke="#8a6232" stroke-width="2" fill="none"/>`;
         [['a',m?m.a:null,upY],['b',m?m.b:null,downY]].forEach(([side,name,y])=>{
           if(name===null){
             if(r===0 && m && m.bye && side==='b'){
@@ -777,12 +782,12 @@
         if(pickKind){
           const bx=boxRight+STUB_W/2;
           const icon = pickKind==='match' ? '⚔️' : '🎫'; // 片側だけの枠は不戦勝の確定なので札アイコンで区別する
-          pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle cx="${bx}" cy="${centerY}" r="11" fill="#241b12" stroke="#e8b34c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">${icon}</text></g>`;
+          pickBtnSvg+=`<g class="tree-pick" data-r="${r}" data-m="${i}"><circle class="tree-pick-button" cx="${bx}" cy="${centerY}" r="11" fill="#fff2b8" stroke="#c89b3c" stroke-width="1.5"/><text x="${bx}" y="${centerY+4.5}" font-size="12" text-anchor="middle">${icon}</text></g>`;
         }
       }
     }
     let trophySvg=''; if(state.winnerName){ const fy=jointY(totalRounds-1,0); trophySvg=`<text x="${lastColRight+6}" y="${fy+8}" font-size="22">🏆</text>`; }
-    return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="${svgW}" height="${svgH}" fill="#0a0810"/>${framesSvg}${linesSvg}${boxesSvg}${pickBtnSvg}${cardZoneSvg}${trophySvg}</svg>`;
+    return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg"><rect class="tree-canvas-bg" x="0" y="0" width="${svgW}" height="${svgH}" fill="#f7f4ea"/>${framesSvg}${linesSvg}${boxesSvg}${pickBtnSvg}${cardZoneSvg}${trophySvg}</svg>`;
   }
 
   function renderBracket(){
@@ -1365,12 +1370,12 @@
   (function ensurePickBtnStyle(){
     const s=document.createElement('style');
     s.textContent=`.match-pick-row{display:flex; flex-direction:column; gap:6px;}
-      .pick-btn{display:flex; align-items:center; gap:6px; min-width:0; background:#161320; border:1px solid var(--line); border-radius:10px; color:var(--cream); font-weight:700; font-size:16px; padding:4px;}
+      .pick-btn{display:flex; align-items:center; gap:6px; min-width:0; background:#fffdf7; border:1px solid var(--stone-beige); border-radius:10px; color:var(--fantasy-text); font-weight:700; font-size:16px; padding:4px;}
       /* ⚠️ cursor:pointer や :active を付けないこと。3位決定戦の名前は表示専用で、
          勝敗の入力は⚔️モーダル側。押せそうに見えると誤タップを誘発する(2026-07-28) */
       .pick-main{flex:1; display:flex; align-items:center; gap:10px; min-width:0; padding:9px 8px; border-radius:8px;}
       .pick-btn span.nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-      .pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); font-weight:900; }`;
+      .pick-btn.winner{ background:linear-gradient(90deg,#fff2b8,#fffaf0); border-color:var(--antique-gold); color:var(--dark-cocoa); font-weight:900; }`;
     document.head.appendChild(s);
   })();
 
