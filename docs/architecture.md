@@ -28,6 +28,10 @@
 | `google-auth.js` / `gas-db.js` / `gas-config.js` | GAS連携（Googleログイン・API呼び出し・設定値） |
 | `gas/Code.gs` / `gas/README.md` | GASバックエンド本体とセットアップ手順 |
 | `user-register-modal.js` / `walkin-modal.js` | 共通モーダル |
+| `guide-assistant.js` / `guide-assistant.css` | 対象10ページ共通の助手キャラクター案内。ページ別せりふ・画像抽選・固定表示を担当 |
+
+対象10ページはすべて、スマホ幅で戻るボタンと吹き出しを同じ段に置き、
+せりふの高さに応じてタイトルまでの余白を自動調整する。
 
 ---
 
