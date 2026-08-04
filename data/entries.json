@@ -4110,5 +4110,37 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": false
+  },
+  {
+    "id": "t1785721551793uq2r33_u0004",
+    "tournamentId": "t1785721551793uq2r33",
+    "userId": "u0004",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785721551793uq2r33_u0001",
+    "tournamentId": "t1785721551793uq2r33",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785721551793uq2r33_u0003",
+    "tournamentId": "t1785721551793uq2r33",
+    "userId": "u0003",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785721551793uq2r33_u0009",
+    "tournamentId": "t1785721551793uq2r33",
+    "userId": "u0009",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
   }
 ]
