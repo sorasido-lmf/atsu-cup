@@ -2,6 +2,14 @@
   --bg:#0a0810; --bg2:#14101c; --panel:#1b1626; --panel2:#241d33; --line:#3a2f4d;
   --ember:#ff6a2b; --ember2:#ff9145; --gold:#e8b34c; --gold-dim:#8a6a2c;
   --cream:#f1e6cf; --muted:#9a8fae; --danger:#ff4d4d; --ok:#3ecf8e;
+  /* 明るい闘技場テーマ用トークン。Phase 1ではホーム背景のフォールバックにだけ使用する。 */
+  --surface-ivory:#F5EEDC; --warm-sand:#E7D5B3; --stone-beige:#D7C29A; --pale-marble:#F7F4EA;
+  --frame-brown:#8A6232; --dark-cocoa:#5E4023; --antique-gold:#C89B3C; --highlight-gold:#E2C46E;
+  --primary-orange:#E89A2E; --amber:#F1B73A; --sky-blue:#57C4E5;
+  --theme-success:#6CC04A; --theme-danger:#D94B3D; --winner-highlight:#FFD85C;
+  --fantasy-text:#3F2B18; --fantasy-muted:#6F5A43; --fantasy-focus:#1684A3;
+  --fantasy-panel-radius:20px;
+  --fantasy-panel-shadow:0 12px 30px rgba(94,64,35,.18), 0 2px 6px rgba(94,64,35,.14);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html{overflow-x:hidden; width:100%;}
@@ -27,7 +35,62 @@ body{
     var(--bg);
   padding-bottom:48px;
 }
-.wrap{max-width:640px;margin:0 auto;padding:18px 14px 0;}
+/* ページ別の固定背景。疑似要素をビューポートへ固定し、iOS Safariで不安定な
+   background-attachment:fixedを使わずにコンテンツだけをスクロールさせる。 */
+body.page-scene{
+  isolation:isolate;
+  background:var(--surface-ivory);
+  min-height:100svh;
+  padding-bottom:calc(48px + env(safe-area-inset-bottom));
+}
+body.page-scene::before{
+  content:"";
+  position:fixed;
+  /* iOS Safariの動的ツールバーとelastic overscrollで端が露出しないよう、
+     固定レイヤーをvisual viewportの上下より広く確保する。 */
+  inset:-160px 0;
+  z-index:-1;
+  pointer-events:none;
+  background-color:var(--surface-ivory);
+  background-image:var(--page-background-desktop);
+  background-position:var(--page-background-position-desktop,center);
+  background-repeat:no-repeat;
+  background-size:cover;
+}
+body.page-exterior{
+  --page-background-desktop:url("assets/backgrounds/colosseum/top-settings-desktop-v1.png");
+  --page-background-mobile:url("assets/backgrounds/colosseum/top-settings-mobile-v1.png");
+  --page-background-position-desktop:center center;
+  --page-background-position-mobile:center center;
+}
+body.page-tournament-list{
+  --page-background-desktop:url("assets/backgrounds/colosseum/tournament-list-desktop-v2.png");
+  --page-background-mobile:url("assets/backgrounds/colosseum/tournament-list-mobile-v2.png");
+  --page-background-position-desktop:center center;
+  --page-background-position-mobile:center center;
+}
+body.page-lobby{
+  --page-background-desktop:url("assets/backgrounds/colosseum/lobby-desktop-v2.png");
+  --page-background-mobile:url("assets/backgrounds/colosseum/lobby-mobile-v2.png");
+  --page-background-position-desktop:center center;
+  --page-background-position-mobile:center center;
+}
+body.page-scene header.top{
+  text-shadow:0 2px 8px rgba(10,8,16,.78);
+}
+body.page-scene header.top h1{
+  filter:drop-shadow(0 2px 3px rgba(10,8,16,.68));
+}
+body.page-scene header.top .sub{
+  color:rgba(247,244,234,.94);
+}
+@media (max-width:600px){
+  body.page-scene::before{
+    background-image:var(--page-background-mobile);
+    background-position:var(--page-background-position-mobile,center);
+  }
+}
+.wrap{max-width:640px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 14px 0;}
 a.back-link{
   position:fixed; top:calc(12px + env(safe-area-inset-top)); left:12px; z-index:50;
   color:var(--muted); font:900 11px 'Noto Sans JP',sans-serif; text-decoration:none;
@@ -95,7 +158,7 @@ body.atsucup-has-save-bar{ padding-bottom:calc(var(--atsucup-bottom-bar,0px) + v
 header.top{padding:22px 6px 14px; text-align:center; position:relative;}
 .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
 h1{
-  font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:26px; letter-spacing:.06em;
+  font-family:'Noto Sans JP',sans-serif; font-weight:900; font-size:26px; letter-spacing:.06em;
   margin:6px 0 2px; background:linear-gradient(180deg,#fff2da,var(--gold) 60%, var(--ember2));
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
@@ -109,7 +172,7 @@ h1{
   background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:.5;
 }
 .panel h2{
-  font-family:'Cinzel','Noto Serif JP',serif; font-size:15px; letter-spacing:.05em; color:var(--gold);
+  font-family:'Noto Sans JP',sans-serif; font-size:15px; letter-spacing:.05em; color:var(--gold);
   margin:0 0 12px; display:flex; align-items:center; gap:8px;
 }
 .panel h2 .num{
@@ -251,7 +314,7 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
 .flag-toggle-btn.official.off, .flag-toggle-btn.restricted.off{ color:var(--muted); background:transparent; border:1px solid var(--line); }
 .poster-img{width:100%; border-radius:12px; display:block; margin-bottom:12px; border:1px solid var(--line);}
 .cur-title{
-  font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:19px; color:var(--gold);
+  font-family:'Noto Sans JP',sans-serif; font-weight:900; font-size:19px; color:var(--gold);
   margin:0 0 8px;
 }
 .cur-details{font-size:12.5px; color:var(--cream); line-height:1.8; white-space:pre-wrap; margin-bottom:4px;}
@@ -289,3 +352,219 @@ textarea:focus{outline:none; border-color:var(--gold-dim);}
 .menu-card:active{transform:scale(.95); border-color:var(--ember2);}
 .menu-card .ic{font-size:28px;}
 footer.note{text-align:center; font-size:11px; color:#544a67; margin-top:6px; padding:0 20px; line-height:1.8;}
+
+/* Phase 2: 共通パネル、フォーム、ボタンを明るい闘技場テーマへ統一する。 */
+.panel{
+  color:var(--fantasy-text);
+  background:rgba(247,244,234,.94);
+  border:1.5px solid rgba(138,98,50,.76);
+  border-radius:var(--fantasy-panel-radius);
+  box-shadow:var(--fantasy-panel-shadow);
+  backdrop-filter:blur(4px);
+}
+.panel::before{
+  height:3px;
+  background:linear-gradient(90deg,transparent,var(--highlight-gold),var(--antique-gold),var(--highlight-gold),transparent);
+  opacity:.9;
+}
+.panel h2{
+  color:var(--dark-cocoa);
+}
+.ongoing-card,
+.menu-card{
+  color:var(--fantasy-text);
+  background:linear-gradient(180deg,rgba(255,255,255,.88),rgba(245,238,220,.96));
+  border:1.5px solid var(--stone-beige);
+  box-shadow:0 4px 10px rgba(94,64,35,.10), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.panel .cur-title{
+  color:var(--dark-cocoa);
+}
+.panel .cur-details,
+.panel p.hint,
+.panel .empty-state,
+.panel .field label,
+.panel .section-title{
+  color:var(--fantasy-muted);
+}
+.panel .section-title{
+  border-bottom-color:var(--stone-beige);
+}
+.field input,
+.field select,
+textarea,
+.video-card input{
+  color:var(--fantasy-text);
+  background:rgba(255,253,247,.96);
+  border-color:var(--stone-beige);
+  min-height:44px;
+}
+.field input::placeholder,
+textarea::placeholder,
+.video-card input::placeholder{
+  color:#8B7860;
+}
+.field input:focus,
+.field select:focus,
+textarea:focus,
+.video-card input:focus{
+  outline:3px solid rgba(87,196,229,.42);
+  outline-offset:1px;
+  border-color:var(--fantasy-focus);
+}
+.video-card,
+.filter-acc{
+  color:var(--fantasy-text);
+  background:rgba(255,253,247,.74);
+  border-color:var(--stone-beige);
+}
+.filter-acc > summary{
+  color:var(--fantasy-text);
+}
+.filter-acc .acc-body{
+  border-top-color:var(--stone-beige);
+}
+body .urm-sheet,
+body .wkm-sheet{
+  color:var(--fantasy-text);
+  background:var(--pale-marble);
+  border-color:var(--frame-brown);
+  box-shadow:0 -12px 36px rgba(94,64,35,.22);
+}
+body .urm-sheet h3,
+body .wkm-sheet h3{
+  color:var(--dark-cocoa);
+}
+.panel .confirm-banner,
+.panel .signout-confirm{
+  color:#7A2B22;
+  background:linear-gradient(180deg,rgba(217,75,61,.13),rgba(217,75,61,.05));
+  border-color:var(--theme-danger);
+}
+.btn{
+  min-width:44px;
+  min-height:44px;
+  border:1.5px solid transparent;
+  border-radius:13px;
+  transition:transform .12s ease,box-shadow .12s ease,background .12s ease,border-color .12s ease,opacity .12s ease;
+}
+.btn-primary{
+  color:#3B2109;
+  background:linear-gradient(180deg,var(--amber),var(--primary-orange));
+  border-color:#B86E19;
+  box-shadow:0 4px 0 #A95E16,0 8px 16px rgba(138,98,50,.20);
+}
+.btn-gold{
+  color:var(--fantasy-text);
+  background:linear-gradient(180deg,#F7DD8F,var(--highlight-gold));
+  border-color:var(--antique-gold);
+  box-shadow:0 4px 0 #A77A25,0 8px 16px rgba(138,98,50,.18);
+}
+.btn-ghost{
+  color:var(--dark-cocoa);
+  background:linear-gradient(180deg,#FFFDF7,var(--surface-ivory));
+  border-color:var(--frame-brown);
+  box-shadow:0 3px 0 var(--stone-beige),0 7px 14px rgba(94,64,35,.12);
+}
+.btn-danger{
+  color:#FFF9F1;
+  background:linear-gradient(180deg,#E86658,var(--theme-danger));
+  border-color:#A9342A;
+  box-shadow:0 4px 0 #983027,0 8px 16px rgba(120,36,29,.20);
+}
+.btn:active,
+.menu-card:active,
+.ongoing-card:active{
+  transform:translateY(2px);
+  box-shadow:0 1px 0 rgba(94,64,35,.45),0 3px 8px rgba(94,64,35,.14);
+}
+.btn:disabled{
+  opacity:.48;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+.btn.selected,
+.btn[aria-pressed="true"]{
+  border-color:var(--sky-blue);
+  box-shadow:0 0 0 3px rgba(87,196,229,.28),0 3px 0 var(--stone-beige);
+}
+:is(.btn,.menu-card,.ongoing-card,input,select,textarea):focus-visible{
+  outline:3px solid var(--fantasy-focus);
+  outline-offset:3px;
+}
+@media (hover:hover){
+  .btn:not(:disabled):hover,
+  .menu-card:hover,
+  .ongoing-card:hover{
+    filter:brightness(1.035);
+    border-color:var(--antique-gold);
+  }
+}
+
+/* 共通パネルの見出し構造。
+   参考UIにならい、枠タイトルは濃色帯と白文字で本文から明確に分ける。 */
+.panel{
+  background:linear-gradient(180deg,rgba(255,253,247,.78),rgba(245,238,220,.64));
+  border-color:rgba(138,98,50,.72);
+  box-shadow:none;
+  backdrop-filter:blur(4px);
+}
+.panel::before{
+  display:none;
+}
+.panel > h2{
+  margin:-18px -16px 14px;
+  padding:11px 16px 10px;
+  color:#fffdf7;
+  background:linear-gradient(90deg,rgba(94,64,35,.96),rgba(122,94,61,.94));
+  border-bottom:2px solid rgba(226,196,110,.9);
+  text-shadow:none;
+}
+/* 枠ごとの01/02表記だけを非表示にし、見出し本文や他の番号表示は残す。 */
+.panel > h2 .num{
+  display:none;
+}
+/* パネル内の中見出しは、必要な情報階層を保つ細い帯として扱う。 */
+.panel .section-title{
+  margin-left:-4px;
+  margin-right:-4px;
+  padding:7px 10px;
+  color:#fffdf7;
+  background:linear-gradient(90deg,rgba(94,64,35,.92),rgba(138,98,50,.76));
+  border:0;
+  border-radius:7px;
+}
+/* 枠内では影に頼らず、境界線・色面・余白で階層を表現する。 */
+.panel :is(
+  .ongoing-card,.menu-card,.video-card,.filter-acc,.stat-box,.hist-item,
+  .rank-row,.past-tournament-item,.place-row,.place-card,.roster-row,
+  .roster-cell,.pair-card,.order-item,.match-card,.points-hint,.champion-box,
+  .tree-scroll,
+  input,select,textarea,.btn
+){
+  box-shadow:none;
+}
+/* 見出し・固有名を含め、サイトUIでは明朝系フォントを使用しない。 */
+:is(h1,h2,h3,h4,.cur-title,.tree-title,.champion-box .name,.place-card .nm){
+  font-family:'Noto Sans JP',sans-serif;
+}
+body.page-scene footer.note{
+  padding-bottom:calc(16px + env(safe-area-inset-bottom));
+}
+
+/* 通常表示のiOS Safariでは上下ツールバーの高さがsafe-areaへ含まれない場合がある。
+   背景付きページの先頭・末尾に追加の退避領域を設け、ヘッダーとフッターの文字が
+   ブラウザUIへ潜り込むのを抑える。ページを内部スクロール化しないため対戦表操作には影響しない。 */
+@supports (-webkit-touch-callout:none){
+  @media (max-width:600px){
+    body.page-scene{
+      padding-bottom:calc(120px + env(safe-area-inset-bottom));
+    }
+    body.page-scene .wrap{
+      padding-top:calc(72px + env(safe-area-inset-top));
+    }
+    body.page-scene footer.note{
+      padding-bottom:calc(24px + env(safe-area-inset-bottom));
+    }
+  }
+}

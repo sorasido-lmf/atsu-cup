@@ -2,10 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>あつ杯 大会詳細</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
 <style>
   /* ---- 過去大会詳細 ---- */
@@ -36,42 +36,42 @@
   .decide-tabs button{flex:1; margin-top:0;}
   .order-list{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
   .order-item{
-    display:flex; align-items:center; gap:8px; background:#0d0a14; border:1px solid var(--line);
+    display:flex; align-items:center; gap:8px; color:var(--fantasy-text); background:#fffdf7; border:1px solid var(--stone-beige);
     border-radius:10px; padding:9px 10px; font-size:13px; touch-action:pan-y;
   }
   .order-item.dragging{ box-shadow:0 8px 22px rgba(0,0,0,.5); border-color:var(--ember2); z-index:20; position:relative; }
-  .order-item.is-seed{ border-color:var(--gold-dim); background:#181206; }
+  .order-item.is-seed{ border-color:var(--antique-gold); background:#fff2b8; }
   .seed-toggle-btn, .remove-btn{
-    flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:var(--muted);
+    flex-shrink:0; background:#fffdf7; border:1px solid var(--stone-beige); border-radius:6px; color:var(--fantasy-muted);
     font-size:13px; padding:5px 8px; cursor:pointer;
   }
-  .seed-toggle-btn.active{ background:rgba(232,179,76,.18); border-color:var(--gold-dim); color:var(--gold); }
-  .remove-btn{ color:#ff8f8f; }
+  .seed-toggle-btn.active{ background:#fff2b8; border-color:var(--antique-gold); color:var(--dark-cocoa); }
+  .remove-btn{ color:var(--theme-danger); }
   .order-item .drag-handle{
     flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center;
     color:var(--muted); font-size:18px; cursor:grab; touch-action:none; border-radius:6px;
   }
   .order-item .drag-handle:active{ cursor:grabbing; background:rgba(255,255,255,.08); }
-  .order-item .idx{font-family:'JetBrains Mono',monospace; color:var(--ember2); width:20px; text-align:right; font-size:12px; flex-shrink:0;}
+  .order-item .idx{font-family:'JetBrains Mono',monospace; color:var(--frame-brown); width:20px; text-align:right; font-size:12px; flex-shrink:0;}
   .order-item .nm-edit{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:6px 4px; border-radius:6px; cursor:text;}
   .order-item .nm-edit:active{ background:rgba(255,255,255,.08); }
   .order-item .nm-edit-input{
-    flex:1; min-width:0; background:#161320; border:1px solid var(--ember2); color:var(--cream);
+    flex:1; min-width:0; background:#fffdf7; border:1px solid var(--antique-gold); color:var(--fantasy-text);
     border-radius:6px; padding:5px 8px; font-size:13px; font-family:'Noto Sans JP',sans-serif;
   }
   .order-item .cam{font-size:12px; opacity:.8; flex-shrink:0;}
-  .manual-seed-label{font-size:12px; font-weight:900; color:var(--gold); margin:14px 0 8px; letter-spacing:.04em;}
+  .manual-seed-label{font-size:12px; font-weight:900; color:var(--dark-cocoa); margin:14px 0 8px; letter-spacing:.04em;}
   .seed-chip-list{display:flex; flex-wrap:wrap; gap:8px;}
   .seed-chip{
-    background:#161320; border:1px solid var(--line); color:var(--cream); border-radius:999px;
+    background:#fffdf7; border:1px solid var(--stone-beige); color:var(--fantasy-text); border-radius:999px;
     padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer;
   }
-  .seed-chip.active{ background:linear-gradient(90deg,rgba(232,179,76,.32),rgba(232,179,76,.1)); border-color:var(--gold-dim); color:var(--gold); }
+  .seed-chip.active{ background:linear-gradient(90deg,#fff2b8,#fffaf0); border-color:var(--antique-gold); color:var(--dark-cocoa); }
   .pairing-list{display:flex; flex-direction:column; gap:10px;}
-  .pair-card{background:#0d0a14; border:1px solid var(--line); border-radius:12px; padding:10px;}
+  .pair-card{color:var(--fantasy-text); background:#fffdf7; border:1px solid var(--stone-beige); border-radius:12px; padding:10px;}
   .pair-row{display:flex; align-items:center; gap:8px;}
   .pair-slot{
-    flex:1; display:flex; align-items:center; gap:4px; min-width:0; background:#161320; border:1px solid var(--line);
+    flex:1; display:flex; align-items:center; gap:4px; min-width:0; background:var(--pale-marble); border:1px solid var(--stone-beige);
     border-radius:10px; padding:8px 6px;
   }
   .pair-slot.bye{ color:var(--muted); font-style:italic; justify-content:center; }
@@ -94,8 +94,8 @@
   .roulette-modal{ position:fixed; inset:0; z-index:2147483000; display:flex; align-items:center; justify-content:center; padding:20px; }
   .roulette-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.72); backdrop-filter:blur(2px); }
   .roulette-card{
-    position:relative; width:100%; max-width:340px; background:linear-gradient(180deg,var(--panel),var(--panel2));
-    border:1px solid var(--line); border-radius:18px; padding:22px 18px; box-shadow:0 20px 60px rgba(0,0,0,.6);
+    position:relative; width:100%; max-width:340px; color:var(--fantasy-text); background:var(--pale-marble);
+    border:1.5px solid var(--frame-brown); border-radius:18px; padding:22px 18px; box-shadow:0 20px 60px rgba(56,35,15,.36);
     display:flex; flex-direction:column; align-items:center;
   }
   .wheel-holder{position:relative; width:260px; height:260px; margin:0 auto;}
@@ -112,7 +112,7 @@
     box-shadow:0 0 14px rgba(232,179,76,.4);
   }
   .picked-banner{
-    margin:16px 0 6px; text-align:center; min-height:34px; font-family:'Cinzel','Noto Serif JP',serif;
+    margin:16px 0 6px; text-align:center; min-height:34px; font-family:'Noto Sans JP',sans-serif;
     font-size:19px; font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(232,179,76,.5);
   }
   .picked-banner.seed{
@@ -130,19 +130,41 @@
   }
 
   /* ---- 対戦表(bracket) ---- */
-  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:15px; color:var(--gold); margin-bottom:2px;}
+  .tree-title{font-family:'Noto Sans JP',sans-serif; font-weight:900; font-size:15px; color:var(--dark-cocoa); margin-bottom:2px;}
   .tree-scroll{
     /* 縦方向は内側の別スクロール箱にせず、ページ全体の通常スクロールに任せる方針
        (2026-07-27変更。以前はoverflow-y:auto+max-height:92vhで内箱化していたが、
        大人数の大会でネストしたスクロール領域になり使いづらいという指摘のため撤廃)。
        横方向は対戦表の列数が多いラウンドで従来通りスクロール可能にする。 */
-    overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
-    background:#0a0810; padding:8px 0;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;
+    border-radius:16px; border:1.5px solid var(--frame-brown);
+    background:rgba(247,244,234,.94); padding:8px 0;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.72),inset -12px 0 18px -18px rgba(94,64,35,.5);
+    scrollbar-color:var(--antique-gold) var(--warm-sand); scrollbar-width:thin;
     /* iOSでエントリー名を長押しした際に、D&Dより先にテキスト選択/コピーの吹き出しが
        出てしまいドラッグが妨げられるのを防ぐ(実機のみで再現、2026-07-27) */
     -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
   }
   .tree-scroll svg{ display:block; width:max(100%, var(--svg-natural-w, 0px)); max-width:none; height:auto; }
+  .tree-canvas-bg{ fill:rgba(247,244,234,.80); }
+  .tree-round-frame{ fill:none; stroke:rgba(138,98,50,.22); }
+  .tree-round-label{ fill:var(--dark-cocoa); }
+  .tree-connector{ fill:none; stroke:var(--frame-brown); }
+  .tree-slot rect{ fill:#fffdf7; stroke:var(--stone-beige); }
+  .tree-slot .tree-name{ fill:var(--fantasy-text); }
+  .tree-slot.is-winner{ opacity:1; }
+  .tree-slot.is-winner rect{ fill:#fff2b8; stroke:var(--antique-gold); }
+  .tree-slot.is-winner .tree-name{ fill:var(--dark-cocoa); }
+  .tree-slot.is-loser{ opacity:.52; }
+  .tree-slot.is-forced rect{ stroke:var(--theme-danger); }
+  .tree-slot.is-seed-win rect{ stroke-dasharray:3 3; }
+  .tree-seed-tag,.tree-seed-label{ fill:var(--fantasy-muted); }
+  .tree-seed-box,.tree-slot rect.tree-seed-box{ fill:#f2ead8; stroke:var(--stone-beige); stroke-dasharray:3 3; }
+  .tree-pending-box,.tree-slot rect.tree-pending-box{ fill:#eee4cf; stroke:var(--stone-beige); }
+  .tree-pending-label{ fill:#806c53; }
+  .tree-slot-action-box,.tree-slot rect.tree-slot-action-box{ fill:#fff8e7; stroke:var(--antique-gold); stroke-dasharray:3 3; }
+  .tree-slot-action-label{ fill:var(--dark-cocoa); }
+  .tree-pick-button{ fill:#fff2b8; stroke:var(--antique-gold); }
   .tree-pick{ cursor:pointer; }
   .tree-pick circle{ transition: fill .12s ease; }
   .tree-pick:active circle{ fill:#3a2c14 !important; }
@@ -176,36 +198,45 @@
   }
   .champion-box{
     margin-top:18px; text-align:center; padding:22px 14px; border-radius:14px;
-    background:radial-gradient(circle at 50% 0%, rgba(232,179,76,.2), transparent 70%), #14100a; border:1px solid var(--gold-dim);
+    background:radial-gradient(circle at 50% 0%, rgba(255,216,92,.45), transparent 72%),var(--pale-marble);
+    border:1.5px solid var(--antique-gold); box-shadow:var(--fantasy-panel-shadow);
   }
-  .champion-box .label{font-size:11px; letter-spacing:.2em; color:var(--muted); text-transform:uppercase;}
+  .champion-box .label{font-size:11px; letter-spacing:.2em; color:var(--fantasy-muted); text-transform:uppercase;}
   .champion-box .name{
-    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:26px; color:var(--gold);
-    margin:6px 0 14px; text-shadow:0 0 16px rgba(232,179,76,.5);
+    font-family:'Noto Sans JP',sans-serif; font-weight:900; font-size:26px; color:var(--dark-cocoa);
+    margin:6px 0 14px; text-shadow:0 1px 0 #fff,0 0 14px rgba(255,216,92,.58);
   }
+  .champion-box .place-row{
+    color:var(--fantasy-text); background:#fffdf7; border-color:var(--stone-beige);
+  }
+  .champion-box .place-row.p1{
+    background:#fff2b8; border-color:var(--antique-gold);
+  }
+  .champion-box .place-row .p{ color:var(--fantasy-muted); }
+  .champion-box .place-row.p1 .p{ color:var(--dark-cocoa); }
   .match-pick-modal{ position:fixed; inset:0; z-index:2147483000; display:flex; align-items:center; justify-content:center; padding:20px; }
   .match-pick-modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.62); backdrop-filter:blur(2px); }
   .match-pick-modal-card{
-    position:relative; width:100%; max-width:360px; background:linear-gradient(180deg,var(--panel),var(--panel2));
-    border:1px solid var(--line); border-radius:16px; padding:20px 18px; box-shadow:0 20px 60px rgba(0,0,0,.6);
+    position:relative; width:100%; max-width:360px; color:var(--fantasy-text); background:var(--pale-marble);
+    border:1.5px solid var(--frame-brown); border-radius:18px; padding:20px 18px; box-shadow:0 20px 60px rgba(56,35,15,.36);
   }
   .match-pick-modal-title{
-    text-align:center; font-size:11px; letter-spacing:.15em; color:var(--ember2); font-weight:900;
+    text-align:center; font-size:11px; letter-spacing:.15em; color:var(--dark-cocoa); font-weight:900;
     text-transform:uppercase; margin-bottom:14px;
   }
   .match-pick-modal-row{ display:flex; flex-direction:column; gap:10px; align-items:stretch; }
   .match-pick-modal-row .vs-label{ text-align:center; }
   .modal-pick-btn{
     display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
-    background:#161320; border:1px solid var(--line); border-radius:12px; color:var(--cream);
+    background:#fffdf7; border:1.5px solid var(--stone-beige); border-radius:12px; color:var(--fantasy-text);
     font-weight:900; font-size:17px; padding:16px 18px; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
   }
   .modal-pick-btn .nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .modal-pick-btn:active{ background:rgba(255,255,255,.08); }
-  .modal-pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); }
+  .modal-pick-btn.winner{ background:linear-gradient(90deg,#fff2b8,#fffaf0); border-color:var(--antique-gold); color:var(--dark-cocoa); }
 </style>
 </head>
-<body>
+<body class="page-scene page-tournament-list">
 <a class="back-link" href="tournaments.html">‹ 大会一覧へ</a>
 <div class="wrap">
   <header class="top">
