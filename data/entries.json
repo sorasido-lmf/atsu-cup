@@ -4064,54 +4064,6 @@
     "recAtEntry": true
   },
   {
-    "id": "t1785819320466mc95be_u0001",
-    "tournamentId": "t1785819320466mc95be",
-    "userId": "u0001",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": false
-  },
-  {
-    "id": "t1785819320466mc95be_u0003",
-    "tournamentId": "t1785819320466mc95be",
-    "userId": "u0003",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785819320466mc95be_u0004",
-    "tournamentId": "t1785819320466mc95be",
-    "userId": "u0004",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785819320466mc95be_u0002",
-    "tournamentId": "t1785819320466mc95be",
-    "userId": "u0002",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785819320466mc95be_u0008",
-    "tournamentId": "t1785819320466mc95be",
-    "userId": "u0008",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true
-  },
-  {
-    "id": "t1785819320466mc95be_u0010",
-    "tournamentId": "t1785819320466mc95be",
-    "userId": "u0010",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": false
-  },
-  {
     "id": "t1785721551793uq2r33_u0004",
     "tournamentId": "t1785721551793uq2r33",
     "userId": "u0004",
@@ -4174,5 +4126,53 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true
+  },
+  {
+    "id": "t1785819320466mc95be_u0001",
+    "tournamentId": "t1785819320466mc95be",
+    "userId": "u0001",
+    "placement": 3,
+    "wins": 0,
+    "recAtEntry": false
+  },
+  {
+    "id": "t1785819320466mc95be_u0003",
+    "tournamentId": "t1785819320466mc95be",
+    "userId": "u0003",
+    "placement": 1,
+    "wins": 3,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785819320466mc95be_u0004",
+    "tournamentId": "t1785819320466mc95be",
+    "userId": "u0004",
+    "placement": 2,
+    "wins": 2,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785819320466mc95be_u0002",
+    "tournamentId": "t1785819320466mc95be",
+    "userId": "u0002",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785819320466mc95be_u0008",
+    "tournamentId": "t1785819320466mc95be",
+    "userId": "u0008",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true
+  },
+  {
+    "id": "t1785819320466mc95be_u0010",
+    "tournamentId": "t1785819320466mc95be",
+    "userId": "u0010",
+    "placement": 3,
+    "wins": 0,
+    "recAtEntry": false
   }
 ]
