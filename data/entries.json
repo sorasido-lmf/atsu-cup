@@ -5,7 +5,8 @@
     "userId": "u0011",
     "placement": 3,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0006",
@@ -13,7 +14,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0009",
@@ -21,7 +23,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0003",
@@ -29,7 +32,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0004",
@@ -37,7 +41,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0015",
@@ -45,7 +50,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0027",
@@ -53,7 +59,8 @@
     "userId": "u0027",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0002",
@@ -61,7 +68,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0018",
@@ -69,7 +77,8 @@
     "userId": "u0018",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0028",
@@ -77,7 +86,8 @@
     "userId": "u0028",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0001",
@@ -85,7 +95,8 @@
     "userId": "u0001",
     "placement": 1,
     "wins": 5,
-    "recAtEntry": false
+    "recAtEntry": false,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0014",
@@ -93,7 +104,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0007",
@@ -101,7 +113,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0029",
@@ -109,7 +122,8 @@
     "userId": "u0029",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0013",
@@ -117,7 +131,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0010",
@@ -125,7 +140,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0030",
@@ -133,7 +149,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0008",
@@ -141,7 +158,8 @@
     "userId": "u0008",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852032535363ygjkd_u0012",
@@ -149,7 +167,8 @@
     "userId": "u0012",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0004",
@@ -157,7 +176,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0009",
@@ -165,7 +185,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0002",
@@ -173,7 +194,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0003",
@@ -181,7 +203,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0012",
@@ -189,7 +212,8 @@
     "userId": "u0012",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0007",
@@ -197,7 +221,8 @@
     "userId": "u0007",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0005",
@@ -205,7 +230,8 @@
     "userId": "u0005",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0008",
@@ -213,7 +239,8 @@
     "userId": "u0008",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0013",
@@ -221,7 +248,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0010",
@@ -229,7 +257,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0011",
@@ -237,7 +266,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0006",
@@ -245,7 +275,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0014",
@@ -253,7 +284,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0015",
@@ -261,7 +293,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0016",
@@ -269,7 +302,8 @@
     "userId": "u0016",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0017",
@@ -277,7 +311,8 @@
     "userId": "u0017",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0018",
@@ -285,7 +320,8 @@
     "userId": "u0018",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785150826872lhf6la_u0001",
@@ -293,7 +329,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0004",
@@ -301,7 +338,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0012",
@@ -309,7 +347,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0014",
@@ -317,7 +356,8 @@
     "userId": "u0014",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0008",
@@ -325,7 +365,8 @@
     "userId": "u0008",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0010",
@@ -333,7 +374,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0030",
@@ -341,7 +383,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0017",
@@ -349,7 +392,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0007",
@@ -357,7 +401,8 @@
     "userId": "u0007",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0003",
@@ -365,7 +410,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0018",
@@ -373,7 +419,8 @@
     "userId": "u0018",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0005",
@@ -381,7 +428,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785239870017on2c25_u0011",
@@ -389,7 +437,8 @@
     "userId": "u0011",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0004",
@@ -397,7 +446,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0012",
@@ -405,7 +455,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0014",
@@ -413,7 +464,8 @@
     "userId": "u0014",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0008",
@@ -421,7 +473,8 @@
     "userId": "u0008",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0010",
@@ -429,7 +482,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0030",
@@ -437,7 +491,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0007",
@@ -445,7 +500,8 @@
     "userId": "u0007",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0003",
@@ -453,7 +509,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0017",
@@ -461,7 +518,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0011",
@@ -469,7 +527,8 @@
     "userId": "u0011",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0005",
@@ -477,7 +536,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852415704474itgmd_u0018",
@@ -485,7 +545,8 @@
     "userId": "u0018",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0006",
@@ -493,7 +554,8 @@
     "userId": "u0006",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0004",
@@ -501,7 +563,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0011",
@@ -509,7 +572,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0002",
@@ -517,7 +581,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0012",
@@ -525,7 +590,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0007",
@@ -533,7 +599,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0017",
@@ -541,7 +608,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0010",
@@ -549,7 +617,8 @@
     "userId": "u0010",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0018",
@@ -557,7 +626,8 @@
     "userId": "u0018",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0001",
@@ -565,7 +635,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0015",
@@ -573,7 +644,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0013",
@@ -581,7 +653,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0014",
@@ -589,7 +662,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0028",
@@ -597,7 +671,8 @@
     "userId": "u0028",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0008",
@@ -605,7 +680,8 @@
     "userId": "u0008",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785242146292bc9qgs_u0005",
@@ -613,7 +689,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0012",
@@ -621,7 +698,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0031",
@@ -629,7 +707,8 @@
     "userId": "u0031",
     "placement": 2,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0010",
@@ -637,7 +716,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0001",
@@ -645,7 +725,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0014",
@@ -653,7 +734,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0029",
@@ -661,7 +743,8 @@
     "userId": "u0029",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0004",
@@ -669,7 +752,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0028",
@@ -677,7 +761,8 @@
     "userId": "u0028",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0018",
@@ -685,7 +770,8 @@
     "userId": "u0018",
     "placement": null,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0017",
@@ -693,7 +779,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0006",
@@ -701,7 +788,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0011",
@@ -709,7 +797,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0032",
@@ -717,7 +806,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0033",
@@ -725,7 +815,8 @@
     "userId": "u0033",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0003",
@@ -733,7 +824,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0034",
@@ -741,7 +833,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0027",
@@ -749,7 +842,8 @@
     "userId": "u0027",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0035",
@@ -757,7 +851,8 @@
     "userId": "u0035",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0036",
@@ -765,7 +860,8 @@
     "userId": "u0036",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0013",
@@ -773,7 +869,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0007",
@@ -781,7 +878,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0015",
@@ -789,7 +887,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0030",
@@ -797,7 +896,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0005",
@@ -805,7 +905,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0037",
@@ -813,7 +914,8 @@
     "userId": "u0037",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0008",
@@ -821,7 +923,8 @@
     "userId": "u0008",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0038",
@@ -829,7 +932,8 @@
     "userId": "u0038",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0002",
@@ -837,7 +941,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852433145536nx3x0_u0009",
@@ -845,7 +950,8 @@
     "userId": "u0009",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0018",
@@ -853,7 +959,8 @@
     "userId": "u0018",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0009",
@@ -861,7 +968,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0011",
@@ -869,7 +977,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0015",
@@ -877,7 +986,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0030",
@@ -885,7 +995,8 @@
     "userId": "u0030",
     "placement": 2,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0038",
@@ -893,7 +1004,8 @@
     "userId": "u0038",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0006",
@@ -901,7 +1013,8 @@
     "userId": "u0006",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0014",
@@ -909,7 +1022,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0004",
@@ -917,7 +1031,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0001",
@@ -925,7 +1040,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0003",
@@ -933,7 +1049,8 @@
     "userId": "u0003",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0005",
@@ -941,7 +1058,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0010",
@@ -949,7 +1067,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0039",
@@ -957,7 +1076,8 @@
     "userId": "u0039",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0002",
@@ -965,7 +1085,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0008",
@@ -973,7 +1094,8 @@
     "userId": "u0008",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0040",
@@ -981,7 +1103,8 @@
     "userId": "u0040",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0007",
@@ -989,7 +1112,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0029",
@@ -997,7 +1121,8 @@
     "userId": "u0029",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244347303xb731l_u0013",
@@ -1005,7 +1130,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0011",
@@ -1013,7 +1139,8 @@
     "userId": "u0011",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0010",
@@ -1021,7 +1148,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0006",
@@ -1029,7 +1157,8 @@
     "userId": "u0006",
     "placement": 4,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0038",
@@ -1037,7 +1166,8 @@
     "userId": "u0038",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0005",
@@ -1045,7 +1175,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0009",
@@ -1053,7 +1184,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0034",
@@ -1061,7 +1193,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0004",
@@ -1069,7 +1202,8 @@
     "userId": "u0004",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0003",
@@ -1077,7 +1211,8 @@
     "userId": "u0003",
     "placement": 1,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0001",
@@ -1085,7 +1220,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785244946340mxro0f_u0007",
@@ -1093,7 +1229,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0007",
@@ -1101,7 +1238,8 @@
     "userId": "u0007",
     "placement": 4,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0041",
@@ -1109,7 +1247,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0012",
@@ -1117,7 +1256,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0010",
@@ -1125,7 +1265,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0004",
@@ -1133,7 +1274,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0011",
@@ -1141,7 +1283,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0009",
@@ -1149,7 +1292,8 @@
     "userId": "u0009",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0017",
@@ -1157,7 +1301,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0030",
@@ -1165,7 +1310,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0005",
@@ -1173,7 +1319,8 @@
     "userId": "u0005",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0038",
@@ -1181,7 +1328,8 @@
     "userId": "u0038",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0015",
@@ -1189,7 +1337,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0006",
@@ -1197,7 +1346,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245281567xlfxi0_u0003",
@@ -1205,7 +1355,8 @@
     "userId": "u0003",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0014",
@@ -1213,7 +1364,8 @@
     "userId": "u0014",
     "placement": 4,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0012",
@@ -1221,7 +1373,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0005",
@@ -1229,7 +1382,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0017",
@@ -1237,7 +1391,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0015",
@@ -1245,7 +1400,8 @@
     "userId": "u0015",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0007",
@@ -1253,7 +1409,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0011",
@@ -1261,7 +1418,8 @@
     "userId": "u0011",
     "placement": 1,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0010",
@@ -1269,7 +1427,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0009",
@@ -1277,7 +1436,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0038",
@@ -1285,7 +1445,8 @@
     "userId": "u0038",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785245717889z4ylq3_u0004",
@@ -1293,7 +1454,8 @@
     "userId": "u0004",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0009",
@@ -1301,7 +1463,8 @@
     "userId": "u0009",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0014",
@@ -1309,7 +1472,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0007",
@@ -1317,7 +1481,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0015",
@@ -1325,7 +1490,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0038",
@@ -1333,7 +1499,8 @@
     "userId": "u0038",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0003",
@@ -1341,7 +1508,8 @@
     "userId": "u0003",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0011",
@@ -1349,7 +1517,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0017",
@@ -1357,7 +1526,8 @@
     "userId": "u0017",
     "placement": 1,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0006",
@@ -1365,7 +1535,8 @@
     "userId": "u0006",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0004",
@@ -1373,7 +1544,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0041",
@@ -1381,7 +1553,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17852467554351jazav_u0013",
@@ -1389,7 +1562,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0030",
@@ -1397,7 +1571,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0010",
@@ -1405,7 +1580,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0009",
@@ -1413,7 +1589,8 @@
     "userId": "u0009",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0002",
@@ -1421,7 +1598,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0015",
@@ -1429,7 +1607,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0007",
@@ -1437,7 +1616,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0042",
@@ -1445,7 +1625,8 @@
     "userId": "u0042",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0038",
@@ -1453,7 +1634,8 @@
     "userId": "u0038",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0011",
@@ -1461,7 +1643,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0017",
@@ -1469,7 +1652,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0005",
@@ -1477,7 +1661,8 @@
     "userId": "u0005",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0043",
@@ -1485,7 +1670,8 @@
     "userId": "u0043",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0003",
@@ -1493,7 +1679,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0012",
@@ -1501,7 +1688,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785247206782p7v2ff_u0004",
@@ -1509,7 +1697,8 @@
     "userId": "u0004",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0012",
@@ -1517,7 +1706,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0030",
@@ -1525,7 +1715,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0014",
@@ -1533,7 +1724,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0002",
@@ -1541,7 +1733,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0005",
@@ -1549,7 +1742,8 @@
     "userId": "u0005",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0003",
@@ -1557,7 +1751,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0004",
@@ -1565,7 +1760,8 @@
     "userId": "u0004",
     "placement": 3,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0032",
@@ -1573,7 +1769,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0045",
@@ -1581,7 +1778,8 @@
     "userId": "u0045",
     "placement": 4,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0046",
@@ -1589,7 +1787,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0015",
@@ -1597,7 +1796,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0009",
@@ -1605,7 +1805,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0006",
@@ -1613,7 +1814,8 @@
     "userId": "u0006",
     "placement": 2,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0011",
@@ -1621,7 +1823,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0041",
@@ -1629,7 +1832,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0007",
@@ -1637,7 +1841,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0013",
@@ -1645,7 +1850,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0047",
@@ -1653,7 +1859,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0010",
@@ -1661,7 +1868,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0017",
@@ -1669,7 +1877,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0028",
@@ -1677,7 +1886,8 @@
     "userId": "u0028",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785248467911zhfkk2_u0042",
@@ -1685,7 +1895,8 @@
     "userId": "u0042",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0032",
@@ -1693,7 +1904,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0046",
@@ -1701,7 +1913,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0006",
@@ -1709,7 +1922,8 @@
     "userId": "u0006",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0017",
@@ -1717,7 +1931,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0028",
@@ -1725,7 +1940,8 @@
     "userId": "u0028",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0042",
@@ -1733,7 +1949,8 @@
     "userId": "u0042",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0014",
@@ -1741,7 +1958,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0045",
@@ -1749,7 +1967,8 @@
     "userId": "u0045",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0005",
@@ -1757,7 +1976,8 @@
     "userId": "u0005",
     "placement": 3,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0011",
@@ -1765,7 +1985,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0010",
@@ -1773,7 +1994,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0034",
@@ -1781,7 +2003,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0012",
@@ -1789,7 +2012,8 @@
     "userId": "u0012",
     "placement": 4,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0048",
@@ -1797,7 +2021,8 @@
     "userId": "u0048",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0009",
@@ -1805,7 +2030,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0007",
@@ -1813,7 +2039,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0015",
@@ -1821,7 +2048,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0041",
@@ -1829,7 +2057,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0004",
@@ -1837,7 +2066,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0003",
@@ -1845,7 +2075,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296053757tj1uek_u0030",
@@ -1853,7 +2084,8 @@
     "userId": "u0030",
     "placement": 1,
     "wins": 5,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0015",
@@ -1861,7 +2093,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0011",
@@ -1869,7 +2102,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0004",
@@ -1877,7 +2111,8 @@
     "userId": "u0004",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0007",
@@ -1885,7 +2120,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0014",
@@ -1893,7 +2129,8 @@
     "userId": "u0014",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0017",
@@ -1901,7 +2138,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0010",
@@ -1909,7 +2147,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0009",
@@ -1917,7 +2156,8 @@
     "userId": "u0009",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0041",
@@ -1925,7 +2165,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0012",
@@ -1933,7 +2174,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0005",
@@ -1941,7 +2183,8 @@
     "userId": "u0005",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785296526783nm2hkx_u0032",
@@ -1949,7 +2192,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0032",
@@ -1957,7 +2201,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0012",
@@ -1965,7 +2210,8 @@
     "userId": "u0012",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0017",
@@ -1973,7 +2219,8 @@
     "userId": "u0017",
     "placement": 3,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0011",
@@ -1981,7 +2228,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0007",
@@ -1989,7 +2237,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0010",
@@ -1997,7 +2246,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0004",
@@ -2005,7 +2255,8 @@
     "userId": "u0004",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0015",
@@ -2013,7 +2264,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0003",
@@ -2021,7 +2273,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0005",
@@ -2029,7 +2282,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0041",
@@ -2037,7 +2291,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785310238369ehn4km_u0014",
@@ -2045,7 +2300,8 @@
     "userId": "u0014",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0007",
@@ -2053,7 +2309,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0041",
@@ -2061,7 +2318,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0028",
@@ -2069,7 +2327,8 @@
     "userId": "u0028",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0003",
@@ -2077,7 +2336,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0049",
@@ -2085,7 +2345,8 @@
     "userId": "u0049",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0005",
@@ -2093,7 +2354,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0004",
@@ -2101,7 +2363,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0014",
@@ -2109,7 +2372,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0042",
@@ -2117,7 +2381,8 @@
     "userId": "u0042",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0012",
@@ -2125,7 +2390,8 @@
     "userId": "u0012",
     "placement": 1,
     "wins": 5,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0015",
@@ -2133,7 +2399,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0010",
@@ -2141,7 +2408,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0045",
@@ -2149,7 +2417,8 @@
     "userId": "u0045",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0032",
@@ -2157,7 +2426,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0034",
@@ -2165,7 +2435,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0046",
@@ -2173,7 +2444,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0011",
@@ -2181,7 +2453,8 @@
     "userId": "u0011",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0009",
@@ -2189,7 +2462,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0006",
@@ -2197,7 +2471,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178531083825993fczk_u0013",
@@ -2205,7 +2480,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0004",
@@ -2213,7 +2489,8 @@
     "userId": "u0004",
     "placement": 1,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0007",
@@ -2221,7 +2498,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0032",
@@ -2229,7 +2507,8 @@
     "userId": "u0032",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0041",
@@ -2237,7 +2516,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0003",
@@ -2245,7 +2525,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0009",
@@ -2253,7 +2534,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0010",
@@ -2261,7 +2543,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0011",
@@ -2269,7 +2552,8 @@
     "userId": "u0011",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0014",
@@ -2277,7 +2561,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0015",
@@ -2285,7 +2570,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785312757236twdvbo_u0030",
@@ -2293,7 +2579,8 @@
     "userId": "u0030",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0012",
@@ -2301,7 +2588,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0004",
@@ -2309,7 +2597,8 @@
     "userId": "u0004",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0041",
@@ -2317,7 +2606,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0015",
@@ -2325,7 +2615,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0010",
@@ -2333,7 +2624,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0003",
@@ -2341,7 +2633,8 @@
     "userId": "u0003",
     "placement": 3,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0005",
@@ -2349,7 +2642,8 @@
     "userId": "u0005",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0014",
@@ -2357,7 +2651,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0007",
@@ -2365,7 +2660,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0050",
@@ -2373,7 +2669,8 @@
     "userId": "u0050",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853134101434z4ppi_u0032",
@@ -2381,7 +2678,8 @@
     "userId": "u0032",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0048",
@@ -2389,7 +2687,8 @@
     "userId": "u0048",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0051",
@@ -2397,7 +2696,8 @@
     "userId": "u0051",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0041",
@@ -2405,7 +2705,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0004",
@@ -2413,7 +2714,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0030",
@@ -2421,7 +2723,8 @@
     "userId": "u0030",
     "placement": 3,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0017",
@@ -2429,7 +2732,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0005",
@@ -2437,7 +2741,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0009",
@@ -2445,7 +2750,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0014",
@@ -2453,7 +2759,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0010",
@@ -2461,7 +2768,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0006",
@@ -2469,7 +2777,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0003",
@@ -2477,7 +2786,8 @@
     "userId": "u0003",
     "placement": 1,
     "wins": 5,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0013",
@@ -2485,7 +2795,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0052",
@@ -2493,7 +2804,8 @@
     "userId": "u0052",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0011",
@@ -2501,7 +2813,8 @@
     "userId": "u0011",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0007",
@@ -2509,7 +2822,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0015",
@@ -2517,7 +2831,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0049",
@@ -2525,7 +2840,8 @@
     "userId": "u0049",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0012",
@@ -2533,7 +2849,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0034",
@@ -2541,7 +2858,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0042",
@@ -2549,7 +2867,8 @@
     "userId": "u0042",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0050",
@@ -2557,7 +2876,8 @@
     "userId": "u0050",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0028",
@@ -2565,7 +2885,8 @@
     "userId": "u0028",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785313597080s6m9a8_u0046",
@@ -2573,7 +2894,8 @@
     "userId": "u0046",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0006",
@@ -2581,7 +2903,8 @@
     "userId": "u0006",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0015",
@@ -2589,7 +2912,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0051",
@@ -2597,7 +2921,8 @@
     "userId": "u0051",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0017",
@@ -2605,7 +2930,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0010",
@@ -2613,7 +2939,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0005",
@@ -2621,7 +2948,8 @@
     "userId": "u0005",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0041",
@@ -2629,7 +2957,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0009",
@@ -2637,7 +2966,8 @@
     "userId": "u0009",
     "placement": 4,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0011",
@@ -2645,7 +2975,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0004",
@@ -2653,7 +2984,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0012",
@@ -2661,7 +2993,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0003",
@@ -2669,7 +3002,8 @@
     "userId": "u0003",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0007",
@@ -2677,7 +3011,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785322615206slbkff_u0013",
@@ -2685,7 +3020,8 @@
     "userId": "u0013",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0053",
@@ -2693,7 +3029,8 @@
     "userId": "u0053",
     "placement": 3,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0050",
@@ -2701,7 +3038,8 @@
     "userId": "u0050",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0004",
@@ -2709,7 +3047,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0007",
@@ -2717,7 +3056,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0041",
@@ -2725,7 +3065,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0005",
@@ -2733,7 +3074,8 @@
     "userId": "u0005",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0015",
@@ -2741,7 +3083,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0034",
@@ -2749,7 +3092,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0011",
@@ -2757,7 +3101,8 @@
     "userId": "u0011",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0017",
@@ -2765,7 +3110,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0003",
@@ -2773,7 +3119,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0046",
@@ -2781,7 +3128,8 @@
     "userId": "u0046",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0014",
@@ -2789,7 +3137,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785326513728qx09vv_u0012",
@@ -2797,7 +3146,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0034",
@@ -2805,7 +3155,8 @@
     "userId": "u0034",
     "placement": 1,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0005",
@@ -2813,7 +3164,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0032",
@@ -2821,7 +3173,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0007",
@@ -2829,7 +3182,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0014",
@@ -2837,7 +3191,8 @@
     "userId": "u0014",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0046",
@@ -2845,7 +3200,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0012",
@@ -2853,7 +3209,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0011",
@@ -2861,7 +3218,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0015",
@@ -2869,7 +3227,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0004",
@@ -2877,7 +3236,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0010",
@@ -2885,7 +3245,8 @@
     "userId": "u0010",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0041",
@@ -2893,7 +3254,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0003",
@@ -2901,7 +3263,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327280117cwlz1z_u0009",
@@ -2909,7 +3272,8 @@
     "userId": "u0009",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0034",
@@ -2917,7 +3281,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0007",
@@ -2925,7 +3290,8 @@
     "userId": "u0007",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0048",
@@ -2933,7 +3299,8 @@
     "userId": "u0048",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0046",
@@ -2941,7 +3308,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0010",
@@ -2949,7 +3317,8 @@
     "userId": "u0010",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0041",
@@ -2957,7 +3326,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0015",
@@ -2965,7 +3335,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0032",
@@ -2973,7 +3344,8 @@
     "userId": "u0032",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0009",
@@ -2981,7 +3353,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0014",
@@ -2989,7 +3362,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0047",
@@ -2997,7 +3371,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0005",
@@ -3005,7 +3380,8 @@
     "userId": "u0005",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0004",
@@ -3013,7 +3389,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0012",
@@ -3021,7 +3398,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0001",
@@ -3029,7 +3407,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0003",
@@ -3037,7 +3416,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785327600422b9w8kw_u0002",
@@ -3045,7 +3425,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0012",
@@ -3053,7 +3434,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0017",
@@ -3061,7 +3443,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0047",
@@ -3069,7 +3452,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0007",
@@ -3077,7 +3461,8 @@
     "userId": "u0007",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0011",
@@ -3085,7 +3470,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0046",
@@ -3093,7 +3479,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0003",
@@ -3101,7 +3488,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0009",
@@ -3109,7 +3497,8 @@
     "userId": "u0009",
     "placement": 3,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0004",
@@ -3117,7 +3506,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0015",
@@ -3125,7 +3515,8 @@
     "userId": "u0015",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0014",
@@ -3133,7 +3524,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0005",
@@ -3141,7 +3533,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0010",
@@ -3149,7 +3542,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0006",
@@ -3157,7 +3551,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0034",
@@ -3165,7 +3560,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0041",
@@ -3173,7 +3569,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0050",
@@ -3181,7 +3578,8 @@
     "userId": "u0050",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328081106t7ay3c_u0032",
@@ -3189,7 +3587,8 @@
     "userId": "u0032",
     "placement": 4,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0010",
@@ -3197,7 +3596,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0011",
@@ -3205,7 +3605,8 @@
     "userId": "u0011",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0006",
@@ -3213,7 +3614,8 @@
     "userId": "u0006",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0004",
@@ -3221,7 +3623,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0017",
@@ -3229,7 +3632,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0032",
@@ -3237,7 +3641,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0046",
@@ -3245,7 +3650,8 @@
     "userId": "u0046",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0007",
@@ -3253,7 +3659,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0005",
@@ -3261,7 +3668,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0009",
@@ -3269,7 +3677,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0015",
@@ -3277,7 +3686,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0034",
@@ -3285,7 +3695,8 @@
     "userId": "u0034",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0041",
@@ -3293,7 +3704,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0014",
@@ -3301,7 +3713,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0012",
@@ -3309,7 +3722,8 @@
     "userId": "u0012",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785328445238w3bmnb_u0050",
@@ -3317,7 +3731,8 @@
     "userId": "u0050",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0009",
@@ -3325,7 +3740,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0015",
@@ -3333,7 +3749,8 @@
     "userId": "u0015",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0012",
@@ -3341,7 +3758,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0041",
@@ -3349,7 +3767,8 @@
     "userId": "u0041",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0004",
@@ -3357,7 +3776,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0010",
@@ -3365,7 +3785,8 @@
     "userId": "u0010",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0017",
@@ -3373,7 +3794,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0047",
@@ -3381,7 +3803,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0034",
@@ -3389,7 +3812,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0006",
@@ -3397,7 +3821,8 @@
     "userId": "u0006",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0007",
@@ -3405,7 +3830,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0005",
@@ -3413,7 +3839,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0032",
@@ -3421,7 +3848,8 @@
     "userId": "u0032",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0014",
@@ -3429,7 +3857,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532864040365s1w6_u0046",
@@ -3437,7 +3866,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0010",
@@ -3445,7 +3875,8 @@
     "userId": "u0010",
     "placement": 1,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0046",
@@ -3453,7 +3884,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0009",
@@ -3461,7 +3893,8 @@
     "userId": "u0009",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0004",
@@ -3469,7 +3902,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0015",
@@ -3477,7 +3911,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0007",
@@ -3485,7 +3920,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0017",
@@ -3493,7 +3929,8 @@
     "userId": "u0017",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0012",
@@ -3501,7 +3938,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0005",
@@ -3509,7 +3947,8 @@
     "userId": "u0005",
     "placement": 4,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t17853289779901i3kvq_u0014",
@@ -3517,7 +3956,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0017",
@@ -3525,7 +3965,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0052",
@@ -3533,7 +3974,8 @@
     "userId": "u0052",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0005",
@@ -3541,7 +3983,8 @@
     "userId": "u0005",
     "placement": 4,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0010",
@@ -3549,7 +3992,8 @@
     "userId": "u0010",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0014",
@@ -3557,7 +4001,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0032",
@@ -3565,7 +4010,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0047",
@@ -3573,7 +4019,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0046",
@@ -3581,7 +4028,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0004",
@@ -3589,7 +4037,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0034",
@@ -3597,7 +4046,8 @@
     "userId": "u0034",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0009",
@@ -3605,7 +4055,8 @@
     "userId": "u0009",
     "placement": 3,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0015",
@@ -3613,7 +4064,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0012",
@@ -3621,7 +4073,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t178532915800527de4d_u0007",
@@ -3629,7 +4082,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0017",
@@ -3637,7 +4091,8 @@
     "userId": "u0017",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0010",
@@ -3645,7 +4100,8 @@
     "userId": "u0010",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0014",
@@ -3653,7 +4109,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0054",
@@ -3661,7 +4118,8 @@
     "userId": "u0054",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0009",
@@ -3669,7 +4127,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0004",
@@ -3677,7 +4136,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0015",
@@ -3685,7 +4145,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0007",
@@ -3693,7 +4154,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0046",
@@ -3701,7 +4163,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0052",
@@ -3709,7 +4172,8 @@
     "userId": "u0052",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0012",
@@ -3717,7 +4181,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0030",
@@ -3725,7 +4190,8 @@
     "userId": "u0030",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0032",
@@ -3733,7 +4199,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0047",
@@ -3741,7 +4208,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0011",
@@ -3749,7 +4217,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329404784rnqv9d_u0005",
@@ -3757,7 +4226,8 @@
     "userId": "u0005",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0005",
@@ -3765,7 +4235,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0011",
@@ -3773,7 +4244,8 @@
     "userId": "u0011",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0032",
@@ -3781,7 +4253,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0007",
@@ -3789,7 +4262,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0010",
@@ -3797,7 +4271,8 @@
     "userId": "u0010",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0012",
@@ -3805,7 +4280,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0034",
@@ -3813,7 +4289,8 @@
     "userId": "u0034",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0014",
@@ -3821,7 +4298,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0048",
@@ -3829,7 +4307,8 @@
     "userId": "u0048",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0009",
@@ -3837,7 +4316,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0046",
@@ -3845,7 +4325,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0004",
@@ -3853,7 +4334,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0015",
@@ -3861,7 +4343,8 @@
     "userId": "u0015",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785329634979xtf89g_u0047",
@@ -3869,7 +4352,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0004",
@@ -3877,7 +4361,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0009",
@@ -3885,7 +4370,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0055",
@@ -3893,7 +4379,8 @@
     "userId": "u0055",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0015",
@@ -3901,7 +4388,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0005",
@@ -3909,7 +4397,8 @@
     "userId": "u0005",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0010",
@@ -3917,7 +4406,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0014",
@@ -3925,7 +4415,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0012",
@@ -3933,7 +4424,8 @@
     "userId": "u0012",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0046",
@@ -3941,7 +4433,8 @@
     "userId": "u0046",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0032",
@@ -3949,7 +4442,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785330428185hsjci0_u0007",
@@ -3957,7 +4451,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0056",
@@ -3965,7 +4460,8 @@
     "userId": "u0056",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0055",
@@ -3973,7 +4469,8 @@
     "userId": "u0055",
     "placement": null,
     "wins": 1,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0046",
@@ -3981,7 +4478,8 @@
     "userId": "u0046",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0005",
@@ -3989,7 +4487,8 @@
     "userId": "u0005",
     "placement": 2,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0015",
@@ -3997,7 +4496,8 @@
     "userId": "u0015",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0014",
@@ -4005,7 +4505,8 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0007",
@@ -4013,7 +4514,8 @@
     "userId": "u0007",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0047",
@@ -4021,7 +4523,8 @@
     "userId": "u0047",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0032",
@@ -4029,7 +4532,8 @@
     "userId": "u0032",
     "placement": null,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0004",
@@ -4037,7 +4541,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0009",
@@ -4045,7 +4550,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0012",
@@ -4053,7 +4559,8 @@
     "userId": "u0012",
     "placement": 1,
     "wins": 4,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785331004895ecrba1_u0010",
@@ -4061,7 +4568,8 @@
     "userId": "u0010",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785819320466mc95be_u0001",
@@ -4069,7 +4577,8 @@
     "userId": "u0001",
     "placement": 3,
     "wins": 0,
-    "recAtEntry": false
+    "recAtEntry": false,
+    "monsterId": null
   },
   {
     "id": "t1785819320466mc95be_u0003",
@@ -4077,7 +4586,8 @@
     "userId": "u0003",
     "placement": 1,
     "wins": 3,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785819320466mc95be_u0004",
@@ -4085,7 +4595,8 @@
     "userId": "u0004",
     "placement": 2,
     "wins": 2,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785819320466mc95be_u0002",
@@ -4093,7 +4604,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785819320466mc95be_u0008",
@@ -4101,7 +4613,8 @@
     "userId": "u0008",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785819320466mc95be_u0010",
@@ -4109,7 +4622,8 @@
     "userId": "u0010",
     "placement": 3,
     "wins": 0,
-    "recAtEntry": false
+    "recAtEntry": false,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0004",
@@ -4117,7 +4631,8 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0001",
@@ -4125,7 +4640,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0003",
@@ -4133,7 +4649,8 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0009",
@@ -4141,7 +4658,8 @@
     "userId": "u0009",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0002",
@@ -4149,7 +4667,8 @@
     "userId": "u0002",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0005",
@@ -4157,7 +4676,8 @@
     "userId": "u0005",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0056",
@@ -4165,7 +4685,8 @@
     "userId": "u0056",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
   },
   {
     "id": "t1785721551793uq2r33_u0028",
@@ -4173,6 +4694,25 @@
     "userId": "u0028",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t1786207126120mlq0ld_u0001",
+    "tournamentId": "t1786207126120mlq0ld",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0296"
+  },
+  {
+    "id": "t1786207126120mlq0ld_u0002",
+    "tournamentId": "t1786207126120mlq0ld",
+    "userId": "u0002",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0157"
   }
 ]
