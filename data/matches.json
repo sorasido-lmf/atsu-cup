@@ -10513,5 +10513,20 @@
     "player2SrcIndex": null,
     "videoUrl": "",
     "playedAt": null
+  },
+  {
+    "id": "t1786207126120mlq0ld_r1_m1",
+    "tournamentId": "t1786207126120mlq0ld",
+    "round": 1,
+    "stage": "normal",
+    "matchIndex": 1,
+    "player1Id": null,
+    "player2Id": null,
+    "winnerId": null,
+    "isBye": true,
+    "player1SrcIndex": null,
+    "player2SrcIndex": null,
+    "videoUrl": "",
+    "playedAt": null
   }
 ]
