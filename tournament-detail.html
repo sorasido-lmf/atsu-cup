@@ -252,6 +252,9 @@
   <section class="panel" id="content"></section>
   <section class="panel" id="matchupSection" style="display:none;"></section>
   <section class="panel" id="bracketSection" style="display:none;"></section>
+  <!-- 参加者とモンスター。組み合わせ決定の前後どちらでも出す(エントリー画面は1回戦決着後に
+       ロックされるため、対戦開始後にモンスターを直せる唯一の導線になる) -->
+  <section class="panel" id="monsterSection" style="display:none;"></section>
 
   <datalist id="rosterCandidates"></datalist>
 </div>
@@ -265,6 +268,7 @@
 <script src="guide-assistant.js"></script>
 <script src="user-register-modal.js"></script>
 <script src="walkin-modal.js"></script>
+<script src="monster-pick-modal.js"></script>
 <script src="detail-view.js"></script>
 </body>
 </html>

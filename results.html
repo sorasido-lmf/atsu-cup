@@ -31,6 +31,9 @@
   .rest-group-title{ font-size:12px; font-weight:900; color:var(--ember2); margin-bottom:6px; }
   .rest-name-list{ display:flex; flex-wrap:wrap; gap:6px; }
   .rest-name-chip{ background:#fffdf7; border:1px solid var(--stone-beige); border-radius:999px; padding:6px 12px; font-size:12.5px; }
+  /* 使用モンスター。順位カードは暗い背景なので、共通の .mon-chip の余白だけ詰めて使う */
+  .place-card .mon-chip{ margin-top:6px; padding:3px 8px; }
+  .rest-name-chip .rest-name-mon{ margin-left:6px; color:var(--fantasy-muted); font-size:11px; }
 </style>
 </head>
 <body class="page-scene page-tournament-list">
@@ -117,6 +120,17 @@
     };
     const placements = AtsuCup.computePlacements(entry);
 
+    // 名前 → その大会で使ったモンスター。参加者数×表示箇所のループを避けて1度だけ作る
+    const monsterOf = {};
+    (state.people||[]).forEach(p=>{ if(p && p.name && p.monsterId) monsterOf[p.name] = p.monsterId; });
+    // 未設定の人には何も出さない(「未設定」の行を並べても情報量が無いため)
+    const monsterHtml = (name, extraCls)=>{
+      if(!monsterOf[name]) return '';
+      const chip = AtsuCup.monsterChip(monsterOf[name]);
+      const cls = chip.state==='known' ? 'has-mon' : 'unknown';
+      return `<span class="mon-chip is-inline ${cls} ${extraCls||''}">${escapeHtml(chip.text)}</span>`;
+    };
+
     // ⚠️ 順位→1人 の辞書にしないこと。3位決定戦をやらなかった大会は同率3位が2人いるので、
     //    上書きすると片方が画面から消える(2026-07-29修正)
     const top = {1:[], 2:[], 3:[], 4:[]};
@@ -140,6 +154,7 @@
           <div class="info">
             <div class="rank-label">${rankLabelText[place]}</div>
             <div class="nm">${escapeHtml(name)}</div>
+            ${monsterHtml(name)}
           </div>
         </div>`;
       });
@@ -158,7 +173,11 @@
       const label = AtsuCup.roundLabel(round.length) + '敗退';
       restHtml += `<div class="rest-group">
         <div class="rest-group-title">${escapeHtml(label)}(${names.length}人)</div>
-        <div class="rest-name-list">${names.map(n=>`<span class="rest-name-chip">${escapeHtml(n)}</span>`).join('')}</div>
+        <div class="rest-name-list">${names.map(n=>{
+          const m = monsterOf[n] ? AtsuCup.monsterChip(monsterOf[n]) : null;
+          const suffix = m ? `<span class="rest-name-mon">${escapeHtml(m.text.replace(/^🐾\s*/,''))}</span>` : '';
+          return `<span class="rest-name-chip">${escapeHtml(n)}${suffix}</span>`;
+        }).join('')}</div>
       </div>`;
     });
     if(restHtml){

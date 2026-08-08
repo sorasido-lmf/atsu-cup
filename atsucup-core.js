@@ -30,6 +30,11 @@ const AtsuCup = (function(){
     guestArchivedUsers: {},
     guestUserSortOrder: {},
     guestTournaments: [],
+    // ---- モンスターの種族カタログ(data/monsters.json のコピー) ----
+    // 🔴 プール分離しない。人がスプレッドシートで育てる読み取り専用の共有マスタで、
+    //    ゲスト/認証で内容が変わらないため。loadFromDataのたびに丸ごと差し替える
+    //    (マージも署名も競合判定も無い。常にサーバーが正)
+    monsters: [],
     // ---- 共通のアクティブ大会ポインタ(どちらのプールの大会かを activePool が示す) ----
     activeId: null,   // 現在操作対象の大会id(各画面が ?id= から setActive でセット)
     activePool: 'auth' // 'auth' | 'guest'
@@ -205,7 +210,8 @@ const AtsuCup = (function(){
   }
 
   /* ---------- data/*.json(GitHub側=正) の取り込み ---------- */
-  const DATA_PATHS = { users:'data/users.json', tournaments:'data/tournaments.json', entries:'data/entries.json', matches:'data/matches.json' };
+  const DATA_PATHS = { users:'data/users.json', tournaments:'data/tournaments.json', entries:'data/entries.json', matches:'data/matches.json',
+                       monsters:'data/monsters.json' };
 
   // リモートの大会をローカルへ取り込む。
   //
@@ -397,6 +403,41 @@ const AtsuCup = (function(){
     return names.sort((a,b)=> (Number(p.userSortOrder[a])||0) - (Number(p.userSortOrder[b])||0));
   }
 
+  /* ---------- モンスターの種族カタログ(読み取り専用マスタ) ---------- */
+
+  // オーラ色・モン類の値。絞り込みUIの並びと、集計のロールアップ順に使う。
+  // ⚠️ ここに無い値がシートに入っていても弾かない(マスタは人が手で育てるもので、
+  //    アプリ側の定数がボトルネックになると運用が止まるため)。表示は素通しする
+  const MONSTER_AURAS = ['赤','青','黄','緑','白','黒'];
+  const MONSTER_KINDS = ['創造','幻霊','魔族','獣','怪物','無機'];
+
+  // idからマスタ1件を引く。未選択・マスタから消えたidは null
+  function monsterById(id){
+    if(!id) return null;
+    return state.monsters.find(m=> m && m.id === id) || null;
+  }
+  // 表示用の短い文字列。見つからない場合は null(呼び出し側で「不明」等に倒す)
+  function monsterLabel(id){
+    const m = monsterById(id);
+    return m ? (m.name || m.id) : null;
+  }
+  // モンスターチップの表示文字列と状態。エントリー画面・大会詳細・結果画面で見た目を揃えるため、
+  // 「未設定」「マスタから消えたid」の文言をここに1つだけ持つ。
+  // 戻り値の state は 'none'(未設定) | 'known' | 'unknown'(idはあるがマスタに無い)
+  function monsterChip(id){
+    if(!id) return { state:'none', text:'🐾 モンスター未設定' };
+    const m = monsterById(id);
+    if(!m) return { state:'unknown', text:'🐾 不明なモンスター' };
+    return { state:'known', text:'🐾 ' + (m.name || m.id) + (m.aura ? '（' + m.aura + '）' : '') };
+  }
+
+  // 選択候補。アーカイブ済みを除き、sortOrder昇順(同値は行順)で並べたコピーを返す
+  function selectableMonsters(){
+    return state.monsters
+      .filter(m=> m && m.id && !m.archived)
+      .sort((a,b)=> (Number(a.sortOrder)||0) - (Number(b.sortOrder)||0));
+  }
+
   // 読み込みは同一オリジンの静的ファイルから行う(アプリと一緒に配信されているdata/を読む)。
   // GitHub APIを使わない理由: 未認証APIは60回/時の制限があり、1ページ4ファイル取得では
   // すぐ枯渇するため。書き込み側(saveTournamentToData)はsha取得が要るのでAPIを使う。
@@ -412,13 +453,23 @@ const AtsuCup = (function(){
   async function loadFromData(){
     if(typeof AtsuCupData === 'undefined') return { ok:false, error:'モジュール未読み込み' };
     try{
-      const [users, tournaments, entries, matches] = await Promise.all([
+      const [users, tournaments, entries, matches, monsters] = await Promise.all([
         fetchJson(DATA_PATHS.users),
         fetchJson(DATA_PATHS.tournaments),
         fetchJson(DATA_PATHS.entries),
-        fetchJson(DATA_PATHS.matches)
+        fetchJson(DATA_PATHS.matches),
+        // 🔴 モンスターマスタだけは失敗を許容する(catchで握り潰してnullにする)。
+        //    fetchJsonは404で例外を投げるため、data/monsters.jsonをまだ push していない
+        //    移行期間にこれを他の4本と同列に置くと、大会・ユーザーの同期まで丸ごと止まる。
+        //    取れなかった場合はローカルの前回値をそのまま使う(空にはしない)
+        fetchJson(DATA_PATHS.monsters).catch(e=>{
+          console.warn('[atsucup] data/monsters.json を取得できませんでした(前回の内容を使います):', e);
+          return null;
+        })
       ]);
       mergeRemoteUsers(users);
+      // マージも競合判定もしない。読み取り専用マスタなので常にサーバーの内容で丸ごと置き換える
+      if(monsters) state.monsters = monsters;
       const appTournaments = AtsuCupData.toAppTournaments({ users, tournaments, entries, matches });
       // updatedAtは生の行にしか無い(アプリの大会オブジェクトには持たせない方針)ので、
       // ここでid→updatedAtのマップにしてmergeへ渡す
@@ -871,6 +922,9 @@ const AtsuCup = (function(){
     state.guestArchivedUsers = data.guestArchivedUsers || {};
     state.guestUserSortOrder = data.guestUserSortOrder || {};
     state.guestTournaments = data.guestTournaments || [];
+    // モンスターマスタは読み取り専用の共有マスタ。キャッシュがあればそれで描き始め、
+    // loadFromDataが完了したらサーバーの内容へ丸ごと差し替わる
+    state.monsters = Array.isArray(data.monsters) ? data.monsters : [];
     if(Array.isArray(data.tournaments)){
       // everSyncedToServer導入(2026-07-27深夜)より前にキャッシュされた大会にはこのフィールドが
       // 無いため、既定でtrue(=既にサーバーへ反映済みの実データのはず)を補う。これにより、
@@ -1442,6 +1496,55 @@ const AtsuCup = (function(){
     return Object.values(stats).filter(s=> !state.archivedUsers[s.name]);
   }
 
+  // モンスター別の集計(2026-08-08追加)。母数は computeAllTimeStats と同じ allFinishedEntries。
+  //
+  // 🔴 computeAllTimeStats には手を入れず、独立した関数として実装している。
+  //    既存の戦績(ポイント・順位・勝率・件数)の値が1つも動かないことが必須要件のため。
+  // ⚠️ モンスター未設定のエントリーは集計に入れない(「未設定」という架空の1体を作らない)。
+  //    そのため used の合計は参加者数の合計とは一致しない。
+  // ⚠️ マスタから消えた(または旧データの)idも、集計対象からは落とさずidのまま残す。
+  //    表示側で monsterById() が null を返すので「不明」として出せる。
+  function computeMonsterStats(opts){
+    const stats = {};
+    const ensure = id=>{
+      if(!stats[id]){
+        const m = monsterById(id);
+        stats[id] = { id, name: m ? m.name : '', aura: m ? m.aura : '', kind: m ? m.kind : '',
+                      mainBlood: m ? m.mainBlood : '', subBlood: m ? m.subBlood : '', known: !!m,
+                      used:0, p1:0, p2:0, p3:0, p4:0, wins:0, games:0 };
+      }
+      return stats[id];
+    };
+    allFinishedEntries(opts).forEach(entry=>{
+      const placements = computePlacements(entry);
+      // この大会での 名前 → monsterId。同じ人が複数回出ることは無いので単純なマップでよい
+      const midOf = {};
+      (entry.participants||[]).forEach(p=>{ if(p && p.name && p.monsterId) midOf[p.name] = p.monsterId; });
+
+      (entry.participants||[]).forEach(p=>{
+        if(!p || !p.monsterId) return;
+        const s = ensure(p.monsterId);
+        s.used += 1;
+        const place = placements[p.name] ? placements[p.name].place : null;
+        if(place===1) s.p1++; else if(place===2) s.p2++; else if(place===3) s.p3++; else if(place===4) s.p4++;
+      });
+
+      // 勝率の実戦カウント。判定条件は computeAllTimeStats の countGame と完全に同じにすること
+      // (両画面で勝率が食い違うと、どちらが正しいのか誰にも判断できなくなる)
+      const countGame = (a, b, winner)=>{
+        if(midOf[a]) ensure(midOf[a]).games++;
+        if(midOf[b]) ensure(midOf[b]).games++;
+        if(winner && midOf[winner]) ensure(midOf[winner]).wins++;
+      };
+      (entry.matches||[]).forEach(round=>{
+        round.forEach(m=>{ if(m.a && m.b && m.winner && !m.bye) countGame(m.a, m.b, m.winner); });
+      });
+      const tp = entry.thirdPlaceMatch;
+      if(tp && tp.a && tp.b && tp.winner) countGame(tp.a, tp.b, tp.winner);
+    });
+    return Object.values(stats);
+  }
+
   // 戦績集計の対象: 優勝が決まっている全大会(終了済み・進行中を問わない)。
   // ⚠️ optsを省略した時の結果は従来と完全に同じにすること(既存の呼び出しを壊さないため)。
   //   opts.scope … 'official'(公式すべて) | 'restricted'(公式かつ制限杯) | 'nonRestricted'(公式かつ制限杯以外)
@@ -1580,7 +1683,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-08-05 00:47";
+  const BUILD_DATE = "2026-08-09 00:09";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1681,7 +1784,8 @@ const AtsuCup = (function(){
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
     advanceRound, pickWinner, pickWinnerAsSeed, resetMatchResult, pickThirdPlaceWinner, resetThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
     propagateWinnerDownstream,
-    computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, endCurrentTournament, newTournamentId,
+    computePlacements, computeTournamentPoints, computeAllTimeStats, computeMonsterStats, allFinishedEntries, endCurrentTournament, newTournamentId,
+    monsterById, monsterLabel, monsterChip, selectableMonsters, MONSTER_AURAS, MONSTER_KINDS,
     setActive, activeT,
     isGuestMode, pool, authPool, guestPool, poolKindOfTournamentId, guestPoolHasData,
     isAdmin, orderedRoster, hasUnsavedUserChanges, usersSignatureOf,

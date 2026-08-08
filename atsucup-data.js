@@ -106,7 +106,9 @@ const AtsuCupData = (function(){
         status: t.status || 'ongoing',
         isOfficial: !!t.isOfficial,
         isRestricted: !!t.isRestricted,
-        people: myEntries.map(e=>({ name: nameOf(e.userId), rec: e.recAtEntry !== false })).filter(p=> !!p.name),
+        // monsterIdはモンスターマスタ(monsters.json)のid。名前キーには直さない
+        // (マスタは読み取り専用で改名の心配が無く、IDのままの方が表示側で属性を引きやすい)
+        people: myEntries.map(e=>({ name: nameOf(e.userId), rec: e.recAtEntry !== false, monsterId: e.monsterId || null })).filter(p=> !!p.name),
         order: [], remaining: [],
         matches: grid,
         winnerName: deriveWinnerName(grid),
@@ -200,7 +202,8 @@ const AtsuCupData = (function(){
         userId,
         placement: (placements[p.name] && placements[p.name].place) || null,
         wins: countWins(t, p.name),
-        recAtEntry: p.rec !== false
+        recAtEntry: p.rec !== false,
+        monsterId: p.monsterId || null
       };
     });
 
@@ -286,7 +289,8 @@ const AtsuCupData = (function(){
   //    全端末で競合モーダルが誤爆する(updatedAtが空の大会は内容比較経路に落ちるため、
   //    「updatedAtがあるから大丈夫」とは言えない。2026-07-28にこの仕組みを導入)。
   // v2: 空枠も含めて全カードを書き出すようにした(空シード枠とaSrc/bSrcが失われる不具合の修正)
-  const SIG_VERSION = 'v2';
+  // v3: entryRowsに monsterId(エントリー時に使ったモンスター)を追加した(2026-08-08)
+  const SIG_VERSION = 'v3';
 
   // キーの並び順に依存しない安定した文字列化。
   // (アプリ側の生成順とtoAppTournamentsの生成順を人力で揃え続けるのは現実的でないため)

@@ -67,7 +67,10 @@ var SCHEMA = {
     { k: 'userId',       t: 'str'  },
     { k: 'placement',    t: 'num?' },
     { k: 'wins',         t: 'num'  },
-    { k: 'recAtEntry',   t: 'bool' }
+    { k: 'recAtEntry',   t: 'bool' },
+    // 2026-08-08追加。その大会でこの人が使ったモンスター(monstersシートのid)。未選択はnull。
+    // ⚠️ 既存列の途中に挿入しないこと(既存データの値がズレる)。必ず最終列に足す。
+    { k: 'monsterId',    t: 'str?' }
   ],
   matches: [
     { k: 'id',              t: 'str'  },
@@ -83,6 +86,21 @@ var SCHEMA = {
     { k: 'player2SrcIndex', t: 'num?' },
     { k: 'videoUrl',        t: 'str'  },
     { k: 'playedAt',        t: 'str?' }
+  ],
+  // 2026-08-08追加。モンスターの種族カタログ(個体ではない)。
+  // 🔴 このシートだけは**人が手で編集する読み取り専用マスタ**で、アプリからは一切書き込まない。
+  //    シートを直したら pushMonstersToGitHub() を手動実行するまでアプリへは伝わらない。
+  monsters: [
+    { k: 'id',        t: 'str'  },
+    { k: 'name',      t: 'str'  },
+    { k: 'aura',      t: 'str'  },  // オーラ色: 赤/青/黄/緑/白/黒
+    { k: 'kind',      t: 'str'  },  // モン類: 創造/幻霊/魔族/獣/怪物/無機
+    // 主血統/副血統は候補値が未確定のため自由入力(バリデーションしない)。
+    // 副血統に入りうる値は「主血統の値 + ロード種 + ノーブル種」の想定。
+    { k: 'mainBlood', t: 'str'  },
+    { k: 'subBlood',  t: 'str'  },
+    { k: 'archived',  t: 'bool' },  // trueで選択候補から外す(過去の記録の表示には影響しない)
+    { k: 'sortOrder', t: 'num'  }
   ]
 };
 
@@ -90,7 +108,7 @@ var SCHEMA = {
 var ADMINS_HEADER = ['email', 'role', 'note'];
 var AUDIT_HEADER  = ['timestamp', 'email', 'action', 'target'];
 
-var DATA_SHEETS = ['users', 'tournaments', 'entries', 'matches'];
+var DATA_SHEETS = ['users', 'tournaments', 'entries', 'matches', 'monsters'];
 
 /* ============================================================
  * 型変換
@@ -558,7 +576,11 @@ function actionSaveTournament_(payload) {
       id: tid + '_' + uid, tournamentId: tid, userId: uid,
       placement: (r.placement === undefined ? null : r.placement),
       wins: r.wins || 0,
-      recAtEntry: r.recAtEntry !== false
+      recAtEntry: r.recAtEntry !== false,
+      // ⚠️ monsterId は userId と違い、名前→ID解決をしない。モンスターマスタは
+      //    シートを人が手で編集する読み取り専用マスタで、クライアントが採番することは
+      //    無いため、選ばれたidをそのまま通す(未選択・不明はnull)
+      monsterId: r.monsterId || null
     };
   });
   var matchRows = (payload.matchRows || []).map(function (r) {
@@ -843,6 +865,12 @@ function compareWithGitHub() {
 /**
  * GitHubの data/*.json をシートへ取り込む(シートを上書きする)。
  * 上書き前の内容は実行ログへ出力するので、必要なら手動で復元できる。
+ *
+ * 🔴 GitHub側が0行でシート側に行がある場合は、そのシートを**上書きせずスキップする**。
+ *    exportTables_ が持っているのと同じ向きの安全弁。これが無いと、GitHubにまだ
+ *    data/monsters.json が無い状態(404→[])でこれを実行した瞬間、手で作った
+ *    モンスターマスタが丸ごと消える。GitHub側を本当に空として反映したい場合は、
+ *    該当シートの行を手で消してから実行すること。
  */
 function importFromGitHub() {
   var out = [];
@@ -852,6 +880,10 @@ function importFromGitHub() {
       Logger.log('--- 上書き前の ' + name + ' (復元用) ---\n' + JSON.stringify(before));
     }
     var rows = readJsonFromGitHub_('data/' + name + '.json');
+    if (!rows.length && before.length) {
+      out.push('⚠️ ' + name + ': GitHub側が0行のためスキップしました(シートの' + before.length + '行はそのまま)');
+      return;
+    }
     writeSheet_(name, rows);
     out.push(name + ': ' + before.length + '行 → ' + rows.length + '行');
   });
@@ -1193,6 +1225,72 @@ function pushSheetChangesToGitHub() {
   exportTables_(['tournaments', 'entries', 'matches'], '手動編集をGitHubへ反映');
   Logger.log(formatSheetDiffLog_(diff, stamped));
   return diff;
+}
+
+/* ------------------------------------------------------------
+ * モンスターマスタ(monstersシート) の書き出し
+ *
+ * monstersシートはアプリからは一切書き込まれない、人が手で育てる読み取り専用マスタ。
+ * そのため tournaments/entries/matches 用の pushSheetChangesToGitHub() とは経路を分ける
+ * (あちらの差分検出は「大会id単位でupdatedAtを打つ」ことが前提で、モンスターには適用できない)。
+ * ------------------------------------------------------------ */
+
+/** monstersシートとGitHubの差分を id で突き合わせて数える(比較のみ・書き込みなし) */
+function diffMonsters_() {
+  var sheetRows = readSheet_('monsters');
+  var ghRows = readJsonFromGitHub_('data/monsters.json');
+  var bySheet = {}, byGh = {};
+  sheetRows.forEach(function (r) { bySheet[r.id] = r; });
+  ghRows.forEach(function (r) { if (r && r.id) byGh[r.id] = r; });
+
+  var added = [], changed = [], removed = [];
+  Object.keys(bySheet).forEach(function (id) {
+    if (!byGh[id]) { added.push(id + ' ' + bySheet[id].name); return; }
+    if (rowSignature_('monsters', bySheet[id]) !== rowSignature_('monsters', byGh[id])) {
+      changed.push(id + ' ' + bySheet[id].name);
+    }
+  });
+  Object.keys(byGh).forEach(function (id) {
+    if (!bySheet[id]) removed.push(id + ' ' + (byGh[id].name || ''));
+  });
+  return { sheetCount: sheetRows.length, ghCount: ghRows.length,
+           added: added, changed: changed, removed: removed };
+}
+
+function formatMonsterDiffLog_(d, pushed) {
+  var lines = ['シート: ' + d.sheetCount + '行 / GitHub: ' + d.ghCount + '行'];
+  if (!d.added.length && !d.changed.length && !d.removed.length) {
+    lines.push('✅ 差はありません(反映すべき手編集はありません)。');
+  } else {
+    if (d.added.length)   { lines.push('追加: ' + d.added.length + '件');   d.added.forEach(function (s) { lines.push('  ＋ ' + s); }); }
+    if (d.changed.length) { lines.push('変更: ' + d.changed.length + '件'); d.changed.forEach(function (s) { lines.push('  ✏️ ' + s); }); }
+    if (d.removed.length) { lines.push('削除: ' + d.removed.length + '件'); d.removed.forEach(function (s) { lines.push('  － ' + s); }); }
+  }
+  lines.push(pushed ? 'GitHubへの反映が完了しました。'
+                    : '※ これは確認のみで、GitHubには書き込んでいません。反映するには pushMonstersToGitHub() を実行してください。');
+  return lines.join('\n');
+}
+
+/**
+ * 【変更なし・確認のみ】monstersシートの手編集を反映すると何が変わるかを報告する。
+ * GASエディタにはインラインの確認UIが作れないため、これが破壊的操作の確認ステップにあたる。
+ * pushMonstersToGitHub() の前に必ず実行し、削除の行に身に覚えがあることを確かめること。
+ */
+function previewMonstersToGitHub() {
+  var d = diffMonsters_();
+  Logger.log(formatMonsterDiffLog_(d, false));
+  return d;
+}
+
+/**
+ * monstersシートの内容を data/monsters.json へ書き出す。
+ * シートが空でGitHubに行がある場合は exportTables_ の安全ガードで中断される。
+ */
+function pushMonstersToGitHub() {
+  var d = diffMonsters_();
+  exportTables_(['monsters'], 'モンスターマスタを更新(' + d.sheetCount + '件)');
+  Logger.log(formatMonsterDiffLog_(d, true));
+  return d;
 }
 
 /**

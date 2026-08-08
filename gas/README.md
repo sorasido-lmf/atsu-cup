@@ -53,7 +53,7 @@
 
 - 初回実行時にGoogleの承認画面が出る → 自分のアカウントを選び、許可する
   （「このアプリはGoogleで確認されていません」と出たら、**詳細 → 安全でないページに移動** で進む。自分で書いたスクリプトなので問題ない）
-- 実行ログに「作成したシート: users, tournaments, entries, matches, admins, audit」と出れば成功
+- 実行ログに「作成したシート: users, tournaments, entries, matches, monsters, admins, audit」と出れば成功
 
 ⚠️ この関数は**日時やIDが日付として自動変換されないように、文字列列を「書式なしテキスト」に設定**している。
 シートを手作業で作らずに必ずこの関数で作ること。
@@ -131,6 +131,7 @@
 | `tournaments` | 大会 |
 | `entries` | 大会参加者（順位・勝数） |
 | `matches` | 対戦カード |
+| `monsters` | **モンスターの種族カタログ**（オーラ色・モン類・血統）。⚠️ アプリからは一切書き込まない、人が手で育てる読み取り専用マスタ |
 | `admins` | **書き込みを許可するメールアドレス**と役割（下記「権限」参照） |
 | `audit` | 誰がいつ何を更新したかの記録（`doPost` が成功・拒否のたびに追記する） |
 
@@ -183,6 +184,10 @@
 
 **2026-07-28の`tournaments`への追加**: `updatedAt`を`isRestricted`の後ろ（最終列）に追加。端末間同期で「サーバー側が更新されたか」を時刻の大小で判定するために使う。
 
+**2026-08-08の`entries`への追加**: `monsterId`を`recAtEntry`の後ろ（最終列）に追加。エントリー時に使ったモンスター（`monsters`シートのid）。既存行は空欄=nullとして読まれ、未選択と同じ扱いになるので移行作業は不要。**同じデプロイで`monsters`シートも必要になる**（下記）。
+
+**2026-08-08の`monsters`シートの新設**: `initSheets()`を実行すると、`SCHEMA`定義どおりの列（`id`/`name`/`aura`/`kind`/`mainBlood`/`subBlood`/`archived`/`sortOrder`）を持つシートが自動で作られる。既にあるシートには触らないので、他のシートへの影響は無い。
+
 **2026-08-03の`users`への追加**: `sortOrder`を`note`の後ろ（最終列）に追加。ユーザー管理画面のドラッグ&ドロップで決める表示順。既存行は空欄=0として読まれ、同値のときは登録順（行順）を保つので、**全員空欄のうちは今までとまったく同じ並びになる**（移行作業は不要）。
 
 ⚠️ **`updatedAt`は手で編集しないこと。** GASが書き込みのたびにサーバー時刻で自動的に打つ列で、アプリ側はこの値を「自分が最後に把握したサーバーの状態」と比較して、他の端末の更新を取り込むかどうかを判断している。未来の日付を手で入れると、以後その大会の更新が全端末で「古いもの」と判定され、**他の端末に一切反映されなくなる**。手で直した内容をアプリへ届けたい場合は、下の「手編集をアプリへ反映する」の手順に従うこと（`updatedAt`は`pushSheetChangesToGitHub()`が自動で打つ）。
@@ -227,8 +232,28 @@ GASエディタにはインラインの確認UIが作れないため、**手順1
 
 ### 対象外
 
+- **`monsters` シートも書き出されない。** モンスターマスタは経路が別で、**`previewMonstersToGitHub()` → `pushMonstersToGitHub()`** を使う（下記）
 - **`users` シートは書き出されない。** ユーザーマスタの修正はアプリの「ユーザー管理」から行うこと
 - **シートから行ごと削除した大会**は `updatedAt` を打てない（行が無いため）。この場合はアプリ側の `pruneTournamentsGoneFromServer()` が各端末のキャッシュから自動で取り除くので、対応は不要。`previewSheetChangesToGitHub()` では別枠で報告される
+
+---
+
+## 🔴 モンスターマスタを更新する（`monsters` シート → GitHub → アプリ）
+
+モンスターの種族カタログは**アプリからは追加も編集もできない**。スプレッドシートの `monsters` シートを人が直接編集し、下の2ステップで反映する。
+
+1. `monsters` シートに行を追加・編集する
+   - `id` は `m0001` 形式の重複しない文字列。**一度振ったidは変えないこと**（`entries.monsterId` から参照されているため、変えると過去の記録が「不明なモンスター」になる）
+   - `aura` は 赤/青/黄/緑/白/黒、`kind` は 創造/幻霊/魔族/獣/怪物/無機
+   - `mainBlood`（主血統）・`subBlood`（副血統）は**自由入力**。アプリ側でバリデーションしない
+   - 使わなくなった種族は行を消さず `archived` に `TRUE` を入れる（選択候補から消えるだけで、過去の記録と集計はそのまま残る）
+   - `sortOrder` は選択モーダルでの並び順（昇順・空欄=0は行順）
+2. **`previewMonstersToGitHub()`** を実行（変更なし・確認のみ）。追加・変更・削除の件数と内訳がログに出るので、**削除の行に身に覚えがあることを確かめる**
+3. **`pushMonstersToGitHub()`** を実行して `data/monsters.json` へ書き出す
+
+反映されるまでの時間は大会データと同じ（GitHubコミット → Pages反映に数十秒〜数分）。各端末は次にページを開いた時に取り込む。
+
+⚠️ **`importFromGitHub()` は `monsters` にも効く。** ただしGitHub側が0行の場合は上書きせずスキップする安全弁を入れてあるので、`data/monsters.json` を一度も push していない状態で実行しても、手で作ったマスタが消えることはない。
 
 ---
 
@@ -240,9 +265,11 @@ GASエディタにはインラインの確認UIが作れないため、**手順1
 | `compareWithGitHub()` | **変更なし。** シートとGitHubのid集合の差分を報告する |
 | `previewSheetChangesToGitHub()` | **変更なし。** 手編集を反映するとどの大会の内容が変わるかを報告する（`pushSheetChangesToGitHub()` の前に必ず実行する確認ステップ） |
 | `pushSheetChangesToGitHub()` | 手編集をGitHubへ反映する。内容が変わる大会の `updatedAt` だけを進めてから書き出す |
+| `previewMonstersToGitHub()` | **変更なし。** `monsters` シートとGitHubの差分（追加・変更・削除）を報告する（`pushMonstersToGitHub()` の前に必ず実行する確認ステップ） |
+| `pushMonstersToGitHub()` | モンスターマスタを `data/monsters.json` へ書き出す |
 | `forcePushSheetChangesToGitHub()` | ⚠️ **破壊的。** シートが空でも安全装置を無視して書き出す（ゴミデータの一括削除専用。通常は使わない） |
 | `importFromGitHub()` | GitHubの `data/*.json` でシートを上書きする（移行・復旧用） |
-| `initSheets()` | 6シートを作成し、ヘッダと書式を設定（初回のみ） |
+| `initSheets()` | 7シートを作成し、ヘッダと書式を設定（初回のみ・既にあるシートには触らないので、`monsters` の追加にも使える） |
 | `seedUsers()` | 既存の15人を `users` へ投入（初回のみ・`importFromGitHub()` を使うなら不要） |
 | `dumpUsersJson()` | `users` をJSONでログ出力（`data/users.json` との比較用） |
 | `selfTestRoundTrip()` | シート→JSON→シート→JSON で内容が変わらないか検証 |

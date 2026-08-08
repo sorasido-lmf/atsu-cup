@@ -40,8 +40,35 @@ GitHubリポジトリで管理する参加者・大会マスタデータ。JSON�
 | placement | number \| null | 最終順位。未確定はnull |
 | wins | number | その大会での勝利数 |
 | recAtEntry | boolean | その大会時点での撮影可否（省略時はusers.recDefaultを使用） |
+| monsterId | string \| null | 外部キー → monsters.json。その大会でこの人が使ったモンスター。未選択はnull。**2026-08-08に最終列として追加**（既存列の途中に挿入しないこと） |
 
 ポイントはここに保存せず、`placement`/`wins`から都度算出する。
+
+`monsterId`は`userId`と違い、**クライアントが送ったidをGASがそのまま書き込む**（名前→ID解決をしない）。
+モンスターマスタはシートを人が手で編集する読み取り専用マスタで、アプリ側が採番することが無いため。
+マスタから消えたidが残っていても行は壊れず、表示側で「不明なモンスター」になるだけ。
+
+## monsters.json（モンスターの種族カタログ）
+
+🔴 **このテーブルだけはアプリから一切書き込まない。** スプレッドシートの`monsters`シートを人が直接編集し、
+GASエディタで`previewMonstersToGitHub()`→`pushMonstersToGitHub()`を手動実行して反映する
+（`gas/README.md`参照）。個体ではなく**種族**の一覧である点に注意。
+
+| カラム | 型 | 説明 |
+|---|---|---|
+| id | string | 一意なID（`m0001`形式）。不変。entries.monsterIdから参照される |
+| name | string | 種族名 |
+| aura | string | オーラ色: 赤 / 青 / 黄 / 緑 / 白 / 黒 |
+| kind | string | モン類: 創造 / 幻霊 / 魔族 / 獣 / 怪物 / 無機 |
+| mainBlood | string | 主血統。**候補値が未確定のため自由入力**（アプリ側でバリデーションしない） |
+| subBlood | string | 副血統。入りうる値は「主血統の値 + ロード種 + ノーブル種」の想定。同じく自由入力 |
+| archived | boolean | trueで選択候補から外れる。**過去の記録の表示・集計には影響しない**（引退した種族を隠すための列） |
+| sortOrder | number | 選択モーダルでの表示順（昇順・同値は行順）。`users.sortOrder`と同じ扱い |
+
+`aura`/`kind`の値はアプリ側にも定数がある（`atsucup-core.js`の`MONSTER_AURAS`/`MONSTER_KINDS`。
+絞り込みUIの並びと集計の内訳に使う）が、**ここに無い値がシートに入っていても弾かない**
+（マスタは人が育てるもので、アプリ側の定数が運用のボトルネックにならないようにするため）。
+定数に無い値は絞り込みチップに出ず、内訳では「その他」にまとまる。
 
 ## matches.json（対戦データ = 一次データ／詳細ログ）
 | カラム | 型 | 説明 |

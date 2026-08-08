@@ -29,6 +29,7 @@ LINE モンスターファーム のコミュニティ大会「あつ杯」の�
 - **`data/` の扱いを変える前に必ず [`docs/data-sync.md`](docs/data-sync.md) と [`docs/operations.md`](docs/operations.md) を読み直す**
 - **大会情報の編集・作成は `saveTournamentMetaToData()`、進行状況の保存は `saveTournamentToData()`。取り違えない。** メタ保存のつもりでフル保存を呼ぶと、他端末が保存済みの対戦結果を空の entries/matches で上書きして消す（実害が出た事故）
 - **`fromAppTournament()` の書き出し規則を変えたら、必ず `atsucup-data.js` の `SIG_VERSION` を上げる。** 上げ忘れると全端末で競合モーダルが誤爆する
+- **モンスターマスタ（`monsters`シート / `data/monsters.json`）をアプリから書き込まない。** 人がシートで育てる読み取り専用マスタで、反映は `pushMonstersToGitHub()` の手動実行のみ。`data/monsters.json` の取得は `loadFromData()` で**必ず `.catch()` を通し、他の4本と同列の `Promise.all` に混ぜない**（404で大会・ユーザーの同期まで止まる）
 - **`state.people` の配列順を変えない。** 同期署名に順序込みで入るため、並べ替えると全大会の署名が変わって全端末で競合モーダルが誤爆する。表示だけ並べ替えること
 
 ### 改悪しないために
@@ -71,7 +72,8 @@ LINE モンスターファーム のコミュニティ大会「あつ杯」の�
 |---|---|
 | 端末間の同期、保存、マージ、署名、大会の削除 | [`docs/data-sync.md`](docs/data-sync.md) 🔴最重要 |
 | 対戦表、シード枠、ラウンド進行、大会の終了、3位決定戦、撮影可否 | [`docs/tournament.md`](docs/tournament.md) |
-| 戦績ランキング、ユーザー管理、権限、並び順 | [`docs/records-users.md`](docs/records-users.md) |
+| 戦績ランキング、ユーザー管理、権限、並び順、モンスター別集計 | [`docs/records-users.md`](docs/records-users.md) |
+| モンスターマスタ（`monsters`シート）、エントリー時のモンスター記録 | [`data/SCHEMA.md`](data/SCHEMA.md) + [`gas/README.md`](gas/README.md) |
 | 画面追加、state の持ち方、ゲスト/認証プール、GAS 構成 | [`docs/architecture.md`](docs/architecture.md) |
 | デプロイ、バージョン更新、スプレッドシート操作、Git 運用、復旧 | [`docs/operations.md`](docs/operations.md) |
 | 「なぜこの設計なのか」が分からない時 | [`docs/incident-notes.md`](docs/incident-notes.md) |

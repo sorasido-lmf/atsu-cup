@@ -684,3 +684,21 @@ a.back-link{
   text-shadow:0 1px 0 #fff;
 }
 @media(max-width:600px){body.page-scene header.top{padding-bottom:20px;}a.back-link{left:max(10px,env(safe-area-inset-left));}}
+
+/* エントリー時に使ったモンスターのチップ。大会エントリー・大会詳細・結果画面で共用する
+   (ページごとに定義すると見た目がずれるため、ここ1箇所に置く)。
+   button でも span でも同じ見た目になるようにしてある(結果画面は押せない表示のみ) */
+.mon-chip{
+  display:block;width:100%;box-sizing:border-box;text-align:left;background:#fffdf7;
+  border:1.5px dashed var(--stone-beige);border-radius:8px;padding:4px 7px;font-size:11px;
+  color:var(--fantasy-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+button.mon-chip{cursor:pointer;}
+.mon-chip.has-mon{border-style:solid;border-color:var(--ember2);color:var(--fantasy-text);font-weight:700;}
+.mon-chip.unknown{border-style:solid;border-color:#c25b50;color:#8f2f27;}
+.mon-chip.is-inline{display:inline-block;width:auto;max-width:100%;}
+/* 大会詳細の「参加者とモンスター」一覧 */
+.mon-person-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;}
+.mon-person{background:#fffdf7;border:1.5px solid var(--stone-beige);border-radius:10px;padding:9px 8px;min-width:0;}
+.mon-person .nm{display:block;font-weight:700;font-size:13px;color:var(--fantasy-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mon-person .mon-chip{margin-top:6px;}

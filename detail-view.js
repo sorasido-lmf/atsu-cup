@@ -10,6 +10,7 @@
   const content = document.getElementById('content');
   const matchupSection = document.getElementById('matchupSection');
   const bracketSection = document.getElementById('bracketSection');
+  const monsterSection = document.getElementById('monsterSection');
   const id = new URLSearchParams(location.search).get('id');
   // この大会を操作対象にする(state.people/matches等がこの大会を指すようになる)
   AtsuCup.setActive(id);
@@ -132,12 +133,67 @@
         renderMatchup();
       }
     }
+    renderMonsterPanel();
     // ⚠️ セッション切れの案内はここでは出さない(2026-07-28に共通化)。
     // atsucup-core.jsのinitSessionExpiredBannerが全ページ・全分岐で画面下部に固定表示するため、
     // ここで出すと同じ内容が同一画面に二重に出てしまう
   }
 
-  function hideSub(){ matchupSection.style.display='none'; bracketSection.style.display='none'; }
+  function hideSub(){ matchupSection.style.display='none'; bracketSection.style.display='none'; monsterSection.style.display='none'; }
+
+  /* ================= 参加者とモンスター ================= */
+  // ⚠️ ここには参加者の追加/削除の導線を作らないこと。エントリー画面が1回戦決着後に
+  //    ロックされる(locked())のは、進行中の対戦結果をresetDownstreamで壊さないための設計で、
+  //    その抜け道をここに作ると同じ事故が起きる。変更できるのはモンスターだけ。
+  function renderMonsterPanel(){
+    if(!state.people.length){ monsterSection.style.display = 'none'; return; }
+    monsterSection.style.display = 'block';
+    const editable = !readOnly;
+    const set = state.people.filter(p=> p.monsterId).length;
+    monsterSection.innerHTML = `
+      <h2>参加者とモンスター</h2>
+      <p class="hint" style="margin:2px 0 0;">${editable
+        ? '名前の下のボタンから、その人が使ったモンスターを記録できます。対戦が始まった後でも変更できます。'
+        : '記録されているモンスター(閲覧のみ)'}</p>
+      <div class="count-badge" style="margin-top:10px;">🐾 記録済み: ${set} / ${state.people.length}人</div>
+      <div class="mon-person-grid">
+        ${sortedForDisplay(state.people).map(p=>{
+          const chip = AtsuCup.monsterChip(p.monsterId);
+          const cls = chip.state==='known' ? 'has-mon' : (chip.state==='unknown' ? 'unknown' : '');
+          const inner = `<span class="nm">${escapeHtml(p.name)}</span>` + (editable
+            ? `<button class="mon-chip ${cls}" data-mon="${escapeHtml(p.name)}" title="使ったモンスターを選ぶ">${escapeHtml(chip.text)}</button>`
+            : `<span class="mon-chip ${cls}">${escapeHtml(chip.text)}</span>`);
+          return `<div class="mon-person">${inner}</div>`;
+        }).join('')}
+      </div>`;
+    if(!editable) return;
+    monsterSection.querySelectorAll('[data-mon]').forEach(el=>{
+      el.addEventListener('click', ()=> openMonsterPicker(el.dataset.mon));
+    });
+  }
+
+  // 🔴 表示だけ並べ替える。state.people の配列順は同期署名に順序込みで入るので絶対に変えない
+  //    (tournament-entry.html の同名関数と同じ理由)
+  function sortedForDisplay(list){
+    const so = AtsuCup.pool().userSortOrder || {};
+    return list.slice().sort((a,b)=> (Number(so[a.name])||0) - (Number(so[b.name])||0));
+  }
+
+  // 参加者1人のモンスターを選び直す。エントリー画面・途中参加からも同じ経路を通す
+  function openMonsterPicker(name, onDone){
+    const person = state.people.find(p=> p.name === name);
+    if(!person) return;
+    MonsterPickModal.open({
+      currentId: person.monsterId || null,
+      personName: name,
+      onPick: (monsterId)=>{
+        person.monsterId = monsterId || null;
+        AtsuCup.persist();
+        if(typeof onDone === 'function') onDone();
+        renderMonsterPanel();
+      }
+    });
+  }
 
   function renderNotFound(){
     hideSub(); content.style.display='block';
@@ -1204,14 +1260,23 @@
           pendingChallengerM={m,name};
           const area=document.getElementById('advanceArea');
           area.innerHTML=`<div class="advance-warn">この先のラウンドに進んだ対戦があります。途中参加者を入れると、その先の組み合わせはいったんリセットされます。よろしいですか？<div class="row"><button class="btn btn-primary" id="chYes">追加する</button><button class="btn btn-ghost" id="chNo">キャンセル</button></div></div>`;
-          document.getElementById('chYes').addEventListener('click', ()=>{ AtsuCup.addChallengerToBye(0, pendingChallengerM.m, pendingChallengerM.name); pendingChallengerM=null; renderTree(); renderExtras(); });
+          document.getElementById('chYes').addEventListener('click', ()=>{ AtsuCup.addChallengerToBye(0, pendingChallengerM.m, pendingChallengerM.name); const n=pendingChallengerM.name; pendingChallengerM=null; renderTree(); renderExtras(); askMonsterForNewcomer(n); });
           document.getElementById('chNo').addEventListener('click', ()=>{ pendingChallengerM=null; renderExtras(); });
         } else {
-          AtsuCup.addChallengerToBye(0, m, name); renderTree(); renderExtras();
+          AtsuCup.addChallengerToBye(0, m, name); renderTree(); renderExtras(); askMonsterForNewcomer(name);
         }
       }
     });
   }
+  // 途中参加で入った人のモンスターを、その場で続けて選べるようにする。
+  // 閉じた(選ばなかった)場合は未設定のまま進み、後から「参加者とモンスター」で直せる。
+  // モンスターマスタが空の環境では出さない(選択肢の無いモーダルを見せない)
+  function askMonsterForNewcomer(name){
+    if(readOnly) return;
+    if(!AtsuCup.selectableMonsters().length) return;
+    openMonsterPicker(name);
+  }
+
   async function saveBracketImg(){
     const svgStr=buildTreeSVG(); const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'}); const url=URL.createObjectURL(blob);
     try{ const img=new Image(); await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=url; }); const canvas=document.createElement('canvas'); canvas.width=img.width; canvas.height=img.height; canvas.getContext('2d').drawImage(img,0,0);

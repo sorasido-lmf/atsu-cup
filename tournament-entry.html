@@ -28,6 +28,7 @@
     cursor:pointer; padding:3px 6px; line-height:1;
   }
   .roster-cell .cam-toggle-inline{ flex-shrink:0; padding:2px 6px; font-size:11px; }
+  /* .mon-chip の見た目は atsucup-style.css(エントリー・大会詳細・結果で共用) */
   .next-flow-box{ margin-top:20px; }
   .lock-notice{
     background:#241214; border:1px solid #5a2222; border-radius:14px; padding:12px 14px;
@@ -82,6 +83,7 @@
 <script src="atsucup-core.js"></script>
 <script src="guide-assistant.js"></script>
 <script src="user-register-modal.js"></script>
+<script src="monster-pick-modal.js"></script>
 <script>
 (function(){
   "use strict";
@@ -225,8 +227,12 @@
       sortedForDisplay(state.people, p=>p.name).forEach(person=>{
         const cell = document.createElement('div');
         cell.className = 'roster-cell selected';
+        // モンスターは対戦開始後(isLocked)でも変更できるようにしておく。参加者の増減と違って
+        // 対戦表に影響しないうえ、当日は先に組んでから記録することが多いため
+        const chip = AtsuCup.monsterChip(person.monsterId);
         cell.innerHTML = `
           <span class="nm">${escapeHtml(person.name)}</span>
+          <button class="mon-chip ${chip.state==='known'?'has-mon':(chip.state==='unknown'?'unknown':'')}" data-mon="${escapeHtml(person.name)}" title="使ったモンスターを選ぶ">${escapeHtml(chip.text)}</button>
           <div class="cell-actions">
             <button class="cam-toggle-inline ${person.rec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(person.name)}" title="この大会限定の撮影可否">${person.rec?'📹':'🚫'}</button>
             ${isLocked ? '' : `<button class="rm" data-toggle="${escapeHtml(person.name)}" title="今回の参加から外す">外す</button>`}
@@ -269,6 +275,21 @@
         el.addEventListener('click', (ev)=>{ ev.stopPropagation(); toggleSelect(el.dataset.toggle); });
       });
     }
+    document.querySelectorAll('[data-mon]').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const person = state.people.find(p=>p.name===el.dataset.mon);
+        if(!person) return;
+        MonsterPickModal.open({
+          currentId: person.monsterId || null,
+          personName: person.name,
+          onPick: (monsterId)=>{
+            person.monsterId = monsterId || null;
+            entryDirty = true; AtsuCup.persist(); renderAll();
+          }
+        });
+      });
+    });
     document.querySelectorAll('[data-cam]').forEach(el=>{
       el.addEventListener('click', (ev)=>{
         ev.stopPropagation();

@@ -83,6 +83,8 @@ GitHub (data/*.json)  ──git→ローカル: やる──▶  ローカル作
 | 大会の作成・タイトル/詳細/開催日/公式大会・制限杯フラグ/ポスター画像の編集 | `tournament-create.html`での作成、大会詳細の「編集する」→「更新する」 | **操作の都度、即時**。entries/matchesには一切触れない専用の保存経路(下記コラム参照)。失敗してもローカルの保存は維持し、インライン警告のみ表示 | `tournament-create.html`、`detail-view.js`の`renderEditForm()` → `AtsuCup.saveTournamentMetaToData()` |
 | 参加者の選出・組み合わせ・勝敗入力・ラウンド進行など、大会の進行に関する変更 | 大会詳細画面での各種操作 | **反映されない。「💾 GitHubに保存」ボタンを押した時のみ** | `detail-view.js`の`saveTournamentToGitHub()` |
 | 大会エントリー画面での参加者の選出・撮影可否変更 | `tournament-entry.html`での各種操作 | **反映されない。画面から退出(「‹ 戻る」「大会詳細に戻る」)する時に変更があれば自動保存**（2026-07-27追加。以前はエントリー画面だけでは一切サーバーへ反映されず、対戦表ページで別途保存ボタンを押す必要があった） | `tournament-entry.html`の`syncAndGo()` → `AtsuCup.saveTournamentToData()`(フル保存) |
+| モンスターマスタ(`monsters`シート) | 人がシートを直接編集(アプリからは一切書き込めない) | **反映されない。GASエディタで`previewMonstersToGitHub()`で確認 → `pushMonstersToGitHub()`を手動実行するまでGitHubへは伝わらない**。大会用の`pushSheetChangesToGitHub()`とは経路が別(あちらの差分検出は大会id単位で`updatedAt`を打つ前提のため流用できない) | `gas/Code.gs`の`pushMonstersToGitHub()` |
+| エントリー時のモンスター(`entries.monsterId`) | エントリー画面・途中参加・大会詳細「参加者とモンスター」での選択 | **エントリー画面からの変更は退出時に自動保存**(他のエントリー内容と同じ)。**大会詳細からの変更は「💾 進行状況を保存」を押した時のみ** | `tournament-entry.html`、`detail-view.js`の`renderMonsterPanel()` |
 | スプレッドシートの手編集 | 人がシートを直接編集 | **反映されない。`gas/Code.gs`の`previewSheetChangesToGitHub()`で確認 → `pushSheetChangesToGitHub()`をGASエディタから手動実行するまでGitHubへは伝わらない**(後者が`updatedAt`も自動で打つ。下記参照) | `gas/README.md` |
 | GitHub上の`data/*.json` → 開発者のローカル | 上記いずれかでGitHubが更新された後 | **反映されない。`git update-index --no-skip-worktree`→`git checkout data`→`--skip-worktree`の手動取り込みが必要** | 前節「データ管理方針」 |
 
@@ -173,6 +175,14 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 対策として署名文字列の先頭にバージョン印を埋めている(`'v2|' + stableStringify(...)`)。別キーで版数を持つのではなく署名自体に埋めるのは、**版数と算出アルゴリズムが乖離しないようにするため**。`migrate()`が`AtsuCupData.isCurrentSigVersion(sig)`で判定し、印が合わない基準値だけを捨てて張り直す。
 
 ⚠️ **`fromAppTournament`の書き出し規則(どの枠を行にするか)を変更したら、必ず`atsucup-data.js`の`SIG_VERSION`を上げること。** 上げ忘れが誤爆の再発リスクの本体。なお「`updatedAt`があるから時刻比較で守られる」とは**言えない** — 列追加前に保存された行は`updatedAt`が空で、内容比較経路に落ちるため。実際に導入時点の本番データは全大会が`updatedAt`空だった。
+
+**v3(2026-08-08)**: `entryRows`に`monsterId`(エントリー時に使ったモンスター)を追加したため上げた。
+
+**モンスターマスタ(`data/monsters.json`)は署名にも競合判定にも一切関与しない。** 読み取り専用の共有マスタで、
+`loadFromData()`のたびに`state.monsters`を丸ごと差し替えるだけ(マージも基準値も無い)。
+⚠️ ただし取得は他の4本と**同列に置かない**こと。`fetchJson`は404で例外を投げるので、
+`Promise.all`に混ぜると`monsters.json`がまだ無い環境で**大会・ユーザーの同期まで丸ごと止まる**。
+個別に`.catch(()=>null)`で受け、取れなかった時はローカルの前回値を使う(空にはしない)。
 
 基準値を捨てた直後は`mergeRemoteTournaments`の「基準値なし」フォールバックを1回通る。この分岐は`conflicts.push`に到達しないので**競合モーダルは構造上発火せず**、ローカルに進行状況があれば保護される。ただし**その1回だけ、他端末の未取り込みの変更がスキップされる**(全端末でリロードし、最新を持つ端末で1回保存し直せば揃う)。
 

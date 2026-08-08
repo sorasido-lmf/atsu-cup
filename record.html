@@ -38,6 +38,18 @@
     margin-bottom:14px; font-size:11px; color:var(--fantasy-muted); background:#fffdf7; border:1px solid var(--stone-beige);
     border-radius:8px; padding:8px 10px; line-height:1.7;
   }
+  /* モンスター別集計。行の作りは .rank-row と同じだが、タップ先の詳細画面が無いので
+     cursor:pointer を外してある(押せそうに見えて何も起きない、を避ける) */
+  .mon-row{ cursor:default; }
+  .mon-row .rr-points{ color:var(--cream); }
+  .roll-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:10px 0 14px; }
+  .roll-cell{
+    background:#fffdf7; border:1px solid var(--stone-beige); border-radius:9px; padding:8px 6px; text-align:center;
+  }
+  .roll-cell .k{ display:block; font-size:11.5px; font-weight:700; color:var(--fantasy-text); }
+  .roll-cell .v{ display:block; margin-top:3px; font-family:'JetBrains Mono',monospace; font-weight:900; font-size:14px; color:var(--fantasy-text); }
+  .roll-cell .s{ display:block; font-size:10px; color:var(--fantasy-muted); }
+  .roll-label{ font-size:11px; color:var(--muted); letter-spacing:.05em; margin-top:6px; }
 </style>
 </head>
 <body class="page-scene page-lobby">
@@ -55,6 +67,12 @@
     <div class="points-hint">🏆 ポイントは大会ごとに加算されます: 対戦に1勝で1P / 4位3P / 3位5P / 準優勝7P / 優勝10P</div>
     <div id="filterArea"></div>
     <div id="rankList"></div>
+  </section>
+
+  <section class="panel" id="monsterPanel">
+    <h2><span class="num">02</span> モンスター別</h2>
+    <p class="hint">エントリー時に記録されたモンスターの集計です。上の絞り込み(対象の大会・期間)がそのまま効きます。</p>
+    <div id="monsterArea"></div>
   </section>
 
 </div>
@@ -143,6 +161,7 @@
     const hint = document.getElementById('filterHint');
     if(hint) hint.textContent = hintText();
     renderRankList();
+    renderMonsterList();
   }
 
   function renderFilter(){
@@ -281,7 +300,80 @@
     });
   }
 
-  function renderAll(){ renderFilter(); renderRankList(); }
+  /* ---- モンスター別集計 ----
+     母数(allFinishedEntries)は上のランキングと同じで、絞り込みもそのまま共有する。
+     ⚠️ モンスター未設定のエントリーは computeMonsterStats が最初から除いている。
+     そのため「使用回数の合計 ≠ 参加者数の合計」になるのは正しい状態 */
+  const MON_SORTS = {
+    used:      { label:'📊 使用回数順', value:s=> s.used },
+    monWinRate:{ label:'⚔️ 勝率順',     value:s=> rateOf(s.wins, s.games) },
+    monChamp:  { label:'👑 優勝数順',   value:s=> s.p1 }
+  };
+  let monSort = 'used';
+
+  function monRowHtml(s, rank){
+    const wr = rateOf(s.wins, s.games);
+    const meta = [s.aura, s.kind, s.mainBlood, s.subBlood].filter(Boolean).join(' / ');
+    // マスタから消えた(または旧データの)idも落とさず出す。名前が引けないのでidを見せる
+    const label = s.known ? (s.name || s.id) : `不明なモンスター(${s.id})`;
+    return `<div class="rank-row mon-row">
+      <div class="rank">${rank}</div>
+      <div class="rr-main">
+        <div class="rr-name">${escapeHtml(label)}</div>
+        <div class="rr-sub">${escapeHtml(meta || '—')}</div>
+        <div class="rr-sub">🥇${s.p1} 🥈${s.p2} 🥉${s.p3} 4位${s.p4} ・ 勝率${pct(wr)}(${s.wins}/${s.games})</div>
+      </div>
+      <div class="rr-points">${s.used}<span class="u">回</span></div>
+    </div>`;
+  }
+
+  // オーラ色別・モン類別の内訳。同じ集計結果から足し上げるだけなので、
+  // 一覧とロールアップで数字が食い違うことが原理的に起きない
+  function rollupHtml(stats, key, values, title){
+    const sum = {};
+    values.forEach(v=>{ sum[v] = { used:0, wins:0, games:0, p1:0 }; });
+    let other = { used:0, wins:0, games:0, p1:0 };
+    stats.forEach(s=>{
+      const bucket = sum[s[key]] || other;
+      bucket.used += s.used; bucket.wins += s.wins; bucket.games += s.games; bucket.p1 += s.p1;
+    });
+    const cells = values.map(v=>{
+      const b = sum[v];
+      return `<div class="roll-cell">
+        <span class="k">${escapeHtml(v)}</span>
+        <span class="v">${b.used}<span style="font-size:10px;">回</span></span>
+        <span class="s">勝率${pct(rateOf(b.wins, b.games))} ・ 👑${b.p1}</span>
+      </div>`;
+    }).join('');
+    const otherCell = other.used ? `<div class="roll-cell"><span class="k">その他</span><span class="v">${other.used}<span style="font-size:10px;">回</span></span><span class="s">勝率${pct(rateOf(other.wins, other.games))} ・ 👑${other.p1}</span></div>` : '';
+    return `<div class="roll-label">${escapeHtml(title)}</div><div class="roll-grid">${cells}${otherCell}</div>`;
+  }
+
+  function renderMonsterList(){
+    const area = document.getElementById('monsterArea');
+    const stats = AtsuCup.computeMonsterStats(filter);
+    if(!stats.length){
+      area.innerHTML = `<div class="empty-state" style="padding:14px 4px;">条件に合う大会に、モンスターが記録されたエントリーがありません。<br>大会エントリー画面で参加者ごとにモンスターを選ぶと、ここに集計されます。</div>`;
+      return;
+    }
+    const val = MON_SORTS[monSort].value;
+    const sorted = stats.slice().sort((a,b)=>
+      (val(b)||0)-(val(a)||0) || b.used-a.used || String(a.name||a.id).localeCompare(String(b.name||b.id),'ja'));
+    const totalUsed = stats.reduce((n,s)=> n+s.used, 0);
+    area.innerHTML = `
+      <div class="acc-btns" style="margin-bottom:6px;">
+        ${Object.keys(MON_SORTS).map(k=>
+          `<button type="button" class="btn ${monSort===k?'btn-gold':'btn-ghost'}" data-monsort="${k}">${MON_SORTS[k].label}</button>`).join('')}
+      </div>
+      <p class="hint" style="margin:0 0 4px;">記録のあるエントリー ${totalUsed}件 / ${stats.length}種類</p>
+      ${rollupHtml(stats, 'aura', AtsuCup.MONSTER_AURAS, 'オーラ色別')}
+      ${rollupHtml(stats, 'kind', AtsuCup.MONSTER_KINDS, 'モン類別')}
+      ${sorted.map((s,i)=> monRowHtml(s, i+1)).join('')}`;
+    area.querySelectorAll('[data-monsort]').forEach(b=>
+      b.addEventListener('click', ()=>{ monSort = b.dataset.monsort; renderMonsterList(); }));
+  }
+
+  function renderAll(){ renderFilter(); renderRankList(); renderMonsterList(); }
 
   renderAll();
   // data/*.json(GitHub側=正)の取り込みが終わったら描き直す
