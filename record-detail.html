@@ -12,6 +12,15 @@
 <style>
   .hist-item-wrap{ margin-bottom:6px; }
   .hist-item-wrap .hist-item{ margin-bottom:0; }
+  /* 大会名 + 使ったモンスターのチップ。375px幅では大会名の方を縮めて、
+     チップ(モンスター名)が先に潰れないようにする */
+  /* 大会名と、その大会で使ったモンスター。
+     ⚠️ 横に並べると375px幅ではモンスター名が「ベス…」まで潰れて用をなさない。
+        名前を読ませるのが目的なので縦に積み、チップに左カラムの幅を丸ごと使わせる */
+  .hist-item .hist-title{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  /* テキストは自前のspanに入れる。flexの直下のテキストノードには text-overflow が効かない */
+  .hist-item .hist-title .t{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hist-item .hist-title .mon-chip{ max-width:100%; }
   .path-list{
     background:#eee4cf; border:1px solid var(--stone-beige); border-top:none; border-radius:0 0 8px 8px;
     padding:4px 12px 8px; margin-top:-1px;
@@ -47,7 +56,13 @@
   </section>
 
   <section class="panel">
-    <h2><span class="num">02</span> 大会別の記録</h2>
+    <h2><span class="num">02</span> 愛用モンスター</h2>
+    <p class="hint">エントリー時に記録されたモンスターの集計です。上の絞り込み(対象の大会・期間)がそのまま効きます。</p>
+    <div id="monsterArea"></div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="num">03</span> 大会別の記録</h2>
     <p class="hint">大会名をタップすると、何回戦で誰と対戦したかの詳細が見られます。</p>
     <div id="entryListArea"></div>
   </section>
@@ -60,6 +75,7 @@
 <script src="gas-db.js"></script>
 <script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
+<script src="monster-stats-view.js"></script>
 <script src="guide-assistant.js"></script>
 <script>
 (function(){
@@ -187,16 +203,19 @@
     document.getElementById('playerNameTitle').textContent = targetName || '(不明)';
     const summaryArea = document.getElementById('summaryArea');
     const entryListArea = document.getElementById('entryListArea');
+    const monsterArea = document.getElementById('monsterArea');
 
     if(!targetName){
       summaryArea.innerHTML = `<div class="empty-state" style="padding:16px 10px;">プレイヤーが指定されていません。</div>`;
       entryListArea.innerHTML = '';
+      monsterArea.innerHTML = '';
       return;
     }
     const entries = AtsuCup.allFinishedEntries(filter).filter(e => (e.participants||[]).some(p=>p.name===targetName));
     if(!entries.length){
       summaryArea.innerHTML = `<div class="empty-state" style="padding:16px 10px;">この集計範囲では「${escapeHtml(targetName)}」が参加した大会がありません。<br>絞り込みを変えてみてください。</div>`;
       entryListArea.innerHTML = '';
+      monsterArea.innerHTML = '';
       return;
     }
 
@@ -216,7 +235,9 @@
       };
       (e.matches||[]).forEach(round=> round.forEach(m=> tally(m, true)));
       tally(e.thirdPlaceMatch, false); // 3位決定戦は既存実装に合わせて bye を見ない
-      return { idx:i, entry:e, title: e.title, label: pl.label, place: pl.place, pts };
+      const me = (e.participants||[]).find(p=>p.name===targetName);
+      return { idx:i, entry:e, title: e.title, label: pl.label, place: pl.place, pts,
+               monsterId: (me && me.monsterId) || null };
     });
 
     const top4 = p1+p2+p3+p4;
@@ -239,14 +260,21 @@
       </div>
     `;
 
+    renderMonsters(monsterArea, entries.length);
+
     const resClass = p => p===1?'p1':p===2?'p2':p===3?'p3':p===4?'p4':'pother';
     entryListArea.innerHTML = rows.map(r=>{
       const isOpen = expandedEntryIdx === r.idx;
       const path = isOpen ? computeParticipantPath(r.entry, targetName) : [];
+      // 使ったモンスター。未記録(state==='none')の大会では何も出さない
+      // (「—」で埋めると、記録漏れなのか記録済みなのか行を見ても分からなくなる)
+      const chip = AtsuCup.monsterChip(r.monsterId);
+      const chipHtml = chip.state === 'none' ? ''
+        : `<span class="mon-chip is-inline ${chip.state==='known'?'has-mon':'unknown'}">${escapeHtml(chip.text)}</span>`;
       return `
       <div class="hist-item-wrap${isOpen?' is-open':''}">
         <div class="hist-item" data-entryidx="${r.idx}" style="cursor:pointer;">
-          <span>${isOpen?'▾':'▸'} ${escapeHtml(r.title)}</span>
+          <span class="hist-title"><span class="t">${isOpen?'▾':'▸'} ${escapeHtml(r.title)}</span>${chipHtml}</span>
           <span class="row" style="gap:6px;">
             <span class="res ${resClass(r.place)}">${escapeHtml(r.label)}</span>
             <span class="count-badge muted2" style="margin:0;">${r.pts}P</span>
@@ -263,6 +291,25 @@
         render();
       });
     });
+  }
+
+  /* ---- 愛用モンスター ----
+     🔴 集計は必ず render() と同じ filter を渡す。渡さないと上の通算成績と母数が食い違い、
+        どちらが正しいのか画面からは判断できなくなる。
+     ⚠️ 率の分母は「モンスターを記録した出場回数」で、出場回数そのものではない
+        (未記録は集計に入らない = AtsuCup側の仕様)。母数が伝わるよう件数を必ず併記する */
+  function renderMonsters(area, playedCount){
+    const stats = AtsuCup.computeMonsterStatsFor(targetName, filter);
+    if(!stats.length){
+      area.innerHTML = `<div class="empty-state" style="padding:14px 4px;">この集計範囲では、まだモンスターの記録がありません。<br>大会詳細の「参加者とモンスター」から選ぶと、ここに集計されます。</div>`;
+      return;
+    }
+    const total = stats.reduce((n,s)=> n+s.used, 0);
+    const sorted = stats.slice().sort((a,b)=>
+      b.used - a.used || String(a.name||a.id).localeCompare(String(b.name||b.id),'ja'));
+    area.innerHTML = `
+      <div class="count-badge" style="margin:0 0 8px;">🐾 記録のある出場: ${total} / ${playedCount}回 ・ ${stats.length}種類</div>
+      ${sorted.map((s,i)=> MonsterStatsView.rowHtml(s, i+1, { total })).join('')}`;
   }
 
   function renderAll(){ renderFilter(); render(); }

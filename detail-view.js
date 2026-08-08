@@ -148,12 +148,18 @@
   function renderMonsterPanel(){
     if(!state.people.length){ monsterSection.style.display = 'none'; return; }
     monsterSection.style.display = 'block';
-    const editable = !readOnly;
+    // 🔴 ここだけ readOnly ではなく isReadOnlyView() で判定する(2026-08-09)。
+    //    readOnly は終了(finished)も含むため、以前は大会が終わった瞬間に
+    //    モンスターを記録する導線が全ページから消えていた。過去の大会は当然すべて
+    //    終了済みなので、「使用率は出るが、そのデータを入れる場所がどこにも無い」状態だった。
+    //    ⚠️ 編集できるのは monsterId だけ。組み合わせ・勝敗のロック(readOnly)は
+    //       そのままにすること。上の警告どおり、ここに参加者の増減を持ち込まない。
+    const editable = !isReadOnlyView();
     const set = state.people.filter(p=> p.monsterId).length;
     monsterSection.innerHTML = `
       <h2>参加者とモンスター</h2>
       <p class="hint" style="margin:2px 0 0;">${editable
-        ? '名前の下のボタンから、その人が使ったモンスターを記録できます。対戦が始まった後でも変更できます。'
+        ? '名前の下のボタンから、その人が使ったモンスターを記録できます。対戦が始まった後でも、大会が終わった後でも変更できます。'
         : '記録されているモンスター(閲覧のみ)'}</p>
       <div class="count-badge" style="margin-top:10px;">🐾 記録済み: ${set} / ${state.people.length}人</div>
       <div class="mon-person-grid">
@@ -165,11 +171,38 @@
             : `<span class="mon-chip ${cls}">${escapeHtml(chip.text)}</span>`);
           return `<div class="mon-person">${inner}</div>`;
         }).join('')}
-      </div>`;
+      </div>
+      ${monsterUsageHtml(set)}`;
     if(!editable) return;
     monsterSection.querySelectorAll('[data-mon]').forEach(el=>{
       el.addEventListener('click', ()=> openMonsterPicker(el.dataset.mon));
     });
+  }
+
+  /* ---- 使用率(終了した大会だけ) ----
+     進行中は出さない。参加者が途中で増えたりモンスターが差し替わったりする間は
+     率が動き続けるので、確定していない数字を「傾向」として見せない。
+     ⚠️ 率の分母は「モンスターが記録されている人数(set)」で、参加者数ではない。
+        未記録を分母に入れると、記録が進むだけで全部の率が動いてしまう。
+        set は呼び出し元と同じ値を受け取り、ここで数え直さない(2箇所で数えるとズレる) */
+  function monsterUsageHtml(set){
+    if(!finished) return '';
+    const t = AtsuCup.activeT();
+    const stats = t ? AtsuCup.computeMonsterStatsOfTournament(t) : [];
+    const head = `<h3 style="margin:18px 0 0;">使用モンスターの傾向</h3>`;
+    if(!stats.length){
+      return `${head}<div class="empty-state" style="padding:12px 4px;">この大会にはモンスターの記録がありません。</div>`;
+    }
+    const opts = { total: set, unit: '人' };
+    const sorted = stats.slice().sort((a,b)=>
+      b.used - a.used || String(a.name||a.id).localeCompare(String(b.name||b.id),'ja'));
+    return `${head}
+      <p class="hint" style="margin:2px 0 0;">率の分母は「モンスターが記録されている ${set}人」です(未記録の人は含みません)。</p>
+      ${MonsterStatsView.rollupHtml(stats, 'aura', AtsuCup.MONSTER_AURAS, 'オーラ色別', opts)}
+      ${MonsterStatsView.rollupHtml(stats, 'kind', AtsuCup.MONSTER_KINDS, 'モン類別', opts)}
+      ${MonsterStatsView.rollupHtml(stats, 'mainBlood', MonsterStatsView.valuesPresent(stats, 'mainBlood'), '主血統別', opts)}
+      <div class="roll-label">使ったモンスター</div>
+      ${sorted.map((s,i)=> MonsterStatsView.rowHtml(s, i+1, opts)).join('')}`;
   }
 
   // 🔴 表示だけ並べ替える。state.people の配列順は同期署名に順序込みで入るので絶対に変えない

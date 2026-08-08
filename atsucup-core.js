@@ -1504,7 +1504,13 @@ const AtsuCup = (function(){
   //    そのため used の合計は参加者数の合計とは一致しない。
   // ⚠️ マスタから消えた(または旧データの)idも、集計対象からは落とさずidのまま残す。
   //    表示側で monsterById() が null を返すので「不明」として出せる。
-  function computeMonsterStats(opts){
+  // 集計の実体。入口(全体 / 個人 / 単一大会)はこの1本を共有する。
+  // 🔴 集計器を分けてはいけない。record.html(全体) / record-detail.html(個人) /
+  //    大会詳細(単一大会)で数え方がズレると、どの画面が正しいのか誰にも判断できなくなる。
+  // opts.onlyName … 指定するとその人ぶんだけを数える(その人の participants と、
+  //                 その人が出た試合のみ)。未指定時の結果は従来と完全に同一。
+  function aggregateMonsterStats_(entries, opts){
+    const onlyName = (opts && opts.onlyName) || null;
     const stats = {};
     const ensure = id=>{
       if(!stats[id]){
@@ -1515,7 +1521,7 @@ const AtsuCup = (function(){
       }
       return stats[id];
     };
-    allFinishedEntries(opts).forEach(entry=>{
+    entries.forEach(entry=>{
       const placements = computePlacements(entry);
       // この大会での 名前 → monsterId。同じ人が複数回出ることは無いので単純なマップでよい
       const midOf = {};
@@ -1523,6 +1529,7 @@ const AtsuCup = (function(){
 
       (entry.participants||[]).forEach(p=>{
         if(!p || !p.monsterId) return;
+        if(onlyName && p.name !== onlyName) return;
         const s = ensure(p.monsterId);
         s.used += 1;
         const place = placements[p.name] ? placements[p.name].place : null;
@@ -1531,10 +1538,12 @@ const AtsuCup = (function(){
 
       // 勝率の実戦カウント。判定条件は computeAllTimeStats の countGame と完全に同じにすること
       // (両画面で勝率が食い違うと、どちらが正しいのか誰にも判断できなくなる)
+      // onlyName 指定時も判定条件そのものは変えない。「その人ぶんだけ積むかどうか」を足すだけ
+      const mine = n => !onlyName || n === onlyName;
       const countGame = (a, b, winner)=>{
-        if(midOf[a]) ensure(midOf[a]).games++;
-        if(midOf[b]) ensure(midOf[b]).games++;
-        if(winner && midOf[winner]) ensure(midOf[winner]).wins++;
+        if(mine(a) && midOf[a]) ensure(midOf[a]).games++;
+        if(mine(b) && midOf[b]) ensure(midOf[b]).games++;
+        if(winner && mine(winner) && midOf[winner]) ensure(midOf[winner]).wins++;
       };
       (entry.matches||[]).forEach(round=>{
         round.forEach(m=>{ if(m.a && m.b && m.winner && !m.bye) countGame(m.a, m.b, m.winner); });
@@ -1543,6 +1552,26 @@ const AtsuCup = (function(){
       if(tp && tp.a && tp.b && tp.winner) countGame(tp.a, tp.b, tp.winner);
     });
     return Object.values(stats);
+  }
+
+  // 全体集計(record.html「モンスター別」)。従来の唯一の入口で、出力は変えていない
+  function computeMonsterStats(opts){
+    return aggregateMonsterStats_(allFinishedEntries(opts), null);
+  }
+
+  // 1人ぶんの集計(record-detail.html「愛用モンスター」)。
+  // ⚠️ optsには呼び出し側の絞り込み(scope/from/to)をそのまま渡すこと。渡さないと
+  //    同じ画面の通算成績と母数が食い違う
+  function computeMonsterStatsFor(name, opts){
+    if(!name) return [];
+    return aggregateMonsterStats_(allFinishedEntries(opts), { onlyName: name });
+  }
+
+  // 1大会ぶんの集計(大会詳細の使用率パネル)。
+  // ⚠️ allFinishedEntriesを通さない。終了判定は呼び出し側(detail-view.jsのfinished)の責任
+  function computeMonsterStatsOfTournament(t){
+    if(!t) return [];
+    return aggregateMonsterStats_([toEntry_(t)], null);
   }
 
   // 戦績集計の対象: 優勝が決まっている全大会(終了済み・進行中を問わない)。
@@ -1574,11 +1603,17 @@ const AtsuCup = (function(){
         if(to   && d > to)   return false;
         return true;
       })
-      .map(t=>({
-        id:t.id, title:t.title, championName:t.winnerName||null, matches:t.matches,
-        thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people,
-        isOfficial:!!t.isOfficial, isRestricted:!!t.isRestricted, createdAt:t.createdAt
-      }));
+      .map(toEntry_);
+  }
+
+  // 大会オブジェクト → 集計用のentry形。allFinishedEntries と単一大会の集計で共有する
+  // (変換を2箇所に書くと、片方だけ列が増えて集計結果がズレる)
+  function toEntry_(t){
+    return {
+      id:t.id, title:t.title, championName:t.winnerName||null, matches:t.matches,
+      thirdPlaceMatch:t.thirdPlaceMatch, participants:t.people,
+      isOfficial:!!t.isOfficial, isRestricted:!!t.isRestricted, createdAt:t.createdAt
+    };
   }
 
   /* ---------- 大会のライフサイクル ---------- */
@@ -1683,7 +1718,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-08-09 00:09";
+  const BUILD_DATE = "2026-08-09 02:47";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1784,7 +1819,7 @@ const AtsuCup = (function(){
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildEmptyRound1, resetDownstream,
     advanceRound, pickWinner, pickWinnerAsSeed, resetMatchResult, pickThirdPlaceWinner, resetThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, forcedPairsList, hasDownstreamProgress,
     propagateWinnerDownstream,
-    computePlacements, computeTournamentPoints, computeAllTimeStats, computeMonsterStats, allFinishedEntries, endCurrentTournament, newTournamentId,
+    computePlacements, computeTournamentPoints, computeAllTimeStats, computeMonsterStats, computeMonsterStatsFor, computeMonsterStatsOfTournament, allFinishedEntries, endCurrentTournament, newTournamentId,
     monsterById, monsterLabel, monsterChip, selectableMonsters, MONSTER_AURAS, MONSTER_KINDS,
     setActive, activeT,
     isGuestMode, pool, authPool, guestPool, poolKindOfTournamentId, guestPoolHasData,

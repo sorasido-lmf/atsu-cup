@@ -702,3 +702,50 @@ button.mon-chip{cursor:pointer;}
 .mon-person{background:#fffdf7;border:1.5px solid var(--stone-beige);border-radius:10px;padding:9px 8px;min-width:0;}
 .mon-person .nm{display:block;font-weight:700;font-size:13px;color:var(--fantasy-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .mon-person .mon-chip{margin-top:6px;}
+
+/* 集計の一覧行と内訳グリッド。record.html(戦績ランキング/モンスター別)、
+   record-detail.html(愛用モンスター)、大会詳細(使用率)で共用する。
+   ⚠️ 以前は record.html の<style>にだけ在り、他ページで使うと枠すら出なかった。
+      3画面で見た目をそろえるため、ここ1箇所に置く */
+.rank-row{
+  display:flex; align-items:center; gap:10px; background:#fffdf7; border:1px solid var(--stone-beige);
+  border-radius:10px; padding:10px 12px; margin-bottom:7px; cursor:pointer;
+}
+.rank-row .rank{
+  width:30px; flex-shrink:0; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:900;
+  font-size:13px; color:var(--muted);
+}
+.rank-row .rank.top1{ color:var(--gold); font-size:18px; }
+.rank-row .rank.top2{ color:#cfd6e6; font-size:16px; }
+.rank-row .rank.top3{ color:#e0a86b; font-size:16px; }
+.rank-row .rr-main{flex:1; min-width:0;}
+.rank-row .rr-name{font-size:14.5px; font-weight:700; color:var(--cream); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.rank-row .rr-sub{font-size:10.5px; color:var(--muted); margin-top:3px;}
+.rank-row .rr-points{
+  flex-shrink:0; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:900; color:var(--gold); font-size:16px;
+}
+.rank-row .rr-points .u{font-size:10px; font-weight:700; color:var(--muted); margin-left:2px;}
+/* モンスター別集計。行の作りは .rank-row と同じだが、タップ先の詳細画面が無いので
+   cursor:pointer を外してある(押せそうに見えて何も起きない、を避ける) */
+.mon-row{ cursor:default; }
+.mon-row .rr-points{ color:var(--cream); }
+.roll-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:10px 0 14px; }
+.roll-cell{
+  background:#fffdf7; border:1px solid var(--stone-beige); border-radius:9px; padding:8px 6px; text-align:center;
+}
+.roll-cell .k{ display:block; font-size:11.5px; font-weight:700; color:var(--fantasy-text); }
+.roll-cell .v{ display:block; margin-top:3px; font-family:'JetBrains Mono',monospace; font-weight:900; font-size:14px; color:var(--fantasy-text); }
+.roll-cell .s{ display:block; font-size:10px; color:var(--fantasy-muted); }
+.roll-label{ font-size:11px; color:var(--muted); letter-spacing:.05em; margin-top:6px; }
+
+/* 使用率の横バー。⚠️ バーだけで意味を伝えないこと(必ず数値を併記する)。
+   幅は呼び出し側のインライン style="width:NN%" で与える(1行ごとにクラスを増やさない) */
+.usage-bar{
+  height:5px; border-radius:999px; overflow:hidden; margin-top:5px;
+  background:var(--warm-sand); border:1px solid var(--stone-beige);
+}
+.usage-bar > i{
+  display:block; height:100%; border-radius:999px;
+  background:linear-gradient(90deg,var(--primary-orange),var(--amber));
+}
+.roll-cell .usage-bar{ margin-top:6px; }

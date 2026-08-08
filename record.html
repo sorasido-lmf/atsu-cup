@@ -10,46 +10,19 @@
 <link rel="stylesheet" href="atsucup-style.css">
 <link rel="stylesheet" href="guide-assistant.css">
 <style>
-  .rank-row{
-    display:flex; align-items:center; gap:10px; background:#fffdf7; border:1px solid var(--stone-beige);
-    border-radius:10px; padding:10px 12px; margin-bottom:7px; cursor:pointer;
-  }
-  .rank-row .rank{
-    width:30px; flex-shrink:0; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:900;
-    font-size:13px; color:var(--muted);
-  }
-  .rank-row .rank.top1{ color:var(--gold); font-size:18px; }
-  .rank-row .rank.top2{ color:#cfd6e6; font-size:16px; }
-  .rank-row .rank.top3{ color:#e0a86b; font-size:16px; }
-  .rank-row .rr-main{flex:1; min-width:0;}
-  .rank-row .rr-name{font-size:14.5px; font-weight:700; color:var(--cream); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .rank-row .rr-sub{font-size:10.5px; color:var(--muted); margin-top:3px;}
+  /* ⚠️ .rank-row / .mon-row / .roll-* の定義は atsucup-style.css へ移した。
+     record-detail.html・大会詳細のモンスター集計と同じ見た目にするため、1箇所で持つ。
+     ここに残すのは、このページ固有のもの(しきい値の参考記録・ポイント説明)だけ */
   /* しきい値に満たない人。順位番号を付けず、参考記録だと分かるように落とす */
   .rank-row-dim{ opacity:.5; }
   .rank-tail-label{
     margin:14px 0 7px; font-size:11px; color:var(--muted); letter-spacing:.05em;
     border-top:1px solid var(--line); padding-top:10px;
   }
-  .rank-row .rr-points{
-    flex-shrink:0; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:900; color:var(--gold); font-size:16px;
-  }
-  .rank-row .rr-points .u{font-size:10px; font-weight:700; color:var(--muted); margin-left:2px;}
   .points-hint{
     margin-bottom:14px; font-size:11px; color:var(--fantasy-muted); background:#fffdf7; border:1px solid var(--stone-beige);
     border-radius:8px; padding:8px 10px; line-height:1.7;
   }
-  /* モンスター別集計。行の作りは .rank-row と同じだが、タップ先の詳細画面が無いので
-     cursor:pointer を外してある(押せそうに見えて何も起きない、を避ける) */
-  .mon-row{ cursor:default; }
-  .mon-row .rr-points{ color:var(--cream); }
-  .roll-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:10px 0 14px; }
-  .roll-cell{
-    background:#fffdf7; border:1px solid var(--stone-beige); border-radius:9px; padding:8px 6px; text-align:center;
-  }
-  .roll-cell .k{ display:block; font-size:11.5px; font-weight:700; color:var(--fantasy-text); }
-  .roll-cell .v{ display:block; margin-top:3px; font-family:'JetBrains Mono',monospace; font-weight:900; font-size:14px; color:var(--fantasy-text); }
-  .roll-cell .s{ display:block; font-size:10px; color:var(--fantasy-muted); }
-  .roll-label{ font-size:11px; color:var(--muted); letter-spacing:.05em; margin-top:6px; }
 </style>
 </head>
 <body class="page-scene page-lobby">
@@ -83,6 +56,7 @@
 <script src="gas-db.js"></script>
 <script src="atsucup-data.js"></script>
 <script src="atsucup-core.js"></script>
+<script src="monster-stats-view.js"></script>
 <script src="guide-assistant.js"></script>
 <script>
 (function(){
@@ -311,43 +285,11 @@
   };
   let monSort = 'used';
 
-  function monRowHtml(s, rank){
-    const wr = rateOf(s.wins, s.games);
-    const meta = [s.aura, s.kind, s.mainBlood, s.subBlood].filter(Boolean).join(' / ');
-    // マスタから消えた(または旧データの)idも落とさず出す。名前が引けないのでidを見せる
-    const label = s.known ? (s.name || s.id) : `不明なモンスター(${s.id})`;
-    return `<div class="rank-row mon-row">
-      <div class="rank">${rank}</div>
-      <div class="rr-main">
-        <div class="rr-name">${escapeHtml(label)}</div>
-        <div class="rr-sub">${escapeHtml(meta || '—')}</div>
-        <div class="rr-sub">🥇${s.p1} 🥈${s.p2} 🥉${s.p3} 4位${s.p4} ・ 勝率${pct(wr)}(${s.wins}/${s.games})</div>
-      </div>
-      <div class="rr-points">${s.used}<span class="u">回</span></div>
-    </div>`;
-  }
-
-  // オーラ色別・モン類別の内訳。同じ集計結果から足し上げるだけなので、
-  // 一覧とロールアップで数字が食い違うことが原理的に起きない
-  function rollupHtml(stats, key, values, title){
-    const sum = {};
-    values.forEach(v=>{ sum[v] = { used:0, wins:0, games:0, p1:0 }; });
-    let other = { used:0, wins:0, games:0, p1:0 };
-    stats.forEach(s=>{
-      const bucket = sum[s[key]] || other;
-      bucket.used += s.used; bucket.wins += s.wins; bucket.games += s.games; bucket.p1 += s.p1;
-    });
-    const cells = values.map(v=>{
-      const b = sum[v];
-      return `<div class="roll-cell">
-        <span class="k">${escapeHtml(v)}</span>
-        <span class="v">${b.used}<span style="font-size:10px;">回</span></span>
-        <span class="s">勝率${pct(rateOf(b.wins, b.games))} ・ 👑${b.p1}</span>
-      </div>`;
-    }).join('');
-    const otherCell = other.used ? `<div class="roll-cell"><span class="k">その他</span><span class="v">${other.used}<span style="font-size:10px;">回</span></span><span class="s">勝率${pct(rateOf(other.wins, other.games))} ・ 👑${other.p1}</span></div>` : '';
-    return `<div class="roll-label">${escapeHtml(title)}</div><div class="roll-grid">${cells}${otherCell}</div>`;
-  }
+  // ⚠️ 行と内訳の描画は monster-stats-view.js へ移した(record-detail.html・大会詳細と共有)。
+  //    ここでは opts を渡さないので、この画面の見た目は従来のまま(使用率とバーは出ない)。
+  //    全体集計にも使用率を出したくなったら {total: totalUsed} を渡すだけでよい
+  const monRowHtml = (s, rank)=> MonsterStatsView.rowHtml(s, rank);
+  const rollupHtml = (stats, key, values, title)=> MonsterStatsView.rollupHtml(stats, key, values, title);
 
   function renderMonsterList(){
     const area = document.getElementById('monsterArea');
