@@ -1718,7 +1718,7 @@ const AtsuCup = (function(){
   }
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-08-09 02:47";
+  const BUILD_DATE = "2026-08-14 21:31";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
@@ -1750,6 +1750,8 @@ const AtsuCup = (function(){
     setInterval(checkVersion, 5 * 60 * 1000);
   }
   /* ---------- セッション切れバナー(全ページ共通・画面下部固定) ---------- */
+  // このバナーは「表示」だけでなく「無音の再認証の駆動」も担う(2026-08-14に役割を拡張)。
+  // 下のupdate()がGoogleAuth.maybeRenew()を呼ぶ。
   // ⚠️ 以前は大会詳細の一部の分岐でだけ、しかもページ上部に出していた。対戦表が縦に長い大会では
   //    下までスクロールすると気づけず、「編集したのに保存できない」状態に陥っていた
   //    (2026-07-28にユーザーから指摘)。全ページで、スクロールしても常に見える下部固定にする。
@@ -1778,6 +1780,11 @@ const AtsuCup = (function(){
     });
 
     function update(){
+      // 表示判定の前に、無音の再認証を試みる(2026-08-14追加)。GoogleAuth.maybeRenew()は
+      // 冪等でクールダウン付きなので、ここからは無条件に呼んでよい。下のsetInterval(1分)と
+      // visibilitychangeに相乗りすることで、「スマホをスリープから復帰させた瞬間」
+      // 「別タブから戻った瞬間」にも再認証が走り、バナーが出る前に復帰できることが多くなる
+      if(typeof GoogleAuth !== 'undefined' && GoogleAuth.maybeRenew) GoogleAuth.maybeRenew();
       const show = (typeof GoogleAuth !== 'undefined') && GoogleAuth.sessionExpired();
       banner.classList.toggle('is-on', show);
       document.body.classList.toggle('atsucup-has-session-banner', show);

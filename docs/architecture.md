@@ -162,3 +162,33 @@ GoogleのIDトークンは有効期限が約1時間で固定(Google側の仕様�
 - `detail-view.js`の`render()`のフォールバックを、`readOnly`でも何かしら(閲覧のみの空き状態)表示するよう修正(空白になるバグ自体の根本修正)
 - `google-auth.js`に`sessionStorage`マーカー`atsucup:hadSession`を追加(トークンを一度でも持ったら立てる、`signOut()`でのみクリア、期限切れでは消さない)。`GoogleAuth.sessionExpired()`で「未ログイン」と「ログインしていたが期限切れ」を区別し、後者の場合は`detail-view.js`/`tournament-entry.html`の読み取り専用表示に再ログインを促すバナーを追加で出す
 - ベストエフォートの自動延長として、トークンの`exp`の5分前を目安に`google.accounts.id.prompt({auto_select:true})`による無音の再認証を一度だけ試みる(`scheduleRenewal`/`attemptSilentRenewal`)。成功すれば気づかれずに継続、失敗しても何もしない(上記のバナーが保険)。**IDトークン自体の寿命は延長できないため、これはあくまで気づかれる前に再認証を試みる対症療法**であることに注意
+
+## 自動延長をイベント駆動にした(2026-08-14)
+
+上の自動延長は**実運用ではほとんど発火していなかった**。`scheduleRenewal()`が`storeToken()`からしか呼ばれず、このアプリはビルド無しのマルチページ構成なので、TOP→大会一覧→大会詳細と画面を移るたびに`setTimeout`が破棄されて再スケジュールされなかったため。「ログイン直後の画面を1時間開きっぱなし」でないと無音更新が走らない ＝ 画面を行き来する大会運営中こそ効かない、という状態だった。
+
+- `google-auth.js`の末尾に`bootRenewal()`を追加し、**ページ読み込み時に有効なトークンがあればタイマーを張り直す**
+- `maybeRenew()`を新設。冪等でクールダウン(60秒)付きなので、どこから何度呼んでもよい。`atsucup-core.js`の`initSessionExpiredBanner()`の`update()`から呼んでおり、既存の`setInterval`(1分)と`visibilitychange`に相乗りする。これで**スリープ復帰・タブ復帰の瞬間**にも再認証が走る
+- **期限が切れた後も諦めない**(`maybeRenew()`は期限切れ状態でも試みる)。無音復帰に成功するとバナーは`onStateChange`経由で自動的に消える
+- ⚠️ **失敗し続ける環境のために指数バックオフを入れてある**(`renewBackoffMs`: 60秒→倍々→上限10分、成功で60秒に戻る)。`maybeRenew()`は1分ごとのポーリングから呼ばれるので、これが無いと「無音更新が絶対に成功しない環境」(FedCM無効・そのブラウザでGoogleに未ログイン等)でGISの`prompt()`を1分おきに永久に叩き続けることになる。検証中に実際にこの状態を再現して気づいた
+- `initialize()`に`use_fedcm_for_prompt: true`を渡す。サードパーティCookie廃止環境で`prompt()`が出せず無音更新が常に失敗するのを減らすため。**FedCM有効時は`notification`の`isNotDisplayed()`/`isSkippedMoment()`が例外を投げる仕様**なので、`attemptSilentRenewal()`ではそもそも成否判定に使わない(バックオフに任せる)。`signIn()`側では引き続き使うが必ず`try`で包む
+- ⚠️ **`hadSession`が無ければ`maybeRenew()`は何もしない。** 一度もログインしていない人に勝手にOne Tapを出さないための必須ガード
+- ⚠️ `renderButton()`を呼んだページで未ログインのときは`attemptSilentRenewal()`をスキップする(`buttonRendered`)。無音更新の`initialize()`が描画済みボタンの設定を上書きするため、「目の前にボタンがあるならそれを押してもらう」を優先する
+- `signOut()`は`storeToken('')`より**先に**`hadSession`を消す。順序が逆だと、通知を受けたバナーが`sessionExpired()===true`を見てログアウト直後に一瞬表示される
+
+**IDトークンの寿命(約1時間)が延長不可であることは変わらない。** これは「気づかれる前に再認証を試みる」対症療法の精度を上げただけで、Googleが無音再認証を拒む環境では従来通りバナーに落ちる。
+
+### 🔴 `storeToken()`の通知は「状態が実際に変わった時」だけ
+
+`storeToken()`は以前、呼ばれるたびに無条件で`onStateChange`のリスナー全員へ通知していた。無音更新の頻度を上げるにあたり、**`getState()`の`(signedIn, email)`が前回と変わった時だけ通知する**よう変更した(`notifyIfChanged()` / `lastNotified`)。
+
+これは単なる最適化ではなく**不変条件の維持**である。購読者の1つが`atsucup-core.js`の`reconcileAuthPoolWithServer()`で、これは「サーバーに存在しないDB大会をこの端末から取り除く」処理。同ファイルのコメント通り**ログインした瞬間だけに限定する**設計であり、無音更新のたびに走るとGitHub Pagesへの反映がまだ済んでいない大会を巻き込んで消しかねない([`data-sync.md`](data-sync.md)も参照)。ほかに`detail-view.js`・`users.html`・`tournaments.html`・`tournament-entry.html`・`index.html`が再描画を購読しており、勝敗入力中やD&D中に再描画が割り込むのも防いでいる。
+
+**ここを「毎回通知」に戻さないこと。** 大会消失の経路が復活する。
+
+- 無音更新(同一アカウント・`signedIn:true`のまま) → 通知しない
+- 期限切れ`storeToken('')`(true→false) → 通知する(バナー表示・`GasDB.clearRole()`)
+- 期限切れからの無音復帰(false→true) → 通知する(バナーが消える)
+- ログイン / ログアウト / アカウント切替(emailが変わる) → 通知する
+
+`gas-db.js`のroleキャッシュはキーにemailを含むので、同一アカウントの無音更新でキャッシュが失われることはない。

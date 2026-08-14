@@ -205,6 +205,8 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 
 これに対応するため、`reconcileAuthPoolWithServer()`を追加し、**Googleログインした瞬間(`GoogleAuth.onStateChange`が`signedIn:true`で発火した時)にだけ**、`state.tournaments`のうち`data/tournaments.json`に存在しないidを問答無用で削除するようにした(ユーザーロースターについても同様、下記参照)。削除が発生した場合は非ブロッキングのトースト通知(`showAuthResyncNotice()`)で件数を知らせる(ゲストプールの確認バナーと違い「元に戻す」選択肢は無い簡易版)。
 
+🔴 **この「ログインした瞬間だけ」という条件は、`google-auth.js`の`storeToken()`が`(signedIn, email)`の変化時にしか通知しないことで成立している。** トークンの無音更新(自動延長)でも通知していた時期があり、更新頻度を上げると**この削除処理が定期的に走ってしまう**。通知条件を「毎回」に戻すと、GitHub Pagesへの反映がまだ済んでいない大会を巻き込んで消す経路が復活する。詳細は [`architecture.md`](architecture.md) の「自動延長をイベント駆動にした(2026-08-14)」を参照。
+
 **⚠️ 2026-07-27深夜追記**: 大会については、上記のログイン限定の仕組みに加えて`pruneTournamentsGoneFromServer()`(前述「マージ規則」参照)が**通常のページ読み込み(`loadFromData()`)でも**、以前に一度でも取り込んだことがある大会に限定して同様の削除を行うようになった。そのためログインを待たずとも、次にどれかのページを開いた時点で反映される。**ユーザーロースターの行削除検知は引き続きログイン時限定のまま**(未同期の新規登録ユーザーを通常利用中に誤って消さないための安全策、下記参照)。
 
 **`reconcileAuthPoolWithServer()`はユーザー(ロースター)にも同じ考え方を適用する(2026-07-27追加)**: `mergeRemoteUsers()`もロースター名を追加するだけで、`data/users.json`から行ごと削除された(archived=trueではなく物理削除された)名前は永久に`state.roster`/`state.archivedUsers`に残り続けてしまう(users.htmlの「アーカイブ済み」一覧にゴミが溜まる原因)。同じ関数内で`data/users.json`も取得し、リモートに存在しない名前を`state.roster`/`state.userRecDefaults`/`state.archivedUsers`から除去する。**安全弁として、取得結果(大会・ユーザーどちらも)が空の場合は何も削除しない**(取得失敗や空データでの誤爆を防ぐ)。過去の大会の`t.people`は名前を独立した文字列として持つだけでロースターへの生きた参照ではないため、ロースターから名前を消しても過去の大会記録には一切影響しない。
