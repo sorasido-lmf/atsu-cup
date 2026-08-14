@@ -442,5 +442,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-08-08T22:32:51.257Z"
+  },
+  {
+    "id": "t1786720798967bx3z1d",
+    "title": "もう一つのローマス特別回（きゅこ運営）",
+    "detail": "もう一つのローマスと同様です",
+    "posterImage": null,
+    "heldAt": "2026-08-14T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-08-14T15:20:01.752Z"
   }
 ]
