@@ -123,23 +123,42 @@
 
   GoogleAuth.onStateChange(renderAuth);
 
+  // セッション切れバナーの「再ログイン」から来た場合(?reauth=1)、ログインボタンまで
+  // スクロールして強調する。
+  // ⚠️ 以前はここで requestAnimationFrame を使っていたが2つの理由で正しく働かなかった:
+  //   1. rAFのコールバックは**タブが非表示だと発火しない**。スマホで「再ログイン」を
+  //      タップした直後に別アプリへ移り、戻ってきた時にはスクロールも強調もされない
+  //   2. rAFの時点ではGISのボタンがまだ非同期描画されておらず signinArea が空なので、
+  //      高さ0の要素を block:'center' で中央に寄せてしまう。その後ボタンが現れた分だけ位置がずれる
+  // ボタンの描画完了後に、かつ表示されている時にだけ実行する。
+  const wantsReauth = new URLSearchParams(location.search).get('reauth') === '1';
+  function focusSigninArea(){
+    if(!wantsReauth) return;
+    if(document.visibilityState === 'hidden'){
+      // 表示されるまで待つ(非表示のままスクロールしても無意味)
+      document.addEventListener('visibilitychange', function onVisible(){
+        if(document.visibilityState !== 'visible') return;
+        document.removeEventListener('visibilitychange', onVisible);
+        focusSigninArea();
+      });
+      return;
+    }
+    signinArea.scrollIntoView({behavior:'smooth', block:'center'});
+    signinArea.classList.add('atsucup-login-focus');
+  }
+
   if(!(typeof AtsuCupGasConfig !== 'undefined' && AtsuCupGasConfig.OAUTH_CLIENT_ID)){
     authState.innerHTML = '⚠️ gas-config.js が未設定です。';
+    focusSigninArea();
   }else{
     // 推奨アカウント表示は通常ボタンより横幅を使うため、パネル内の有効幅を余さず渡す。
     // CSS側でもGoogle生成DOMの min-width を解除し、右端のロゴが切れないようにする。
     const buttonWidth = Math.min(400, Math.max(200, Math.floor(signinArea.clientWidth)));
     GoogleAuth.renderButton(signinArea, { width: buttonWidth }).catch(e=>{
       signinArea.innerHTML = `<div class="empty-state" style="padding:10px 12px; color:#ff6a6a;">ログインボタンの表示に失敗しました: ${e.message}</div>`;
-    });
+    }).then(focusSigninArea); // 成功/失敗どちらでも、描画が終わってからスクロールする
   }
   renderAuth();
-  if(new URLSearchParams(location.search).get('reauth') === '1'){
-    requestAnimationFrame(()=>{
-      signinArea.scrollIntoView({behavior:'smooth', block:'center'});
-      signinArea.classList.add('atsucup-login-focus');
-    });
-  }
 })();
 </script>
 </body>
