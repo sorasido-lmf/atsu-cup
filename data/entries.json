@@ -4527,33 +4527,6 @@
     "monsterId": null
   },
   {
-    "id": "t1786207126120mlq0ld_u0001",
-    "tournamentId": "t1786207126120mlq0ld",
-    "userId": "u0001",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true,
-    "monsterId": "m0296"
-  },
-  {
-    "id": "t1786207126120mlq0ld_u0002",
-    "tournamentId": "t1786207126120mlq0ld",
-    "userId": "u0002",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true,
-    "monsterId": "m0157"
-  },
-  {
-    "id": "t1786207126120mlq0ld_u0009",
-    "tournamentId": "t1786207126120mlq0ld",
-    "userId": "u0009",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true,
-    "monsterId": "m0005"
-  },
-  {
     "id": "t17852032535363ygjkd_u0011",
     "tournamentId": "t17852032535363ygjkd",
     "userId": "u0011",
@@ -4741,5 +4714,32 @@
     "wins": 0,
     "recAtEntry": false,
     "monsterId": "m0124"
+  },
+  {
+    "id": "t1786207126120mlq0ld_u0001",
+    "tournamentId": "t1786207126120mlq0ld",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0296"
+  },
+  {
+    "id": "t1786207126120mlq0ld_u0002",
+    "tournamentId": "t1786207126120mlq0ld",
+    "userId": "u0002",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0157"
+  },
+  {
+    "id": "t1786207126120mlq0ld_u0009",
+    "tournamentId": "t1786207126120mlq0ld",
+    "userId": "u0009",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0005"
   }
 ]
