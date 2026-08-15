@@ -4723,5 +4723,41 @@
     "wins": 2,
     "recAtEntry": true,
     "monsterId": "m0213"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0004",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0004",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0001",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0003",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0003",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0009",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0009",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
   }
 ]
