@@ -420,18 +420,6 @@
     "updatedAt": "2026-08-04T08:06:05.312Z"
   },
   {
-    "id": "t1786207126120mlq0ld",
-    "title": "テスト",
-    "detail": "",
-    "posterImage": null,
-    "heldAt": "2026-08-10T15:00:00.000Z",
-    "status": "ongoing",
-    "archived": false,
-    "isOfficial": false,
-    "isRestricted": false,
-    "updatedAt": "2026-08-08T21:24:23.778Z"
-  },
-  {
     "id": "t17852032535363ygjkd",
     "title": "第33回あつ杯～もう1つのロードオブマスターズ⑪〜",
     "detail": "",
@@ -454,5 +442,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-08-15T08:08:22.836Z"
+  },
+  {
+    "id": "t1786207126120mlq0ld",
+    "title": "テスト",
+    "detail": "",
+    "posterImage": null,
+    "heldAt": "2026-08-10T15:00:00.000Z",
+    "status": "completed",
+    "archived": false,
+    "isOfficial": false,
+    "isRestricted": false,
+    "updatedAt": "2026-08-15T10:31:11.017Z"
   }
 ]
