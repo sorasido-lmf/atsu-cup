@@ -4738,7 +4738,7 @@
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0004",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": false,
     "monsterId": "m0124"
   },
@@ -4783,8 +4783,8 @@
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0017",
     "placement": null,
-    "wins": 0,
-    "recAtEntry": false,
+    "wins": 1,
+    "recAtEntry": true,
     "monsterId": "m0132"
   },
   {
@@ -4801,7 +4801,7 @@
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0006",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": false,
     "monsterId": "m0010"
   },
@@ -4819,7 +4819,7 @@
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0048",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": true,
     "monsterId": "m0296"
   },
