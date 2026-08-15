@@ -4775,7 +4775,7 @@
     "userId": "u0027",
     "placement": null,
     "wins": 0,
-    "recAtEntry": false,
+    "recAtEntry": true,
     "monsterId": "m0104"
   },
   {
