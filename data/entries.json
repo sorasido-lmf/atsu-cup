@@ -4730,7 +4730,7 @@
     "userId": "u0004",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true,
+    "recAtEntry": false,
     "monsterId": null
   },
   {
@@ -4748,7 +4748,7 @@
     "userId": "u0003",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true,
+    "recAtEntry": false,
     "monsterId": null
   },
   {
