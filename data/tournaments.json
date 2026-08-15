@@ -432,18 +432,6 @@
     "updatedAt": "2026-08-08T22:32:51.257Z"
   },
   {
-    "id": "t1786720798967bx3z1d",
-    "title": "もう一つのローマス特別回（きゅこ運営）",
-    "detail": "もう一つのローマスと同様です",
-    "posterImage": null,
-    "heldAt": "2026-08-14T15:00:00.000Z",
-    "status": "ongoing",
-    "archived": false,
-    "isOfficial": true,
-    "isRestricted": false,
-    "updatedAt": "2026-08-15T08:08:22.836Z"
-  },
-  {
     "id": "t1786207126120mlq0ld",
     "title": "テスト",
     "detail": "",
@@ -454,5 +442,17 @@
     "isOfficial": false,
     "isRestricted": false,
     "updatedAt": "2026-08-15T10:31:18.936Z"
+  },
+  {
+    "id": "t1786720798967bx3z1d",
+    "title": "もう一つのローマス特別回（きゅこ運営）",
+    "detail": "もう一つのローマスと同様です",
+    "posterImage": null,
+    "heldAt": "2026-08-14T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-08-15T11:47:15.552Z"
   }
 ]
