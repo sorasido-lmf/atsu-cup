@@ -4698,24 +4698,6 @@
     "monsterId": "m0213"
   },
   {
-    "id": "t1786720798967bx3z1d_u0011",
-    "tournamentId": "t1786720798967bx3z1d",
-    "userId": "u0011",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": true,
-    "monsterId": "m0343"
-  },
-  {
-    "id": "t1786720798967bx3z1d_u0004",
-    "tournamentId": "t1786720798967bx3z1d",
-    "userId": "u0004",
-    "placement": null,
-    "wins": 0,
-    "recAtEntry": false,
-    "monsterId": "m0124"
-  },
-  {
     "id": "t1786207126120mlq0ld_u0001",
     "tournamentId": "t1786207126120mlq0ld",
     "userId": "u0001",
@@ -4741,5 +4723,140 @@
     "wins": 0,
     "recAtEntry": true,
     "monsterId": "m0005"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0011",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0011",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0343"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0004",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0004",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": "m0124"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0007",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0007",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0339"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0016",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0016",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0296"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0001",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": "m0300"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0027",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0027",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": "m0104"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0017",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0017",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": "m0132"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0013",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0013",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0207"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0006",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0006",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": "m0010"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0009",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0009",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": "m0157"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0048",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0048",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0296"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0029",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0029",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0110"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0015",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0015",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0021"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0010",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0010",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": "m0251"
+  },
+  {
+    "id": "t1786720798967bx3z1d_u0008",
+    "tournamentId": "t1786720798967bx3z1d",
+    "userId": "u0008",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0338"
   }
 ]
