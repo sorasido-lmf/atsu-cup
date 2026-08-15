@@ -450,9 +450,9 @@
     "posterImage": null,
     "heldAt": "2026-08-10T15:00:00.000Z",
     "status": "completed",
-    "archived": false,
+    "archived": true,
     "isOfficial": false,
     "isRestricted": false,
-    "updatedAt": "2026-08-15T10:31:11.017Z"
+    "updatedAt": "2026-08-15T10:31:18.936Z"
   }
 ]
