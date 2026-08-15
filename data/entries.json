@@ -4764,8 +4764,8 @@
     "id": "t1786720798967bx3z1d_u0001",
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0001",
-    "placement": null,
-    "wins": 2,
+    "placement": 1,
+    "wins": 4,
     "recAtEntry": false,
     "monsterId": "m0300"
   },
@@ -4782,8 +4782,8 @@
     "id": "t1786720798967bx3z1d_u0017",
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0017",
-    "placement": null,
-    "wins": 2,
+    "placement": 3,
+    "wins": 3,
     "recAtEntry": true,
     "monsterId": "m0132"
   },
@@ -4809,7 +4809,7 @@
     "id": "t1786720798967bx3z1d_u0009",
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0009",
-    "placement": null,
+    "placement": 4,
     "wins": 2,
     "recAtEntry": false,
     "monsterId": "m0157"
@@ -4818,8 +4818,8 @@
     "id": "t1786720798967bx3z1d_u0048",
     "tournamentId": "t1786720798967bx3z1d",
     "userId": "u0048",
-    "placement": null,
-    "wins": 2,
+    "placement": 2,
+    "wins": 3,
     "recAtEntry": true,
     "monsterId": "m0296"
   },
