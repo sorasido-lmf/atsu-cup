@@ -906,6 +906,14 @@
     return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg"><rect class="tree-canvas-bg" x="0" y="0" width="${svgW}" height="${svgH}" fill="#f7f4ea"/>${framesSvg}${linesSvg}${boxesSvg}${pickBtnSvg}${cardZoneSvg}${trophySvg}</svg>`;
   }
 
+  // 対戦開始後は「組み合わせを決める」欄ごと隠れて大会エントリーへの導線が消えるため、
+  // 撮影可否・モンスターを途中で直せるよう対戦表の下にリンクを出す(参加者の増減はエントリー側でロック済み)
+  function entryLinkAfterStartHtml(){
+    if(readOnly || AtsuCup.bracketNotStarted()) return '';
+    const href = `tournament-entry.html?id=${encodeURIComponent(state.tournamentMeta.id)}`;
+    return `<div class="row" style="margin-top:12px;"><a class="btn btn-ghost" style="width:100%;" href="${href}"><img class="btn-page-icon" src="assets/icons/headings/page-entry-v1.png" alt="" width="24" height="24">大会エントリー(撮影可否・モンスターの変更)</a></div>`;
+  }
+
   function renderBracket(){
     computeRowH();
     const hint = finished
@@ -922,6 +930,7 @@
       <div class="row" id="jumpRow" style="display:none; margin-bottom:8px;"><button class="btn btn-ghost" id="jumpNextBtn" style="width:100%;">🎯 次の対戦へ</button></div>
       <div class="tree-scroll" id="treeScroll"></div>
       <div id="advanceArea"></div>
+      ${entryLinkAfterStartHtml()}
       <div class="row" style="margin-top:12px;">
         <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
         ${canManage() ? saveButtonHtml() : ''}

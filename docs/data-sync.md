@@ -82,7 +82,7 @@ GitHub (data/*.json)  ──git→ローカル: やる──▶  ローカル作
 | 大会限定の撮影可否上書き（`person.rec`） | `tournament-entry.html`の📹/🚫トグル | **反映されるのは大会保存時のみ**（`entries.json`の`recAtEntry`列）。**ここ単体でのGitHub反映は無い** | `tournament-entry.html`、`fromAppTournament`の`recAtEntry`算出 |
 | 大会の作成・タイトル/詳細/開催日/公式大会・制限杯フラグ/ポスター画像の編集 | `tournament-create.html`での作成、大会詳細の「編集する」→「更新する」 | **操作の都度、即時**。entries/matchesには一切触れない専用の保存経路(下記コラム参照)。失敗してもローカルの保存は維持し、インライン警告のみ表示 | `tournament-create.html`、`detail-view.js`の`renderEditForm()` → `AtsuCup.saveTournamentMetaToData()` |
 | 参加者の選出・組み合わせ・勝敗入力・ラウンド進行など、大会の進行に関する変更 | 大会詳細画面での各種操作 | **反映されない。「💾 GitHubに保存」ボタンを押した時のみ** | `detail-view.js`の`saveTournamentToGitHub()` |
-| 大会エントリー画面での参加者の選出・撮影可否変更 | `tournament-entry.html`での各種操作 | **反映されない。画面から退出(「‹ 戻る」「大会詳細に戻る」)する時に変更があれば自動保存**（2026-07-27追加。以前はエントリー画面だけでは一切サーバーへ反映されず、対戦表ページで別途保存ボタンを押す必要があった） | `tournament-entry.html`の`syncAndGo()` → `AtsuCup.saveTournamentToData()`(フル保存) |
+| 大会エントリー画面での参加者の選出・撮影可否変更 | `tournament-entry.html`での各種操作 | **反映されない。画面から退出(「‹ 戻る」「大会詳細に戻る」)する時に変更があれば自動保存**（2026-07-27追加。以前はエントリー画面だけでは一切サーバーへ反映されず、対戦表ページで別途保存ボタンを押す必要があった）。⚠️**保存前に`confirmOverwriteIfRemoteNewer(id)`で確認する**（2026-10-10追加。対戦開始後もエントリー画面から撮影可否・モンスターを直せるようにしたため、フル保存が他端末の保存した対戦結果を消しうる） | `tournament-entry.html`の`syncAndGo()` → `AtsuCup.saveTournamentToData()`(フル保存) |
 | モンスターマスタ(`monsters`シート) | 人がシートを直接編集(アプリからは一切書き込めない) | **反映されない。GASエディタで`previewMonstersToGitHub()`で確認 → `pushMonstersToGitHub()`を手動実行するまでGitHubへは伝わらない**。大会用の`pushSheetChangesToGitHub()`とは経路が別(あちらの差分検出は大会id単位で`updatedAt`を打つ前提のため流用できない) | `gas/Code.gs`の`pushMonstersToGitHub()` |
 | エントリー時のモンスター(`entries.monsterId`) | エントリー画面・途中参加・大会詳細「参加者とモンスター」での選択 | **エントリー画面からの変更は退出時に自動保存**(他のエントリー内容と同じ)。**大会詳細からの変更は「💾 進行状況を保存」を押した時のみ** | `tournament-entry.html`、`detail-view.js`の`renderMonsterPanel()` |
 | スプレッドシートの手編集 | 人がシートを直接編集 | **反映されない。`gas/Code.gs`の`previewSheetChangesToGitHub()`で確認 → `pushSheetChangesToGitHub()`をGASエディタから手動実行するまでGitHubへは伝わらない**(後者が`updatedAt`も自動で打つ。下記参照) | `gas/README.md` |
@@ -152,7 +152,7 @@ writeSheet_('entries', entries.concat(entryRows));                          // �
 
 **UI**: `showSyncChoiceModal()`(core、全ページ共通。`.match-pick-modal`のCSSは`tournament-detail.html`内のインライン定義で他ページでは使えないため、`showGuestWipeBanner`と同じくJSからstyleを注入する)を競合モーダルと保存前警告で共用。競合時は「サーバーの内容を取り込む」/「この端末の内容を使う」の2択で、**どちらを選んでも`remoteMeta`をサーバー現在値へ更新する**(しないと毎回同じ競合を聞かれ続ける)。取り込みを選んだ場合は`location.reload()`で描き直す(coreに購読機構が無いため、`showGuestWipeBanner`と同じ流儀)。
 
-**保存前チェック**: `confirmOverwriteIfRemoteNewer(id)`を`detail-view.js`の「💾 進行状況を保存」で保存前に呼ぶ。⚠️**「それでも上書き保存する」を必ず選べるようにすること**。保存ボタンを押した時点では必ずローカルに未保存の変更があるので、ここで操作不能になると大会の進行そのものが止まる。
+**保存前チェック**: `confirmOverwriteIfRemoteNewer(id)`を`detail-view.js`の「💾 進行状況を保存」と`tournament-entry.html`の退出時保存(`syncAndGo`)で保存前に呼ぶ。⚠️**「それでも上書き保存する」を必ず選べるようにすること**。保存ボタンを押した時点では必ずローカルに未保存の変更があるので、ここで操作不能になると大会の進行そのものが止まる。
 
 **残るリスク(設計上の割り切り)**: ①2台がほぼ同時に保存した場合は検知できず後勝ちになる(保存前チェックはPagesを見るため、直前の他端末の保存は見逃す)。根治するにはGAS側で`baseUpdatedAt`を受け取って食い違えばエラーを返す楽観ロックが要る(将来の拡張点)。②GitHub Pages の CDN キャッシュは制御できないため「GASがcommit済み=全端末が即読める」ではない。③`updatedAt`を人がシートで手編集すると判定が壊れる(`gas/README.md`に警告済み)。
 

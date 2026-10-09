@@ -149,7 +149,13 @@
       && !isBlocked();
     if(!shouldSync || exitSyncing){ location.href = href; return; }
     exitSyncing = true;
+    // フル保存はentries/matchesを丸ごと置き換えるため、対戦開始後に開いた場合は他端末が保存した
+    // 対戦結果を消しうる。「💾 進行状況を保存」と同じく、サーバー側が新しければ先に確認する
     if(exitStatus) exitStatus.innerHTML = `<div class="inline-status is-working" role="status">💾 エントリー内容を保存しています...</div>`;
+    const choice = await AtsuCup.confirmOverwriteIfRemoteNewer(id);
+    if(choice === 'reload'){ location.reload(); return; }
+    // 保存をやめた場合も遷移は止めない(変更は端末に残り、大会詳細の「💾 進行状況を保存」で送れる)
+    if(choice === 'cancel'){ location.href = href; return; }
     try{ await AtsuCup.saveTournamentToData(id); }
     catch(e){
       console.error('[atsucup] エントリー保存に失敗しました:', e);
@@ -218,7 +224,7 @@
     const isLocked = locked();
     lockNotice.style.display = isLocked ? 'block' : 'none';
     if(isLocked){
-      lockNotice.innerHTML = `<div class="lock-notice">🔒 対戦が始まっているため、参加者の追加/削除はできません。途中参加させたい場合は大会詳細の対戦表にある「➕途中参加」をご利用ください。</div>`;
+      lockNotice.innerHTML = `<div class="lock-notice">🔒 対戦が始まっているため、参加者の追加/削除はできません。途中参加させたい場合は大会詳細の対戦表にある「➕途中参加」をご利用ください。<br>撮影可否(📹/🚫)とモンスターは変更できます。撮影可否の変更は、組み済みの対戦には影響せず、次のラウンドの組み合わせから反映されます。</div>`;
     }
 
     // 今回参加する人(選択中)・2列表示。ロック中は「外す」ボタンを出さない(削除不可のため)
