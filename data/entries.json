@@ -5027,7 +5027,7 @@
     "userId": "u0029",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true,
+    "recAtEntry": false,
     "monsterId": null
   }
 ]
