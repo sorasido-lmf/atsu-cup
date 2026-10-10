@@ -5020,5 +5020,14 @@
     "wins": 0,
     "recAtEntry": true,
     "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0029",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0029",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
   }
 ]
