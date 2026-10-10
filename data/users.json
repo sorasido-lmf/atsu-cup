@@ -502,5 +502,14 @@
     "createdAt": "2026-07-29T13:17:01.153Z",
     "note": "",
     "sortOrder": 47
+  },
+  {
+    "id": "u0057",
+    "name": "えるびん",
+    "recDefault": true,
+    "archived": false,
+    "createdAt": "2026-10-10T11:43:55.470Z",
+    "note": "",
+    "sortOrder": 57
   }
 ]
