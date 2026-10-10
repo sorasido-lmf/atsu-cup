@@ -4974,7 +4974,7 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true,
-    "monsterId": null
+    "monsterId": "m0150"
   },
   {
     "id": "t17916315595051iwt32_u0008",
@@ -4983,7 +4983,7 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true,
-    "monsterId": null
+    "monsterId": "m0338"
   },
   {
     "id": "t17916315595051iwt32_u0018",
@@ -4998,6 +4998,15 @@
     "id": "t17916315595051iwt32_u0011",
     "tournamentId": "t17916315595051iwt32",
     "userId": "u0011",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": "m0333"
+  },
+  {
+    "id": "t17916315595051iwt32_u0028",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0028",
     "placement": null,
     "wins": 0,
     "recAtEntry": true,
