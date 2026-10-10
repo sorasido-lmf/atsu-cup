@@ -4858,5 +4858,113 @@
     "wins": 0,
     "recAtEntry": true,
     "monsterId": "m0338"
+  },
+  {
+    "id": "t17916315595051iwt32_u0048",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0048",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": false,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0013",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0013",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0030",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0030",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0027",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0027",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0014",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0014",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0057",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0057",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0004",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0004",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0001",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0001",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0005",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0005",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0007",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0007",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0010",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0010",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
+  },
+  {
+    "id": "t17916315595051iwt32_u0017",
+    "tournamentId": "t17916315595051iwt32",
+    "userId": "u0017",
+    "placement": null,
+    "wins": 0,
+    "recAtEntry": true,
+    "monsterId": null
   }
 ]
