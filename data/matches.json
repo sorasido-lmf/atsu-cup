@@ -10837,7 +10837,7 @@
     "matchIndex": 3,
     "player1Id": "u0001",
     "player2Id": "u0009",
-    "winnerId": null,
+    "winnerId": "u0001",
     "isBye": false,
     "player1SrcIndex": null,
     "player2SrcIndex": null,
