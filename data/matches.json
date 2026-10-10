@@ -10823,7 +10823,7 @@
     "player1Id": null,
     "player2Id": null,
     "winnerId": null,
-    "isBye": true,
+    "isBye": false,
     "player1SrcIndex": null,
     "player2SrcIndex": null,
     "videoUrl": "",
