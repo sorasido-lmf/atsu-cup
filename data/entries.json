@@ -4882,8 +4882,8 @@
     "tournamentId": "t17916315595051iwt32",
     "userId": "u0030",
     "placement": null,
-    "wins": 0,
-    "recAtEntry": false,
+    "wins": 1,
+    "recAtEntry": true,
     "monsterId": "m0221"
   },
   {
@@ -4990,7 +4990,7 @@
     "tournamentId": "t17916315595051iwt32",
     "userId": "u0018",
     "placement": null,
-    "wins": 0,
+    "wins": 1,
     "recAtEntry": false,
     "monsterId": "m0108"
   },
