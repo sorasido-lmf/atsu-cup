@@ -454,5 +454,17 @@
     "isOfficial": true,
     "isRestricted": false,
     "updatedAt": "2026-08-15T13:57:29.081Z"
+  },
+  {
+    "id": "t17916315595051iwt32",
+    "title": "第35回あつ杯～もう1つのロードオブマスターズ12〜",
+    "detail": "",
+    "posterImage": "https://raw.githubusercontent.com/sorasido-lmf/atsu-cup/main/posters/t17916315595051iwt32.jpg",
+    "heldAt": "2026-10-09T15:00:00.000Z",
+    "status": "ongoing",
+    "archived": false,
+    "isOfficial": true,
+    "isRestricted": false,
+    "updatedAt": "2026-10-10T11:26:02.508Z"
   }
 ]
