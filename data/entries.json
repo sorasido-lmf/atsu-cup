@@ -4866,7 +4866,7 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": false,
-    "monsterId": null
+    "monsterId": "m0150"
   },
   {
     "id": "t17916315595051iwt32_u0013",
@@ -4883,7 +4883,7 @@
     "userId": "u0030",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true,
+    "recAtEntry": false,
     "monsterId": null
   },
   {
@@ -4901,7 +4901,7 @@
     "userId": "u0014",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true,
+    "recAtEntry": false,
     "monsterId": null
   },
   {
@@ -4910,7 +4910,7 @@
     "userId": "u0057",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true,
+    "recAtEntry": false,
     "monsterId": null
   },
   {
@@ -4920,7 +4920,7 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true,
-    "monsterId": null
+    "monsterId": "m0328"
   },
   {
     "id": "t17916315595051iwt32_u0001",
@@ -4928,8 +4928,8 @@
     "userId": "u0001",
     "placement": null,
     "wins": 0,
-    "recAtEntry": true,
-    "monsterId": null
+    "recAtEntry": false,
+    "monsterId": "m0108"
   },
   {
     "id": "t17916315595051iwt32_u0005",
@@ -4947,7 +4947,7 @@
     "placement": null,
     "wins": 0,
     "recAtEntry": true,
-    "monsterId": null
+    "monsterId": "m0339"
   },
   {
     "id": "t17916315595051iwt32_u0010",
