@@ -10822,7 +10822,7 @@
     "matchIndex": 2,
     "player1Id": "u0013",
     "player2Id": "u0004",
-    "winnerId": null,
+    "winnerId": "u0004",
     "isBye": false,
     "player1SrcIndex": null,
     "player2SrcIndex": null,
